@@ -1,223 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعليمات اختبار الفلاتر المترابطة</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            background-color: #f8f9fa;
-            direction: rtl;
-        }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 15px;
-        }
-        h2 {
-            color: #34495e;
-            margin-top: 30px;
-            margin-bottom: 15px;
-        }
-        .step {
-            background: #ecf0f1;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border-right: 4px solid #3498db;
-        }
-        .code {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            margin: 10px 0;
-            overflow-x: auto;
-        }
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-        }
-        .success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-        }
-        .error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
-        }
-        .btn {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 10px 5px;
-            transition: background 0.3s;
-        }
-        .btn:hover {
-            background: #2980b9;
-        }
-        .btn-success {
-            background: #27ae60;
-        }
-        .btn-success:hover {
-            background: #229954;
-        }
-        ul {
-            padding-right: 20px;
-        }
-        li {
-            margin: 8px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🔧 تعليمات اختبار الفلاتر المترابطة</h1>
-        
-        <div class="warning">
-            <strong>⚠️ تنبيه مهم:</strong> يجب أن تكون على الصفحة الصحيحة لاختبار الفلاتر!
-        </div>
-
-        <h2>📍 الخطوة الأولى: الانتقال للصفحة الصحيحة</h2>
-        <div class="step">
-            <strong>انقر على الرابط التالي للانتقال لصفحة قسم القوانين:</strong><br>
-            <a href="http://127.0.0.1:8001/ar/documents/section/koanyn" class="btn btn-success" target="_blank">
-                🔗 فتح صفحة قسم القوانين
-            </a>
-        </div>
-
-        <div class="success">
-            <strong>✅ الأقسام المتاحة للاختبار:</strong>
-            <ul>
-                <li><strong>قوانين:</strong> <code>http://127.0.0.1:8001/ar/documents/section/koanyn</code> (يحتوي على 4 وثائق)</li>
-                <li><strong>قرارات:</strong> <code>http://127.0.0.1:8001/ar/documents/section/krarat</code> (يحتوي على وثيقة واحدة)</li>
-            </ul>
-        </div>
-
-        <h2>🛠️ الخطوة الثانية: تحميل أدوات الاختبار</h2>
-        <div class="step">
-            <strong>1.</strong> افتح أدوات المطور في المتصفح (اضغط F12)
-        </div>
-        <div class="step">
-            <strong>2.</strong> انتقل لتبويب "Console" أو "وحدة التحكم"
-        </div>
-        <div class="step">
-            <strong>3.</strong> انسخ والصق الكود التالي واضغط Enter:
-        </div>
-        <div class="code">
-fetch('/test_filter_final.js').then(r => r.text()).then(code => eval(code));
-        </div>
-
-        <h2>🚀 الخطوة الثالثة: تشغيل الاختبارات</h2>
-        
-        <div class="step">
-            <strong>للاختبار الشامل:</strong>
-            <div class="code">filterTest.runFullTest()</div>
-        </div>
-
-        <div class="step">
-            <strong>لفحص البيئة فقط:</strong>
-            <div class="code">filterTest.checkEnvironment()</div>
-        </div>
-
-        <div class="step">
-            <strong>لاختبار طلب AJAX:</strong>
-            <div class="code">filterTest.testFilterAjax()</div>
-        </div>
-
-        <div class="step">
-            <strong>لمحاكاة تغيير فلتر معين:</strong>
-            <div class="code">filterTest.simulateFilterChange(6, 'ساري ومعدل')</div>
-        </div>
-
-        <h2>📊 تفسير النتائج</h2>
-        
-        <div class="success">
-            <strong>✅ النتائج الإيجابية:</strong>
-            <ul>
-                <li>"نموذج الفلاتر: ✅ موجود" - يعني أن النموذج موجود</li>
-                <li>"عدد القوائم المنسدلة: X" - يظهر عدد الفلاتر المتاحة</li>
-                <li>"تم إرسال الطلب بنجاح" - يعني أن AJAX يعمل</li>
-                <li>"تم تحديث الفلاتر" - يعني أن الترابط يعمل</li>
-            </ul>
-        </div>
-
-        <div class="error">
-            <strong>❌ النتائج السلبية:</strong>
-            <ul>
-                <li>"نموذج الفلاتر: ❌ غير موجود" - تأكد من أنك على الصفحة الصحيحة</li>
-                <li>"عدد القوائم المنسدلة: 0" - لا توجد فلاتر في الصفحة</li>
-                <li>"خطأ في الطلب" - مشكلة في الاتصال بالخادم</li>
-            </ul>
-        </div>
-
-        <h2>🔍 اختبار يدوي للفلاتر</h2>
-        <div class="step">
-            <strong>بعد الانتقال لصفحة القوانين:</strong>
-            <ol>
-                <li>ابحث عن القوائم المنسدلة في الصفحة</li>
-                <li>اختر قيمة من أي قائمة منسدلة</li>
-                <li>راقب ما إذا كانت باقي القوائم تتحدث تلقائياً</li>
-                <li>تحقق من أن القيم المعروضة تتناسب مع الاختيار</li>
-            </ol>
-        </div>
-
-        <div class="warning">
-            <strong>💡 نصائح للاختبار:</strong>
-            <ul>
-                <li>تأكد من أن الخادم يعمل على المنفذ 8001</li>
-                <li>تحقق من وجود أخطاء في وحدة التحكم</li>
-                <li>جرب أقسام مختلفة للمقارنة</li>
-                <li>راقب طلبات الشبكة في تبويب Network</li>
-            </ul>
-        </div>
-
-        <h2>🆘 في حالة وجود مشاكل</h2>
-        <div class="step">
-            <strong>إذا لم تعمل الفلاتر:</strong>
-            <ol>
-                <li>تحقق من وجود أخطاء JavaScript في وحدة التحكم</li>
-                <li>تأكد من أن الصفحة تحتوي على فلاتر مخصصة</li>
-                <li>جرب إعادة تحميل الصفحة</li>
-                <li>تحقق من حالة الخادم</li>
-            </ol>
-        </div>
-
-        <div class="step">
-            <a href="http://127.0.0.1:8001/ar/documents/section/koanyn" class="btn" target="_blank">
-                🔗 فتح صفحة الاختبار الآن
-            </a>
-        </div>
-    </div>
-</body>
-</html>
