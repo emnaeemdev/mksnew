@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تعليمات اختبار الفلاتر المترابطة</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .step {
+            background: #ecf0f1;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .code {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            direction: ltr;
+            text-align: left;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .btn {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-success:hover {
+            background: #229954;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 تعليمات اختبار الفلاتر المترابطة</h1>
+        
+        <div class="warning">
+            <strong>⚠️ تنبيه:</strong> هذه الأدوات مخصصة لاختبار وتشخيص مشاكل الفلاتر المترابطة. تأكد من فتح أدوات المطور في المتصفح لرؤية النتائج.
+        </div>
+        
+        <h2>📋 الخطوات المطلوبة</h2>
+        
+        <div class="step">
+            <strong>الخطوة 1:</strong> افتح صفحة الوثائق
+            <br>
+            <a href="/ar/documents/section/koanyn" class="btn" target="_blank">فتح صفحة الوثائق</a>
+        </div>
+        
+        <div class="step">
+            <strong>الخطوة 2:</strong> افتح أدوات المطور
+            <br>
+            اضغط <strong>F12</strong> أو <strong>Ctrl+Shift+I</strong> ثم انتقل إلى تبويب <strong>Console</strong>
+        </div>
+        
+        <div class="step">
+            <strong>الخطوة 3:</strong> حمّل ملف الاختبار
+            <br>
+            انسخ والصق الكود التالي في وحدة التحكم:
+            <div class="code">fetch('/test_filter_final.js').then(r => r.text()).then(code => eval(code));</div>
+        </div>
+        
+        <div class="step">
+            <strong>الخطوة 4:</strong> تشغيل الاختبار الشامل
+            <br>
+            اكتب الأمر التالي في وحدة التحكم:
+            <div class="code">filterTest.runFullTest()</div>
+        </div>
+        
+        <h2>🛠️ أوامر الاختبار المتاحة</h2>
+        
+        <div class="step">
+            <strong>فحص البيئة:</strong>
+            <div class="code">filterTest.checkEnvironment()</div>
+            يتحقق من وجود النموذج والقوائم المنسدلة
+        </div>
+        
+        <div class="step">
+            <strong>اختبار طلب AJAX:</strong>
+            <div class="code">filterTest.testFilterAjax()</div>
+            يختبر إرسال طلب تحديث الفلاتر إلى الخادم
+        </div>
+        
+        <div class="step">
+            <strong>محاكاة تغيير فلتر:</strong>
+            <div class="code">filterTest.simulateFilterChange(6, 'ساري ومعدل')</div>
+            يحاكي تغيير قيمة الحقل 6 إلى "ساري ومعدل"
+        </div>
+        
+        <div class="step">
+            <strong>اختبار الحقل 6 تحديداً:</strong>
+            <div class="code">filterTest.testField6()</div>
+            اختبار سريع للحقل 6 الذي يواجه مشاكل
+        </div>
+        
+        <div class="step">
+            <strong>فحص الأحداث المرتبطة:</strong>
+            <div class="code">filterTest.checkEventListeners()</div>
+            يتحقق من أن أحداث التغيير مرتبطة بشكل صحيح
+        </div>
+        
+        <h2>📊 تفسير النتائج</h2>
+        
+        <div class="success">
+            <strong>✅ علامات النجاح:</strong>
+            <ul>
+                <li>رؤية "تم استلام عدادات الحقول بنجاح"</li>
+                <li>ظهور بيانات fieldCounts مع أرقام صحيحة</li>
+                <li>تحديث القوائم المنسدلة بعد تغيير الفلاتر</li>
+            </ul>
+        </div>
+        
+        <div class="warning">
+            <strong>❌ علامات المشاكل:</strong>
+            <ul>
+                <li>رسائل خطأ في وحدة التحكم</li>
+                <li>عدم وجود بيانات fieldCounts</li>
+                <li>عدم تحديث القوائم المنسدلة</li>
+                <li>أخطاء في طلبات AJAX</li>
+            </ul>
+        </div>
+        
+        <h2>🔗 روابط سريعة</h2>
+        
+        <a href="/ar/documents/section/test-section" class="btn btn-success" target="_blank">صفحة الوثائق</a>
+        <a href="/test_filter_final.js" class="btn" target="_blank">ملف الاختبار</a>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+            <strong>💡 نصيحة:</strong> إذا واجهت مشاكل، تأكد من أن الخادم يعمل وأن صفحة الوثائق تحتوي على فلاتر.
+        </div>
+    </div>
+</body>
+</html>

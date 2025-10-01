@@ -1,0 +1,131 @@
+<?php
+
+namespace App\Models;
+
+use App\Contracts\Searchable;
+use App\Traits\Published;
+use App\Traits\SearchableTrait;
+use App\Traits\SlugableTrait;
+use App\Traits\SortingTrait;
+use App\Traits\UploadTrait;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\UploadedFile;
+
+class Nashra extends Model implements Searchable
+{
+    use HasFactory, Published, SearchableTrait, SlugableTrait, SoftDeletes, SortingTrait, UploadTrait;
+
+    protected $fillable = [
+        'slug_ar',
+        'slug_en',
+        'title_ar',
+        'title_en',
+        'sub_title',
+        'sub_title_en',
+        'description_ar',
+        'description_en',
+        'post_date',
+        'url',
+        'main_image',
+        'file',
+        'brief_ar',
+        'brief_en',
+        'category_id',
+        'author_id',
+        'total_downloads',
+        'total_views',
+        'total_shares',
+        'status',
+    ];
+
+    // الخانات التي سيتم إضافتها تلقائيًا
+    protected $appends = [
+        'thumb_image_url',
+        'main_image_url',
+        'cover_url',
+    ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id')->withTrashed();
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(Author::class, 'author_id')->withTrashed();
+    }
+
+    public function setMainImageAttribute($image)
+    {
+        if ($this->main_image) {
+            $this->deleteFromPublic($this->main_image);
+        }
+
+        return $this->attributes['main_image'] = $image instanceof UploadedFile ? 
+            $this->moveFileToPublic($image, 'nashra') : 
+            $image;
+    }
+
+    public function mainImageUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->filePublicUrl($this->main_image)
+        );
+    }
+
+    public function setFileAttribute($file)
+    {
+        if ($this->file) {
+            $this->deleteFromPublic($this->file);
+        }
+
+        return $this->attributes['file'] = $file instanceof UploadedFile ? 
+            $this->moveFileToPublic($file, 'nashra_pdf') : 
+            $file;
+    }
+
+    public function fileUrl(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->file ? $this->filePublicUrl($this->file) : ''
+        );
+    }
+
+    public function getSearchableColumns(): array
+    {
+        return [
+            'title_ar',
+            'title_en',
+        ];
+    }
+
+
+
+public function getGoogleSheetIframe(): string
+{
+    // التحقق من وجود الرابط
+    if ($this->url) {
+        // التحقق إذا كان الرابط داخل وسم iframe أو رابط عادي
+        if (strpos($this->url, '<iframe') !== false) {
+            // إذا كان الرابط داخل وسم iframe، استخراج الرابط منه باستخدام تعبير منتظم
+            preg_match('/src="([^"]+)"/', $this->url, $matches);
+            $iframeUrl = $matches[1] ?? '';  // إذا تم استخراج الرابط بنجاح
+        } else {
+            // إذا كان الرابط مباشر، استخدامه كما هو
+            $iframeUrl = $this->url;
+        }
+
+        // التأكد من أن الرابط صالح، ثم إرجاع الـ iframe
+        if ($iframeUrl) {
+            return "<iframe src='{$iframeUrl}' width='100%' height='100vh' style='border: none;'></iframe>";
+        }
+    }
+
+    // في حال لم يكن هناك رابط
+    return "<p>لا يوجد رابط Google Sheet.</p>";
+}
+}
