@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use App\Models\PostFile;
 
 class PostController extends Controller
 {
@@ -242,5 +243,30 @@ class PostController extends Controller
         }
         
         return response()->download($filePath, $post->file_name);
+    }
+
+    /**
+     * Download specific post attachment (PostFile) with download counter and session-based deduplication
+     */
+    public function downloadAttachment($locale, PostFile $file)
+    {
+        // Ensure file exists on disk
+        $fullPath = storage_path('app/public/' . $file->file_path);
+        if (!file_exists($fullPath)) {
+            abort(404);
+        }
+
+        // Prevent duplicate counting per session
+        $sessionKey = 'downloaded_post_files';
+        $downloaded = session()->get($sessionKey, []);
+        if (!in_array($file->id, $downloaded, true)) {
+            $file->increment('download_count');
+            $downloaded[] = $file->id;
+            session()->put($sessionKey, $downloaded);
+        }
+
+        // Use display name if available, else original name
+        $downloadName = $file->display_name ?: $file->original_name ?: basename($file->file_path);
+        return response()->download($fullPath, $downloadName);
     }
 }

@@ -36,9 +36,18 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
+    background-color: #6f8ea8;
+    border: 1px solid #6f8ea8;
     border-radius: 8px;
+    color: #fff;
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: #5f7e96;
+    border-color: #5f7e96;
+    color: #fff;
+    box-shadow: none;
 }
 
 .table th {

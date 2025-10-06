@@ -287,27 +287,46 @@
     @if(request('fields'))
         <div class="row mb-4 search-results">
             <div class="col-12">
-                <div class="alert alert-info d-flex align-items-center">
+                {{-- <div class="alert alert-info d-flex align-items-center">
                     <i class="fas fa-info-circle me-2"></i>
                     <div>
                         @php
                             $countForFilters = 0;
                             if (isset($categorizedResults) && $categorizedResults) {
-                                $countForFilters += isset($categorizedResults['phrase']) ? $categorizedResults['phrase']->total() : 0;
-                                $countForFilters += isset($categorizedResults['all']) ? $categorizedResults['all']->total() : 0;
-                                if (!empty($categorizedResults['per_word']) && is_array($categorizedResults['per_word'])) {
-                                    foreach ($categorizedResults['per_word'] as $pg) {
-                                        $countForFilters += $pg->total();
+                                // استخدم العدد الفريد الممرّر من الكنترولر إن كان متاحًا
+                                if (!empty($categorizedResults['unique_total'])) {
+                                    $countForFilters = (int) $categorizedResults['unique_total'];
+                                } else {
+                                    // احتياط: حساب يدوي في حال عدم توفر unique_total
+                                    $uniqueIds = [];
+                                    if (!empty($categorizedResults['phrase'])) {
+                                        foreach ($categorizedResults['phrase'] as $doc) {
+                                            if ($doc && isset($doc->id)) { $uniqueIds[$doc->id] = true; }
+                                        }
                                     }
+                                    if (!empty($categorizedResults['all'])) {
+                                        foreach ($categorizedResults['all'] as $doc) {
+                                            if ($doc && isset($doc->id)) { $uniqueIds[$doc->id] = true; }
+                                        }
+                                    }
+                                    if (!empty($categorizedResults['per_word']) && is_array($categorizedResults['per_word'])) {
+                                        foreach ($categorizedResults['per_word'] as $pg) {
+                                            foreach ($pg as $doc) {
+                                                if ($doc && isset($doc->id)) { $uniqueIds[$doc->id] = true; }
+                                            }
+                                        }
+                                    }
+                                    $countForFilters = count($uniqueIds);
                                 }
                             } else {
+                                // في حالة عدم وجود نتائج مصنفة، اعرض العدد الكلي من المجموع الرئيسي إن وُجد
                                 $countForFilters = isset($documents) ? $documents->total() : 0;
                             }
                         @endphp
                         تم العثور على <strong>{{ $countForFilters }}</strong> وثيقة
                         مع الفلاتر المحددة
                     </div>
-                </div>
+                </div> --}}
             </div>
         </div>
     @endif
@@ -316,74 +335,138 @@
     @if(isset($categorizedResults) && $categorizedResults)
         @php $raw = $categorizedResults['raw'] ?? ''; @endphp
 
-        <div class="row mt-4">
+        @php
+            $activeTab = request('tab');
+            if(!$activeTab) {
+                $firstWordTab = null;
+                $wi = 0;
+                foreach(($categorizedResults['per_word'] ?? []) as $w => $page) {
+                    if(!$firstWordTab && $page->count()) { $firstWordTab = 'word-'.$wi; }
+                    $wi++;
+                }
+                $activeTab = (($categorizedResults['phrase'] ?? null) && $categorizedResults['phrase']->count()) ? 'phrase'
+                    : (($categorizedResults['all'] ?? null) && $categorizedResults['all']->count() ? 'all'
+                    : ($firstWordTab ?: 'phrase'));
+            }
+            $baseQuery = request()->except(['page','page_p','page_a','page_any']);
+            $phraseTotal = ($categorizedResults['phrase'] ?? null) ? $categorizedResults['phrase']->total() : 0;
+            $allTotal = ($categorizedResults['all'] ?? null) ? $categorizedResults['all']->total() : 0;
+            $anyTotal = ($categorizedResults['any'] ?? null) ? $categorizedResults['any']->total() : 0;
+            $perWordTotal = 0;
+            if(!empty($categorizedResults['per_word'])) {
+                foreach($categorizedResults['per_word'] as $page) { $perWordTotal += $page->total(); }
+            }
+        @endphp
+
+        <div class="row mt-3" id="results-tabs">
+            <div class="col-12">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button id="tab-link-phrase" class="nav-link {{ $activeTab=='phrase' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-phrase" aria-controls="tab-phrase">مطابقة تامة <span class="badge rounded-pill bg-secondary ms-1">{{ $phraseTotal }}</span></button>
+                    </li>
+                    <li class="nav-item">
+                        <button id="tab-link-all" class="nav-link {{ $activeTab=='all' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-all" aria-controls="tab-all">جميع الكلمات <span class="badge rounded-pill bg-secondary ms-1">{{ $allTotal }}</span></button>
+                    </li>
+                    @php $tokensCount = isset($categorizedResults['tokens']) && is_array($categorizedResults['tokens']) ? count($categorizedResults['tokens']) : 0; @endphp
+                    @if(!empty($categorizedResults['per_word']) && $tokensCount > 1)
+                        @foreach($categorizedResults['per_word'] as $word => $page)
+                            <li class="nav-item">
+                                <button id="tab-link-word-{{ $loop->index }}" class="nav-link {{ $activeTab=='word-'.$loop->index ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-word-{{ $loop->index }}" aria-controls="tab-word-{{ $loop->index }}">
+                                    نتائج بها كلمة <b style="color: rgb(124, 190, 86);">"{{ $word }}"</b> <span class="badge rounded-pill bg-secondary ms-1">{{ $page->total() }}</span>
+                                </button>
+                            </li>
+                        @endforeach
+                    @endif
+                </ul>
+            </div>
+        </div>
+
+        <div class="tab-content">
+        <div id="tab-phrase" class="tab-pane fade row mt-2 {{ $activeTab=='phrase' ? 'show active' : '' }}" role="tabpanel" aria-labelledby="tab-link-phrase">
             <div class="col-12">
                 <h5 class="mb-3"><i class="fas fa-quote-left ms-1"></i> وثائق مطابقة  تمامًا لجملة البحث</h5>
                 @if(($categorizedResults['phrase'] ?? null) && $categorizedResults['phrase']->count())
                     <div class="row g-3 mb-3">
                         @foreach($categorizedResults['phrase'] as $document)
-                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'exact'])
+                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'exact', 'rawSearch' => $raw])
                         @endforeach
                     </div>
                     <div class="d-flex justify-content-center mb-4">
-                        {{ $categorizedResults['phrase']->appends(request()->except('page_p'))->links() }}
+                        {{ $categorizedResults['phrase']->appends(array_merge(request()->except('page_p'), ['tab' => 'phrase']))->links() }}
                     </div>
                 @else
                     <div class="alert alert-light">لا توجد نتائج مطابقة تمامًا لعبارة "{{ $raw }}"</div>
+                    
                 @endif
             </div>
         </div>
 
-        <div class="row mt-2">
+        <div id="tab-all" class="tab-pane fade row mt-2 {{ $activeTab=='all' ? 'show active' : '' }}" role="tabpanel" aria-labelledby="tab-link-all">
             <div class="col-12">
                 <h5 class="mb-3"><i class="fas fa-check-double ms-1"></i>وثائق بها جميع كلمات البحث</h5>
                 @if(($categorizedResults['all'] ?? null) && $categorizedResults['all']->count())
                     <div class="row g-3 mb-3">
                         @foreach($categorizedResults['all'] as $document)
-                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'all'])
-                        @endforeach
+                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'all', 'tokens' => ($categorizedResults['tokens'] ?? [])])
+                            @endforeach
                     </div>
                     <div class="d-flex justify-content-center mb-4">
-                        {{ $categorizedResults['all']->appends(request()->except('page_a'))->links() }}
+                        {{ $categorizedResults['all']->appends(array_merge(request()->except('page_a'), ['tab' => 'all']))->links() }}
                     </div>
                 @else
-                    <div class="alert alert-light">لا توجد نتائج تحتوي كل كلمات البحث.</div>
+                   <div class="alert alert-light">لا توجد نتائج تحتوي كل كلمات البحث.</div>
+                
                 @endif
             </div>
         </div>
 
-@if(!empty($categorizedResults['per_word']))
-    <div class="row mt-2">
-        <div class="col-12">
-            <h5 class="mb-3"><i class="fas fa-check ms-1"></i>وثائق بها كلمة واحدة من البحث</h5>
-            
-            <!-- متغير لفحص إذا كان فيه نتائج لأي كلمة -->
-            @php $noResults = true; @endphp
-            
-            @foreach($categorizedResults['per_word'] as $word => $page)
-                @if($page->count()) 
-                    @php $noResults = false; @endphp <!-- إذا كانت فيه نتائج، خلي المتغير false -->
-                    <div class="mb-2"><span class="badge bg-info">{{ $word }}</span></div>
-                    <div class="row g-3 mb-3">
-                        @foreach($page as $document)
-                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'any'])
-                        @endforeach
-                    </div>
-                    <div class="d-flex justify-content-center mb-4">
-                        {{ $page->appends(request()->except('page_w'.$loop->index))->links() }}
-                    </div>
-                @endif
-            @endforeach
-            
-            <!-- عرض الرسالة فقط لو مفيش أي نتائج -->
-            @if($noResults)
-                <div class="alert alert-light">لا توجد نتائج تحتوي كلمة واحدة من جملة البحث.</div>
-            @endif
-        </div>
-    </div>
-@endif
+{{-- تمت إزالة تبويب "أي كلمة" واستبدلنا تبويبات ديناميكية لكل كلمة بحث --}}
 
-        
+        @php $tokensCount = isset($categorizedResults['tokens']) && is_array($categorizedResults['tokens']) ? count($categorizedResults['tokens']) : 0; @endphp
+        @if(!empty($categorizedResults['per_word']) && $tokensCount > 1)
+            @foreach($categorizedResults['per_word'] as $word => $page)
+                <div id="tab-word-{{ $loop->index }}" class="tab-pane fade row mt-2 {{ $activeTab=='word-'.$loop->index ? 'show active' : '' }}" role="tabpanel" aria-labelledby="tab-link-word-{{ $loop->index }}">
+                    <div class="col-12">
+                        <h5 class="mb-3"><i class="fas fa-check ms-1"></i>نتائج بها كلمة "{{ $word }}"</h5>
+                        @if($page->count())
+                            <div class="row g-3 mb-3">
+                                @foreach($page as $document)
+                                    @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'any', 'word' => $word])
+                                @endforeach
+                            </div>
+                            <div class="d-flex justify-content-center mb-4">
+                                {{ $page->appends(array_merge(request()->except('page_w'.$loop->index), ['tab' => 'word-'.$loop->index]))->links() }}
+                            </div>
+                        @else
+                            <div class="alert alert-light">لا توجد نتائج تحتوي كلمة "{{ $word }}".</div>
+                          
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        @endif
+
+        </div> <!-- نهاية tab-content -->
+
+        {{-- <div class="row mt-4" id="results-tabs-bottom">
+            <div class="col-12">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link {{ $activeTab=='phrase' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-phrase" aria-controls="tab-phrase">مطابقة تامة <span class="badge rounded-pill bg-secondary ms-1">{{ $phraseTotal }}</span></button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link {{ $activeTab=='all' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-all" aria-controls="tab-all">جميع الكلمات <span class="badge rounded-pill bg-secondary ms-1">{{ $allTotal }}</span></button>
+                    </li>
+                    @if(!empty($categorizedResults['per_word']))
+                        @foreach($categorizedResults['per_word'] as $word => $page)
+                            <li class="nav-item">
+                                <button class="nav-link {{ $activeTab=='word-'.$loop->index ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-word-{{ $loop->index }}" aria-controls="tab-word-{{ $loop->index }}">نتائج بها كلمة "{{ $word }}" <span class="badge rounded-pill bg-secondary ms-1">{{ $page->total() }}</span></button>
+                            </li>
+                        @endforeach
+                    @endif
+                </ul>
+            </div>
+        </div> --}}
     @endif
 
     <!-- قائمة الوثائق -->
@@ -505,242 +588,15 @@
 
 @push('scripts')
 <script>
-// نظام الفلاتر بدون AJAX - تحديث الصفحة مباشرة
+// منع أي تمرير غير مرغوب فيه عند الضغط على التبويبات
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('filterForm');
-    if (!form) return;
-    
-    // مستمع للتغييرات على القوائم المنسدلة - إرسال النموذج فوراً
-    form.addEventListener('change', function(e) {
-        const target = e.target;
-        
-        // التحقق من أن العنصر المتغير هو قائمة منسدلة للحقول المخصصة أو عناصر أخرى
-        if (target.tagName === 'SELECT') {
-            // إرسال النموذج مباشرة عند تغيير أي قائمة منسدلة
-            form.submit();
-        }
-    });
-    
-    // زر مسح الفلاتر
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', function() {
-            // مسح جميع قيم النموذج
-            Array.from(form.elements).forEach(element => {
-                if (element.name && element.name.startsWith('fields[')) {
-                    element.value = '';
-                }
-            });
-            
-            // مسح قيمة البحث أيضاً
-            const searchInput = document.getElementById('search');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // إعادة توجيه إلى الصفحة بدون فلاتر
-            window.location.href = window.location.pathname;
-        });
-    }
-    
-    // دالة لتهيئة تأثيرات hover
-    function initHoverEffects() {
-        const hoverCards = document.querySelectorAll('.hover-card');
-        hoverCards.forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.classList.add('shadow-lg');
-                this.style.transform = 'translateY(-5px)';
-            });
-            
-            card.addEventListener('mouseleave', function() {
-                this.classList.remove('shadow-lg');
-                this.style.transform = 'translateY(0)';
-            });
-        });
-    }
-    
-    // تهيئة تأثيرات hover عند تحميل الصفحة
-    initHoverEffects();
-});
-
-// تأثيرات hover للبطاقات
-$(document).ready(function() {
-    $('.hover-card').hover(
-        function() {
-            $(this).addClass('shadow-lg').css('transform', 'translateY(-5px)');
-        },
-        function() {
-            $(this).removeClass('shadow-lg').css('transform', 'translateY(0)');
-        }
-    );
-});
-</script>
-@endpush
-
-@push('styles')
-<style>
-.hover-card {
-    transition: all 0.3s ease;
-    cursor: pointer;
-}
-
-.hover-card:hover {
-    transform: translateY(-5px);
-}
-
-.card-img-top {
-    transition: transform 0.3s ease;
-}
-
-.hover-card:hover .card-img-top {
-    transform: scale(1.05);
-}
-
-.badge {
-    font-size: 0.75em;
-}
-
-.form-label {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.5rem;
-}
-
-
-
-.bg-opacity-10 {
-    background-color: rgba(var(--bs-primary-rgb), 0.1) !important;
-}
-
-.border-top {
-    border-top: 1px solid #dee2e6 !important;
-}
-
-.fs-6 {
-    font-size: 1rem !important;
-}
-
-.form-control-sm {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-}
-
-.alert-info {
-    border-right: 4px solid #0dcaf0;
-}
-
-.pagination {
-    margin-bottom: 0;
-}
-
-.pagination .page-link {
-    color: #007bff;
-    border: 1px solid #dee2e6;
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // جعل القوائم المنسدلة تحدث الصفحة فوراً
-    const dropdowns = document.querySelectorAll('#sort, #per_page, select[name^="fields["][name$="]"]');
-    
-    dropdowns.forEach(function(dropdown) {
-        dropdown.addEventListener('change', function() {
-            document.getElementById('filterForm').submit();
+    const tabButtons = document.querySelectorAll('#results-tabs .nav-link, #results-tabs-bottom .nav-link');
+    tabButtons.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            const y = window.scrollY;
+            setTimeout(function(){ window.scrollTo(0, y); }, 0);
         });
     });
-    
-    // جعل قوائم التاريخ المنسدلة تحدث الصفحة فوراً
-    const dateDropdowns = document.querySelectorAll('select[name*="[day]"], select[name*="[month]"], select[name*="[year]"]');
-    
-    dateDropdowns.forEach(function(dropdown) {
-        dropdown.addEventListener('change', function() {
-            document.getElementById('filterForm').submit();
-        });
-    });
-});
-</script>
-
-<style>
-.pagination .page-item.active .page-link {
-    background-color: #007bff;
-    border-color: #007bff;
-}
-</style>
-@endpush
-
-
-
-@push('scripts')
-<script>
-// نظام الفلاتر بدون AJAX - تحديث الصفحة مباشرة
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('filterForm');
-    if (!form) return;
-    
-    // مستمع للتغييرات على القوائم المنسدلة - إرسال النموذج فوراً
-    form.addEventListener('change', function(e) {
-        const target = e.target;
-        
-        // التحقق من أن العنصر المتغير هو قائمة منسدلة للحقول المخصصة أو عناصر أخرى
-        if (target.tagName === 'SELECT') {
-            // إرسال النموذج مباشرة عند تغيير أي قائمة منسدلة
-            form.submit();
-        }
-    });
-    
-    // زر مسح الفلاتر
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', function() {
-            // مسح جميع قيم النموذج
-            Array.from(form.elements).forEach(element => {
-                if (element.name && element.name.startsWith('fields[')) {
-                    element.value = '';
-                }
-            });
-            
-            // مسح قيمة البحث أيضاً
-            const searchInput = document.getElementById('search');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // إعادة توجيه إلى الصفحة بدون فلاتر
-            window.location.href = window.location.pathname;
-        });
-    }
-    
-    // دالة لتهيئة تأثيرات hover
-    function initHoverEffects() {
-        const hoverCards = document.querySelectorAll('.hover-card');
-        hoverCards.forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.classList.add('shadow-lg');
-                this.style.transform = 'translateY(-5px)';
-            });
-            
-            card.addEventListener('mouseleave', function() {
-                this.classList.remove('shadow-lg');
-                this.style.transform = 'translateY(0)';
-            });
-        });
-    }
-    
-    // تهيئة تأثيرات hover عند تحميل الصفحة
-    initHoverEffects();
-});
-
-// تأثيرات hover للبطاقات
-$(document).ready(function() {
-    $('.hover-card').hover(
-        function() {
-            $(this).addClass('shadow-lg').css('transform', 'translateY(-5px)');
-        },
-        function() {
-            $(this).removeClass('shadow-lg').css('transform', 'translateY(0)');
-        }
-    );
 });
 </script>
 @endpush
@@ -1173,3 +1029,57 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 @endpush
 @endsection
+
+@push('scripts')
+<script>
+    (function(){
+        function setActiveInBothNavs(target){
+            var links = document.querySelectorAll('[data-bs-toggle="tab"]');
+            links.forEach(function(link){
+                var href = link.getAttribute('data-bs-target');
+                if(href === target){
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        }
+        function updateUrlTabParam(tab){
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', tab);
+            history.replaceState(null, '', url.toString());
+        }
+        document.addEventListener('shown.bs.tab', function (event) {
+            var target = event.target.getAttribute('data-bs-target'); // #tab-*
+            var tab = target.replace('#tab-','');
+            setActiveInBothNavs(target);
+            updateUrlTabParam(tab);
+        });
+    })();
+</script>
+@endpush
+
+@push('styles')
+<style>
+/* تقليل المسافة قبل وبعد تنبيهات عدم وجود نتائج داخل التبويبات */
+.tab-pane .alert {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+// منع أي تمرير غير مرغوب فيه عند الضغط على التبويبات
+document.addEventListener('DOMContentLoaded', function() {
+    const tabButtons = document.querySelectorAll('#results-tabs .nav-link, #results-tabs-bottom .nav-link');
+    tabButtons.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            const y = window.scrollY;
+            setTimeout(function(){ window.scrollTo(0, y); }, 0);
+        });
+    });
+});
+</script>
+@endpush

@@ -29,7 +29,7 @@
                             <select name="section" id="section" class="form-select">
                                 <option value="">كل الأقسام</option>
                                 @foreach($sections as $section)
-                                    <option value="{{ $section->id }}" {{ request('section') == $section->id ? 'selected' : '' }}>{{ app()->getLocale() === 'ar' ? $section->name : $section->name_en }}</option>
+                                    <option value="{{ $section->id }}" {{ request('section') == $section->id ? 'selected' : '' }}>{{ app()->getLocale() === 'ar' ? $section->name : $section->name_en }} ({{ $section->published_documents_count }})</option>
                                 @endforeach
                             </select>
                         </div>
@@ -66,7 +66,7 @@
                                         <p class="card-text text-muted mb-3">{{ Str::limit($section->description, 100) }}</p>
                                     @endif
                                     <div class="d-flex justify-content-center align-items-center mb-3">
-                                        <span class="badge bg-primary me-2">{{ $section->documents_count }} وثيقة</span>
+                                        <span class="badge bg-primary me-2">{{ $section->published_documents_count }} وثيقة</span>
       
                                     </div>
                                     @if($section->slug)

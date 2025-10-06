@@ -315,6 +315,29 @@ return [
     'operation_in_progress' => 'Operation in progress',
     'about' => 'About Us',
     'contact' => 'Contact Us',
+
+    // Contact Page
+    'address' => 'Address',
+    'phone' => 'Phone',
+    'email' => 'Email',
+    'name' => 'Name',
+    'subject' => 'Subject',
+    'message' => 'Message',
+    'send' => 'Send',
+    'contact_description' => 'Please reach out via the information below or send us a message using the form.',
+    'our_address' => 'Our Address',
+    'our_phone' => 'Our Phone',
+    'back_to_posts' => 'Back to Posts',
+    'contact_submitted' => 'Your message has been sent successfully. We will get back to you soon.',
+
+    // No Translation Page
+    'no_translation_title' => 'Translation not available',
+    'no_translation_message' => 'Sorry, this page is not available in the selected language yet.',
+    'back_home' => 'Back to Home',
+
+    // Privacy Page
+    'contact_privacy' => 'Privacy & Contact',
+    'contact_privacy_text' => 'For any privacy-related inquiries, please contact us using the information below.',
     
     // Footer
     'all_rights_reserved' => 'All rights reserved',

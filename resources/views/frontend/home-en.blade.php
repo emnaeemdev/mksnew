@@ -21,8 +21,11 @@
                                          class="card-img-top" 
                                          style="height: 250px; object-fit: cover;" 
                                          alt="{{ $post->title }}">
+                                    <div class="top-badge">
+                                        {{ optional($post->category)->name_en ?? 'Uncategorized' }}
+                                    </div>
                                     <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-3">
-                                        <span class="badge bg-light text-dark mb-2">{{ optional($post->category)->name_en ?? 'Uncategorized' }}</span>
+                                        
                                         <h6 class="mb-0 text-white">{{ $post->title_en ?: $post->title }}</h6>
                                     </div>
                                 </div>
@@ -107,6 +110,9 @@
                                              style="height: 180px; object-fit: cover;" 
                                              alt="{{ $post->title }}">
                                     @endif
+                                    <div class="top-badge">
+                                        {{ optional($post->category)->name_en ?? 'Uncategorized' }}
+                                    </div>
                                     <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-2">
                                         <h6 class="mb-0 text-white small">{{ $post->title_en ?: $post->title }}</h6>
                                     </div>
@@ -124,6 +130,19 @@
 
 @push('styles')
 <style>
+.position-relative { position: relative; }
+.top-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #ffffff;
+    color: #333;
+    border: 1px solid rgba(0,0,0,0.1);
+    padding: 0.25rem 0.4rem;
+    font-size: 0.75rem;
+    line-height: 1;
+    z-index: 3;
+}
 .hover-card {
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }

@@ -91,6 +91,11 @@
                                                    title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
+                                                <a href="{{ route('admin.nashras.show', $nashra->id) }}" 
+                                                   class="btn btn-sm btn-info" 
+                                                   title="عرض">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
                                                 <form action="{{ route('admin.nashras.destroy', $nashra->id) }}" 
                                                       method="POST" 
                                                       style="display: inline;"

@@ -65,9 +65,10 @@
                                             id="status" 
                                             name="status" 
                                             required>
-                                        <option value="draft" {{ old('status') == 'draft' ? 'selected' : '' }}>مسودة</option>
-                                        <option value="published" {{ old('status') == 'published' ? 'selected' : '' }}>منشور</option>
+                                        <option value="draft" {{ old('status', 'published') == 'draft' ? 'selected' : '' }}>مسودة</option>
+                                        <option value="published" {{ old('status', 'published') == 'published' ? 'selected' : '' }}>منشور</option>
                                     </select>
+
                                     @error('status')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -502,7 +503,7 @@
                                 <div class="tab-pane fade show active" id="display-ar" role="tabpanel">
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
-                                            <div class="form-check form-switch">
+                                            <div class="form-check form-switch" style="padding-left: 21.5em;">
                                                 <input class="form-check-input" 
                                                        type="checkbox" 
                                                        id="show_in_slider_ar" 
@@ -517,7 +518,7 @@
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
-                                            <div class="form-check form-switch">
+                                            <div class="form-check form-switch" style="padding-left: 21.5em;">
                                                 <input class="form-check-input" 
                                                        type="checkbox" 
                                                        id="show_in_releases_ar" 
@@ -532,7 +533,7 @@
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
-                                            <div class="form-check form-switch">
+                                            <div class="form-check form-switch" style="padding-left: 21.5em;">
                                                 <input class="form-check-input" 
                                                        type="checkbox" 
                                                        id="show_in_other_reports_ar" 
@@ -552,7 +553,7 @@
                                 <div class="tab-pane fade" id="display-en" role="tabpanel">
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
-                                            <div class="form-check form-switch">
+                                            <div class="form-check form-switch" style="padding-left: 21.5em;">
                                                 <input class="form-check-input" 
                                                        type="checkbox" 
                                                        id="show_in_slider_en" 
@@ -567,7 +568,7 @@
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
-                                            <div class="form-check form-switch">
+                                            <div class="form-check form-switch" style="padding-left: 21.5em;">
                                                 <input class="form-check-input" 
                                                        type="checkbox" 
                                                        id="show_in_releases_en" 
@@ -582,7 +583,7 @@
                                         </div>
                                         
                                         <div class="col-md-4 mb-3">
-                                            <div class="form-check form-switch">
+                                            <div class="form-check form-switch" style="padding-left: 21.5em;">
                                                 <input class="form-check-input" 
                                                        type="checkbox" 
                                                        id="show_in_other_reports_en" 

@@ -177,10 +177,10 @@
                                                name="title_en" 
                                                value="{{ old('title_en', $post->title_en) }}" 
                                                placeholder="Enter topic title in English (optional)">
-                                        <div class="form-text">
+                                        {{-- <div class="form-text">
                                             <i class="fas fa-info-circle me-1"></i>
                                             إذا لم يتم إدخال عنوان إنجليزي، سيتم استخدام العنوان العربي في النسخة الإنجليزية
-                                        </div>
+                                        </div> --}}
                                         @error('title_en')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror

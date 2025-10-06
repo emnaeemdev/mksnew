@@ -1,7 +1,8 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold" href="{{ route('home') }}">
-            <img alt="Logo" src="https://mksegypt.org/landing-assets/images/logo-arabic-header_mks.png" class="logo-dark">
+           
+            <img alt="Logo" src="{{ asset('images/logo-arabic-header_mks.png') }}" class="footer_logo" style="width: 100%;" />
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -12,7 +13,7 @@
             <ul class="navbar-nav me-2">
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
-                        <i class="fas fa-home me-1"></i>
+                       
                         {{ __('messages.home') }}
                     </a>
                 </li>
@@ -90,14 +91,14 @@
                 
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about', [app()->getLocale()]) }}">
-                        <i class="fas fa-info-circle me-1"></i>
+                       
                         {{ __('messages.about') }}
                     </a>
                 </li>
                 
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact', [app()->getLocale()]) }}">
-                        <i class="fas fa-envelope me-1"></i>
+                       
                         {{ __('messages.contact') }}
                     </a>
                 </li>
@@ -107,12 +108,12 @@
                 <!-- Language Switcher -->
                 <div>
                     @if(app()->getLocale() == 'ar')
-                        <a href="#" class="btn btn-outline-warning lang-switch" data-lang="en">
+                        <a href="#" class="btn custom-btn-lan-sw  lang-switch" data-lang="en">
                             <i class="fas fa-globe me-1"></i>
                             English
                         </a>
                     @else
-                        <a href="#" class="btn btn-outline-warning lang-switch" data-lang="ar">
+                        <a href="#" class="btn custom-btn-lan-sw lang-switch" data-lang="ar">
                             <i class="fas fa-globe me-1"></i>
                             العربية
                         </a>

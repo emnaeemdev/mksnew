@@ -41,7 +41,7 @@
                     </a>
                 </li>
                 <li class="breadcrumb-item">
-                    <a href="{{ route('posts.index', ['category' => $post->category->name_en ?: $post->category->slug]) }}">
+                    <a href="{{ route('posts.index', [app()->getLocale(), 'category' => $post->category->slug]) }}">
                         {{ $post->category->name }}
                     </a>
                 </li>
@@ -60,7 +60,7 @@
             <div class="post-hero-content">
                 <h1 class="post-hero-title">{{ $post->title }}</h1>
                 <div class="post-hero-meta">
-                    <a href="{{ route('posts.index', ['category' => $post->category->name_en ?: $post->category->slug]) }}" class="post-category me-3">
+                    <a href="{{ route('posts.index', [app()->getLocale(), 'category' => $post->category->slug]) }}" class="post-category me-3">
                         <i class="fas fa-tag me-1"></i>
                         {{ $post->category->name }}
                     </a>
@@ -91,7 +91,7 @@
                         <h1 class="post-title">{{ $post->title }}</h1>
                         <div class="post-meta">
                             <div class="post-meta-item">
-                                <a href="{{ route('posts.index', ['category' => $post->category->name_en ?: $post->category->slug]) }}" class="post-category">
+                                <a href="{{ route('posts.index', [app()->getLocale(), 'category' => $post->category->slug]) }}" class="post-category">
                                     <i class="fas fa-tag me-1"></i>
                                     {{ $post->category->name }}
                                 </a>
@@ -138,11 +138,14 @@
                                         </small>
                                     </div>
                                     <div class="col-md-4 text-end">
-                                        <a href="{{ $file->fileUrl }}" 
-                                           class="btn btn-primary btn-sm" download>
+                                        <a href="{{ route('posts.files.download', ['locale' => app()->getLocale(), 'file' => $file->id]) }}" 
+                                           class="btn btn-primary btn-sm">
                                             <i class="fas fa-download me-1"></i>
                                             {{ $currentLocale == 'ar' ? 'تحميل' : 'Download' }}
                                         </a>
+                                        <div class="mt-2 text-muted small">
+                                            {{ $currentLocale == 'ar' ? 'عدد التحميلات' : 'Downloads' }}: {{ $file->download_count ?? 0 }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -184,7 +187,7 @@
                                    
                                 </h6>
                                 <div class="d-flex gap-2 flex-wrap">
-                                    <a href="{{ route('posts.index', ['category' => $post->category->name_en ?: $post->category->slug]) }}"
+                                    <a href="{{ route('posts.index', [app()->getLocale(), 'category' => $post->category->slug]) }}"
                    class="btn btn-outline-primary btn-sm">
                                         <i class="fas fa-list me-1"></i>
                                         {{ app()->getLocale() == 'ar' ? ($post->category ? 'المزيد من ' . $post->category->name : 'كل المقالات') : ($post->category ? 'More from ' . $post->category->name : 'All posts') }}
@@ -211,7 +214,7 @@
                     </h4>
                     
                     @foreach($otherReportsPosts as $otherPost)
-                    <a href="{{ ($otherPost->category && $otherPost->category->name) ? route('content.show', [app()->getLocale(), $otherPost->category->name_en ?: $otherPost->category->slug, $otherPost->id]) : route('posts.index') }}" 
+                    <a href="{{ ($otherPost->category && $otherPost->category->name) ? route('content.show', [app()->getLocale(), $otherPost->category->slug, $otherPost->id]) : route('posts.index', [app()->getLocale()]) }}" 
                        class="related-post-card">
                         <img class="related-thumb" src="{{ $otherPost->featured_image ? asset('storage/' . $otherPost->featured_image) : 'https://via.placeholder.com/120x80?text=No+Image' }}" alt="{{ $otherPost->title }}">
                         <div class="related-post-body">
@@ -239,7 +242,7 @@
                     </h4>
                     
                     @foreach($relatedPosts as $relatedPost)
-                    <a href="{{ ($relatedPost->category && $relatedPost->category->name) ? route('content.show', [app()->getLocale(), $relatedPost->category->name_en ?: $relatedPost->category->slug, $relatedPost->id]) : route('posts.index') }}" class="related-post-card">
+                    <a href="{{ ($relatedPost->category && $relatedPost->category->name) ? route('content.show', [app()->getLocale(), $relatedPost->category->slug, $relatedPost->id]) : route('posts.index', [app()->getLocale()]) }}" class="related-post-card">
                         <img class="related-thumb" src="{{ $relatedPost->featured_image ? asset('storage/' . $relatedPost->featured_image) : 'https://via.placeholder.com/120x80?text=No+Image' }}" alt="{{ $relatedPost->title }}">
                         <div class="related-post-body">
                             <div class="related-post-title">{{ Str::limit($relatedPost->title, 60) }}</div>
@@ -256,7 +259,7 @@
                     @endforeach
                     
                     <div class="text-center mt-3">
-                        <a href="{{ route('posts.index', ['category' => $post->category->slug]) }}" 
+                        <a href="{{ route('posts.index', [app()->getLocale(), 'category' => $post->category->slug]) }}" 
                            class="btn btn-primary btn-sm">
                             <i class="fas fa-arrow-right me-1"></i>
                             {{ app()->getLocale() == 'ar' ? 'عرض المزيد' : 'View More' }}
@@ -272,7 +275,7 @@
 
     
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     
     <script>
         // Track page view time for analytics

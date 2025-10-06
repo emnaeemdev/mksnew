@@ -107,7 +107,13 @@ class HomeController extends Controller
      */
     public function contact($locale = null)
     {
-        return view('frontend.contact');
+        // توليد كابتشا حسابية بسيطة وحفظ الإجابة في السيشن
+        $a = random_int(1, 9);
+        $b = random_int(1, 9);
+        session(['contact_captcha_answer' => $a + $b]);
+        $captchaQuestion = "$a + $b";
+
+        return view('frontend.contact', compact('captchaQuestion'));
     }
     
     /**

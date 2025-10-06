@@ -120,17 +120,37 @@ body {
 
 
 .btn-primary {
-    background: linear-gradient(135deg, #2b4596 0%, #e9640a 100%);
-    border: none;
+    background-color: #6f8ea8;
+    border: 1px solid #6f8ea8;
     border-radius: 25px;
     padding: 10px 25px;
     font-weight: 600;
-    transition: all 0.3s ease;
+    color: #fff;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(43, 69, 150, 0.4);
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: #5f7e96;
+    border-color: #5f7e96;
+    color: #fff;
+    box-shadow: none;
+}
+
+/* توحيد نص الهيدر ولونه */
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .dropdown-item,
+.lang-switch {
+  color: #2b4596;
+}
+
+/* هوفر الهيدر */
+.navbar .nav-link:hover,
+.navbar .navbar-brand:hover,
+.navbar .dropdown-item:hover,
+.lang-switch:hover {
+  color: #e9640a;
 }
 
 .footer {
@@ -258,8 +278,8 @@ body {
 }
 
 .dropdown-item:hover {
-    background: linear-gradient(135deg, #2b4596 0%, #e9640a 100%);
-    color: white;
+    background-color: rgba(233, 100, 10, 0.12);
+    color: #e9640a;
     transform: translateX(5px);
 }
 
@@ -279,14 +299,15 @@ body {
 }
 
 .navbar .dropdown-item {
-    color: #333;
-    font-weight: 500;
+    color: #2b4596;
+    font-weight: 700;
     display: flex;
+    font-size: 14px;
 }
 
 .navbar .dropdown-item:hover {
-    background: linear-gradient(135deg, #2b4596 0%, #e9640a 100%);
-    color: white;
+    background-color: rgba(233, 100, 10, 0.12);
+    color: #e9640a;
 }
 
 /* Header Layout Improvements */
@@ -422,4 +443,92 @@ body {
     width: 95px;
     height: 62px;
   }
+}
+
+/* Header text: bold + 14px */
+.navbar .nav-link,
+.navbar .navbar-brand {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Dropdown items in header */
+.navbar .dropdown-item {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Language switch button in header */
+.lang-switch {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* Unify all buttons site-wide to single calm color */
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-warning,
+.btn-info,
+.btn-light,
+.btn-dark {
+  background-color: #6f8ea8;
+  border-color: #6f8ea8;
+  color: #fff;
+}
+
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-warning,
+.btn-outline-info,
+.btn-outline-light,
+.btn-outline-dark {
+  background-color: transparent;
+  border-color: #6f8ea8;
+  color: #6f8ea8;
+}
+
+/* Hover/focus unified behavior */
+.btn-secondary:hover,
+.btn-success:hover,
+.btn-danger:hover,
+.btn-warning:hover,
+.btn-info:hover,
+.btn-light:hover,
+.btn-dark:hover,
+.btn-secondary:focus,
+.btn-success:focus,
+.btn-danger:focus,
+.btn-warning:focus,
+.btn-info:focus,
+.btn-light:focus,
+.btn-dark:focus {
+  background-color: #5f7e96;
+  border-color: #5f7e96;
+  color: #fff;
+  box-shadow: none;
+}
+
+.btn-outline-primary:hover,
+.btn-outline-secondary:hover,
+.btn-outline-success:hover,
+.btn-outline-danger:hover,
+.btn-outline-warning:hover,
+.btn-outline-info:hover,
+.btn-outline-light:hover,
+.btn-outline-dark:hover,
+.btn-outline-primary:focus,
+.btn-outline-secondary:focus,
+.btn-outline-success:focus,
+.btn-outline-danger:focus,
+.btn-outline-warning:focus,
+.btn-outline-info:focus,
+.btn-outline-light:focus,
+.btn-outline-dark:focus {
+  background-color: #5f7e96;
+  border-color: #5f7e96;
+  color: #fff;
+  box-shadow: none;
 }

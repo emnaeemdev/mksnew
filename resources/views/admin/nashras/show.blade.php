@@ -169,6 +169,7 @@
                                                class="btn btn-outline-success">
                                                 <i class="fas fa-download"></i> تحميل الملف
                                             </a>
+                                            <div class="mt-2 text-muted small">عدد التحميلات: {{ $nashra->download_count ?? 0 }}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -186,11 +187,11 @@
                                               style="display: inline;">
                                             @csrf
                                             @method('PATCH')
-                                            <button type="submit" 
+                                            {{-- <button type="submit" 
                                                     class="btn {{ $nashra->status === 'published' ? 'btn-warning' : 'btn-success' }} w-100">
                                                 <i class="fas {{ $nashra->status === 'published' ? 'fa-eye-slash' : 'fa-eye' }}"></i>
                                                 {{ $nashra->status === 'published' ? 'إخفاء النشرة' : 'نشر النشرة' }}
-                                            </button>
+                                            </button> --}}
                                         </form>
                                         
                                         <a href="{{ route('admin.nashras.edit', $nashra->id) }}" 
@@ -239,7 +240,7 @@ $(document).ready(function() {
         container.html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i><p class="mt-2">جاري جلب البيانات...</p></div>');
         
         $.ajax({
-            url: '{{ route("frontend.nashras.get-sheet-data", $nashra->id) }}',
+            url: '{{ route("frontend.nashras.get-sheet-data", ["locale" => app()->getLocale(), "nashra" => $nashra->id]) }}',
             method: 'GET',
             success: function(response) {
                 if (response.success && response.data) {

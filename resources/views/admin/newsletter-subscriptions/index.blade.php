@@ -20,64 +20,66 @@
 </div>
 
 <div class="card">
-    <form id="bulkDeleteForm" method="POST" action="{{ route('admin.newsletter-subscriptions.bulk-delete') }}">
-        @csrf
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0 align-middle">
-                    <thead>
+    <!-- تمت إزالة نموذج الحذف الجماعي المغلف لتجنب مشكلة النماذج المتداخلة -->
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th style="width:36px"><input type="checkbox" id="selectAll"></th>
+                        <th>#</th>
+                        <th>الاسم</th>
+                        <th>البريد الإلكتروني</th>
+                        <th>تاريخ الاشتراك</th>
+                        <th class="text-end">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($subscriptions as $subscription)
                         <tr>
-                            <th style="width:36px"><input type="checkbox" id="selectAll"></th>
-                            <th>#</th>
-                            <th>الاسم</th>
-                            <th>البريد الإلكتروني</th>
-                            <th>تاريخ الاشتراك</th>
-                            <th class="text-end">إجراءات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($subscriptions as $subscription)
-                            <tr>
-                                <td><input type="checkbox" name="ids[]" value="{{ $subscription->id }}" class="row-check"></td>
-                                <td>{{ $subscription->id }}</td>
-                                <td>{{ $subscription->name }}</td>
-                                <td class="email-cell">{{ $subscription->email }}</td>
-                                <td>{{ $subscription->created_at->format('Y-m-d H:i') }}</td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary copy-email-btn" data-email="{{ $subscription->email }}" title="نسخ البريد">
-                                        <i class="fa fa-copy"></i>
+                            <td><input type="checkbox" name="ids[]" value="{{ $subscription->id }}" class="row-check"></td>
+                            <td>{{ $subscription->id }}</td>
+                            <td>{{ $subscription->name }}</td>
+                            <td class="email-cell">{{ $subscription->email }}</td>
+                            <td>{{ $subscription->created_at->format('Y-m-d H:i') }}</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-secondary copy-email-btn" data-email="{{ $subscription->email }}" title="نسخ البريد">
+                                    <i class="fa fa-copy"></i>
+                                </button>
+                                <form action="{{ route('admin.newsletter-subscriptions.destroy', $subscription) }}" method="POST" onsubmit="return confirm('حذف هذا الاشتراك؟');" class="d-inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        <i class="fa fa-trash"></i>
                                     </button>
-                                    <form action="{{ route('admin.newsletter-subscriptions.destroy', $subscription) }}" method="POST" onsubmit="return confirm('حذف هذا الاشتراك؟');" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="6" class="text-center">لا توجد اشتراكات حتى الآن</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="text-center">لا توجد اشتراكات حتى الآن</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
-        <div class="card-footer d-flex justify-content-between align-items-center">
+    </div>
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <div>
+            <!-- نموذج مخفي للحذف الجماعي يتم تعبئته ديناميكياً بـ ids المحددة -->
+            <form id="bulkDeleteForm" method="POST" action="{{ route('admin.newsletter-subscriptions.bulk-delete') }}" class="d-none">
+                @csrf
+            </form>
+            <button type="button" id="bulkDeleteBtn" class="btn btn-danger">
+                <i class="fa fa-trash me-1"></i> حذف جماعي
+            </button>
+        </div>
+        @if($subscriptions->hasPages())
             <div>
-                <button type="submit" class="btn btn-danger" onclick="return confirm('هل تريد حذف العناصر المحددة؟');">
-                    <i class="fa fa-trash me-1"></i> حذف جماعي
-                </button>
+                {{ $subscriptions->links() }}
             </div>
-            @if($subscriptions->hasPages())
-                <div>
-                    {{ $subscriptions->links() }}
-                </div>
-            @endif
-        </div>
-    </form>
+        @endif
+    </div>
 </div>
 @endsection
 
@@ -115,6 +117,32 @@
                         setTimeout(() => copyAllBtn.classList.remove('btn-success'), 800);
                     });
                 }
+            });
+        }
+
+        // الحذف الجماعي: جمع المعرفات وإرسالها عبر النموذج المخفي
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', function() {
+                const selected = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
+                if (selected.length === 0) {
+                    alert('يرجى اختيار عناصر للحذف');
+                    return;
+                }
+                if (!confirm('هل تريد حذف العناصر المحددة؟')) {
+                    return;
+                }
+                const form = document.getElementById('bulkDeleteForm');
+                // إزالة أي مدخلات ids سابقة مع الحفاظ على CSRF
+                form.querySelectorAll('input[name="ids[]"]').forEach(el => el.remove());
+                selected.forEach(id => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'ids[]';
+                    input.value = id;
+                    form.appendChild(input);
+                });
+                form.submit();
             });
         }
     });

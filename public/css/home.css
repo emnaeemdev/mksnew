@@ -1,11 +1,11 @@
 /* Home Page Styles */
 body {
     font-family: 'Cairo', sans-serif;
-    background-color: #f8f9fa;
+    background-color: #ffffff;
 }
 
 .navbar {
-    background: linear-gradient(135deg, #667eea 20%);
+    background: linear-gradient(135deg, #ffffff 20%);
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     z-index: 1030;
     
@@ -296,8 +296,31 @@ body {
 
 /* ✅ ضبط الصور داخل الحاوية */
 .main-image, .small-image {
-    position: relative; /* لتحديد موضع العنوان داخل الصورة */
+    position: relative; /* already set above, kept for clarity */
+    overflow: hidden; /* keep badge and overlays clipped inside image area */
 }
+
+.category-badge, .top-badge {
+    position: absolute;
+    top: 8px !important;
+    right: 8px !important;
+    background: #ffffff;
+    color: #333;
+    border: 1px solid rgba(0,0,0,0.15);
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    line-height: 1;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    z-index: 10; /* above overlay-title */
+}
+
+/* Optional RTL adjustment: keep on right; remove block to switch to left for RTL */
+/*
+[dir="rtl"] .category-badge, [dir="rtl"] .top-badge {
+    right: 8px !important;  
+}
+*/
 
 .custom-blog-image {
     width: 222px;
@@ -402,12 +425,9 @@ li {
 
 
 
-.footer {
-    background: #333;
-    color: white;
-    padding: 40px 0;
-    margin-top: 50px;
-}
+
+
+
 
 .language-switcher {
     margin-left: 15px;
@@ -469,7 +489,6 @@ li {
             color: rgba(51, 32, 153, 0.8);
         }
 
-        
         
         
         
@@ -739,14 +758,62 @@ li {
             padding: 10px 15px;
             border-radius: 8px;
             text-decoration: none;
-            color: white;
+            color: #fff;
             font-size: 0.9rem;
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background-color: #6f8ea8;
+            border: 1px solid #6f8ea8;
+        }
+
+        /* توحيد أزرار custom-btn إلى لون واحد (خارج .share-btn) */
+        .custom-btn {
+            background-color: #6f8ea8;
+            border: 1px solid #6f8ea8;
+            color: #fff;
+        }
+        .custom-btn:hover,
+        .custom-btn:focus {
+            background-color: #5f7e96;
+            border-color: #5f7e96;
+            color: #fff;
+            box-shadow: none;
+        }
+        .custom-btn.orange,
+        .custom-btn.blue {
+            background-color: #6f8ea8 !important;
+            border-color: #6f8ea8 !important;
+            color: #fff !important;
         }
         
-        .share-btn:hover {
-            transform: scale(1.05);
-            color: white;
+        .share-btn:hover,
+        .share-btn:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            color: #fff;
+        }
+        
+        /* remove per-network colors to keep one color across site */
+        .share-facebook,
+        .share-twitter,
+        .share-linkedin,
+        .share-whatsapp {
+            background-color: #6f8ea8 !important;
+            border-color: #6f8ea8 !important;
+        }
+        
+        /* Related posts button normalization if any specific class exists */
+        .related-posts .btn,
+        .related-post-card .btn {
+            background-color: #6f8ea8;
+            border-color: #6f8ea8;
+            color: #fff;
+        }
+        
+        .related-posts .btn:hover,
+        .related-post-card .btn:hover {
+            background-color: #5f7e96;
+            border-color: #5f7e96;
+            color: #fff;
         }
         
         .share-facebook { background: #3b5998; }
@@ -775,16 +842,49 @@ li {
         }
         
         .footer {
-            background: #333;
+            background: #a39c9c;
             color: white;
             padding: 40px 0;
             margin-top: 50px;
         }
+.footer_logo {
+    width: 100%;
+    max-width: 120px;
+    align-items: center;
+}
 
 
 
+ .custom-btn-lan-sw {
+        border: 2px solid;
+        color: inherit;
+        transition: all 0.3s ease;
+    }
 
+    /* اللون البرتقالي */
+    .custom-btn-lan-sw.orange {
+        border-color: #e9640a;
+        color: #e9640a;
+    }
 
+    .custom-btn-lan-sw.orange:hover {
+        background-color: #2b4596;
+        color: #fff;
+        border-color: #6f8ea8;
+        box-shadow: none;
+    }
+
+    /* اللون الأزرق */
+    .custom-btn-lan-sw.blue {
+        border-color: #2b4596;
+        color: #2b4596;
+    }
+
+    .custom-btn-lan-sw.orange:hover,
+    .custom-btn.blue:hover {
+        background-color: #2b4596;
+        color: #fff;
+    }
 
 
 

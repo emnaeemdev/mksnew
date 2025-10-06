@@ -92,7 +92,17 @@ class NashraController extends Controller
         if (!file_exists($filePath)) {
             abort(404, 'الملف غير موجود');
         }
-        return response()->download($filePath, $nashra->title_ar . '.pdf');
+
+        // منع تكرار العد في نفس الجلسة
+        $sessionKey = 'downloaded_nashras';
+        $downloaded = session()->get($sessionKey, []);
+        if (!in_array($nashra->id, $downloaded, true)) {
+            $nashra->increment('download_count');
+            $downloaded[] = $nashra->id;
+            session()->put($sessionKey, $downloaded);
+        }
+
+        return response()->download($filePath, ($nashra->title_ar ?: 'nashra') . '.pdf');
     }
 
     /**

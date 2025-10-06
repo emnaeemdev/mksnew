@@ -1,175 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تعليمات اختبار الفلاتر</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            padding: 40px;
-        }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-        }
-        .step {
-            background: #f8f9fa;
-            border-left: 5px solid #007bff;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 5px;
-        }
-        .step h3 {
-            color: #007bff;
-            margin-top: 0;
-        }
-        .code {
-            background: #2d3748;
-            color: #e2e8f0;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            margin: 10px 0;
-            overflow-x: auto;
-        }
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            color: #856404;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .button {
-            display: inline-block;
-            background: #007bff;
-            color: white;
-            padding: 12px 24px;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 10px 5px;
-            transition: background 0.3s;
-        }
-        .button:hover {
-            background: #0056b3;
-        }
-        .emoji {
-            font-size: 1.2em;
-            margin-left: 5px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🔍 اختبار الفلاتر المترابطة</h1>
-        
-        <div class="warning">
-            <strong>⚠️ مهم جداً:</strong> هذا الاختبار سيساعدنا في تحديد المشكلة بالضبط. يرجى اتباع الخطوات بالترتيب.
-        </div>
-
-        <div class="step">
-            <h3>الخطوة 1: افتح صفحة الوثائق <span class="emoji">📄</span></h3>
-            <p>اذهب إلى صفحة الوثائق التي تحتوي على الفلاتر:</p>
-            <a href="/ar/documents/section/test-section" class="button" target="_blank">افتح صفحة الوثائق</a>
-        </div>
-
-        <div class="step">
-            <h3>الخطوة 2: افتح أدوات المطور <span class="emoji">🛠️</span></h3>
-            <p>اضغط F12 أو انقر بالزر الأيمن واختر "فحص العنصر" ثم اذهب إلى تبويب "Console"</p>
-        </div>
-
-        <div class="step">
-            <h3>الخطوة 3: حمّل ملف الاختبار <span class="emoji">📥</span></h3>
-            <p>انسخ والصق الكود التالي في الكونسول:</p>
-            <div class="code">
-var script = document.createElement('script');<br>
-script.src = '/test_filter_debug.js';<br>
-document.head.appendChild(script);
-            </div>
-        </div>
-
-        <div class="step">
-            <h3>الخطوة 4: شغّل الاختبار الشامل <span class="emoji">🚀</span></h3>
-            <p>بعد تحميل الملف، شغّل الاختبار الشامل:</p>
-            <div class="code">
-testFilters.runFullTest();
-            </div>
-        </div>
-
-        <div class="step">
-            <h3>الخطوة 5: اختبارات إضافية <span class="emoji">🧪</span></h3>
-            <p>يمكنك تشغيل اختبارات محددة:</p>
-            <div class="code">
-// فحص القوائم المنسدلة<br>
-testFilters.checkDropdowns();<br><br>
-// اختبار AJAX للحقل 6<br>
-testFilters.testAjaxRequest('6', 'ساري ومعدل');<br><br>
-// محاكاة تغيير الفلتر<br>
-testFilters.simulateFilterChange('6', 'ساري ومعدل');
-            </div>
-        </div>
-
-        <div class="success">
-            <strong>✅ ما نبحث عنه:</strong>
-            <ul>
-                <li>هل يتم إرسال طلبات AJAX بنجاح؟</li>
-                <li>هل تصل البيانات من الخادم؟</li>
-                <li>هل يتم تحديث القوائم المنسدلة؟</li>
-                <li>هل توجد أخطاء في الكونسول؟</li>
-            </ul>
-        </div>
-
-        <div class="step">
-            <h3>الخطوة 6: أرسل النتائج <span class="emoji">📊</span></h3>
-            <p>انسخ جميع النتائج من الكونسول وأرسلها لي لتحليلها.</p>
-        </div>
-
-        <div class="warning">
-            <strong>💡 نصيحة:</strong> إذا لم تظهر أي نتائج، تأكد من أنك في الصفحة الصحيحة وأن الكونسول مفتوح.
-        </div>
-    </div>
-
-    <script>
-        // إضافة بعض المساعدات
-        console.log('🎯 صفحة تعليمات الاختبار محملة. اتبع الخطوات أعلاه.');
-        
-        // دالة مساعدة لتحميل ملف الاختبار
-        window.loadTestScript = function() {
-            var script = document.createElement('script');
-            script.src = '/test_filter_debug.js';
-            script.onload = function() {
-                console.log('✅ تم تحميل ملف الاختبار بنجاح!');
-                console.log('🚀 يمكنك الآن تشغيل: testFilters.runFullTest()');
-            };
-            script.onerror = function() {
-                console.error('❌ فشل في تحميل ملف الاختبار');
-            };
-            document.head.appendChild(script);
-        };
-        
-        console.log('💡 يمكنك استخدام loadTestScript() لتحميل ملف الاختبار مباشرة.');
-    </script>
-</body>
-</html>

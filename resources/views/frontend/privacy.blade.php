@@ -36,7 +36,7 @@
                         </div>
                         
                         <div class="text-center mt-4">
-                            <a href="{{ route('posts.index') }}" class="btn btn-primary btn-lg">
+                            <a href="{{ route('posts.index', [app()->getLocale()]) }}" class="btn btn-primary btn-lg">
                                 <i class="fas fa-arrow-left me-2"></i>
                                 {{ __('messages.back_to_posts') }}
                             </a>

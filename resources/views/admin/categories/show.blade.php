@@ -285,7 +285,7 @@
                     </a>
                     
                     @if($category->is_active)
-                        <a href="{{ route('posts.index', ['category' => $category->name]) }}" target="_blank" class="btn btn-outline-success">
+                        <a href="{{ route('posts.index', [app()->getLocale(), 'category' => $category->slug]) }}" target="_blank" class="btn btn-outline-success">
                             <i class="fas fa-external-link-alt me-2"></i>
                             عرض في الموقع
                         </a>

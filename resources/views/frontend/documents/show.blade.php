@@ -102,7 +102,7 @@
                         <button class="btn btn-outline-success btn-sm" onclick="shareDocument('whatsapp')">
                             <i class="fab fa-whatsapp me-1"></i> واتساب
                         </button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="copyDocumentLink()">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="copyDocumentLink(this)">
                             <i class="fas fa-link me-1"></i> نسخ الرابط
                         </button>
                         <button class="btn btn-outline-dark btn-sm" onclick="printDocument()">
@@ -122,254 +122,10 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- تمت إزالة "معلومات إضافية" من العمود الرئيسي وسيجري عرضها في الشريط الجانبي -->
-            
-            <!-- التنقل بين الوثائق -->
-            @if($previousDocument || $nextDocument)
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-body p-4">
-                        <div class="row">
-                            @if($previousDocument)
-                                <div class="col-md-6 mb-3 mb-md-0">
-                                    <div class="d-flex align-items-center">
-                                        <div class="me-3">
-                                            <i class="fas fa-arrow-right text-primary" style="font-size: 1.5rem;"></i>
-                                        </div>
-                                        <div>
-                                            <small class="text-muted d-block">الوثيقة السابقة</small>
-                                            @if($previousDocument->section && $previousDocument->section->slug)
-                                                <a href="{{ route('content.show', [app()->getLocale(), $previousDocument->section->name_en ?: $previousDocument->section->slug, $previousDocument->id]) }}" 
-                                                   class="text-decoration-none fw-bold">
-                                                    {{ Str::limit($previousDocument->title, 40) }}
-                                                </a>
-                                            @else
-                                                <span class="text-muted fw-bold">{{ Str::limit($previousDocument->title, 40) }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                            
-                            @if($nextDocument)
-                                <div class="col-md-6 text-md-end">
-                                    <div class="d-flex align-items-center {{ $previousDocument ? 'justify-content-md-end' : '' }}">
-                                        <div class="me-3 order-md-2">
-                                            <i class="fas fa-arrow-left text-primary" style="font-size: 1.5rem;"></i>
-                                        </div>
-                                        <div class="order-md-1">
-                                            <small class="text-muted d-block">الوثيقة التالية</small>
-                                            @if($nextDocument->section && $nextDocument->section->slug)
-                                                <a href="{{ route('content.show', [app()->getLocale(), $nextDocument->section->name_en ?: $nextDocument->section->slug, $nextDocument->id]) }}" 
-                                                   class="text-decoration-none fw-bold">
-                                                    {{ Str::limit($nextDocument->title, 40) }}
-                                                </a>
-                                            @else
-                                                <span class="text-muted fw-bold">{{ Str::limit($nextDocument->title, 40) }}</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            @endif
-        </div>
-        
-        <!-- الشريط الجانبي -->
-        <div class="col-lg-4">
-            <div class="sticky-top" style="top: 120px;">
-                @if($document->fieldValues->count() > 0)
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-light">
-                            <h6 class="card-title mb-0">
-                                <i class="fas fa-list-ul me-2"></i>
-                                معلومات إضافية
-                            </h6>
-                        </div>
-                        <div class="card-body p-3">
-                            <div class="row g-3">
-                                @foreach($document->fieldValues as $fieldValue)
-                                    <div class="col-12">
-                                        <div class="border rounded p-3 h-100">
-                                            <h6 class="text-primary mb-2">
-                                                <i class="fas fa-tag me-1"></i>
-                                                {{ $fieldValue->field->label }}
-                                            </h6>
-                                            
-                                            @switch($fieldValue->field->type)
-                                                @case('date')
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="fas fa-calendar text-success me-2"></i>
-                                                        <span class="fw-bold">{{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}</span>
-                                                    </div>
-                                                    @break
-                                                
-                                                @case('number')
-                                                    <div class="d-flex align-items-center">
-                                                        <i class="fas fa-hashtag text-info me-2"></i>
-                                                        <span class="fw-bold fs-5">{{ number_format($fieldValue->value) }}</span>
-                                                    </div>
-                                                    @break
-                                                
-                                                @case('select')
-                                                    <span class="badge bg-primary fs-6 px-3 py-2">{{ $fieldValue->value }}</span>
-                                                    @break
-                                                
-                                                @case('multiselect')
-                                                    @php
-                                                        $values = is_array($fieldValue->value) ? $fieldValue->value : (json_decode($fieldValue->value, true) ?: []);
-                                                    @endphp
-                                                    <div class="d-flex flex-wrap gap-1">
-                                                        @foreach($values as $value)
-                                                            <span class="badge bg-secondary">{{ $value }}</span>
-                                                        @endforeach
-                                                    </div>
-                                                    @break
-                                                
-                                                @case('file')
-                                                    <a href="{{ asset('storage/' . $fieldValue->value) }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                                        <i class="fas fa-download me-2"></i>
-                                                        تحميل الملف
-                                                    </a>
-                                                    @break
-                                                
-                                                @case('textarea')
-                                                    <div class="text-break" style="white-space: pre-wrap; line-height: 1.6;">{{ $fieldValue->value }}</div>
-                                                    @break
-                                                
-                                                @default
-                                                    <p class="mb-0 text-break fw-bold">{{ $fieldValue->value }}</p>
-                                            @endswitch
-                                            
-                                            @if($fieldValue->field->help_text)
-                                                <small class="text-muted d-block mt-2">
-                                                    <i class="fas fa-info-circle me-1"></i>
-                                                    {{ $fieldValue->field->help_text }}
-                                                </small>
-                                            @endif
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                @endif
 
-                <!-- معلومات سريعة -->
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-info-circle me-2"></i>
-                            معلومات الوثيقة
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <small class="text-muted d-block">القسم</small>
-                            @if($document->section && $document->section->slug)
-                                <a href="{{ route('frontend.documents.section', [app()->getLocale(), $document->section->slug]) }}" 
-                                   class="text-decoration-none">
-                            @else
-                                <span class="text-muted">
-                            @endif
-                                <span class="badge bg-primary">{{ app()->getLocale() === 'ar' ? (optional($document->section)->name ?? 'غير مصنّف') : (optional($document->section)->name_en ?? 'Uncategorized') }}</span>
-                            @if($document->section && $document->section->slug)
-                                </a>
-                            @else
-                                </span>
-                            @endif
-                        </div>
-                        
-                        <div class="mb-3">
-                            <small class="text-muted d-block">تاريخ النشر</small>
-                            <span class="fw-bold">{{ $document->created_at->format('Y-m-d') }}</span>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <small class="text-muted d-block">عدد المشاهدات</small>
-                            <span class="fw-bold text-primary">{{ number_format($document->views_count) }}</span>
-                        </div>
-                        
-                        @if($document->fieldValues->count() > 0)
-                            <div class="mb-3">
-                                <small class="text-muted d-block">الحقول المخصصة</small>
-                                <span class="fw-bold">{{ $document->fieldValues->count() }} حقل</span>
-                            </div>
-                        @endif
-                        
-                        <div class="mb-3">
-                            <small class="text-muted d-block">وقت القراءة المتوقع</small>
-                            <span class="fw-bold">
-                                {{ ceil(str_word_count(strip_tags($document->content)) / 200) }} دقيقة
-                            </span>
-                        </div>
-                        
-                        <div class="d-grid">
-                            @if($document->section && $document->section->slug)
-                                <a href="{{ route('frontend.documents.section', [app()->getLocale(), $document->section->slug]) }}" 
-                                   class="btn btn-outline-primary">
-                            @else
-                                <span class="btn btn-outline-secondary disabled">
-                            @endif
-                                <i class="fas fa-list me-2"></i>
-                                المزيد من {{ app()->getLocale() === 'ar' ? (optional($document->section)->name ?? 'قسم غير محدد') : (optional($document->section)->name_en ?? 'Undefined Section') }}
-                            @if($document->section && $document->section->slug)
-                                </a>
-                            @else
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- وثائق ذات صلة -->
-            @if($relatedDocuments->count() > 0)
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-light">
-                        <h6 class="card-title mb-0">
-                            <i class="fas fa-file-alt me-2"></i>
-                            وثائق ذات صلة
-                        </h6>
-                    </div>
-                    <div class="card-body p-0">
-                        @foreach($relatedDocuments as $related)
-                            <div class="p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
-                                <div class="d-flex">
-                                    <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
-                                         style="width: 60px; height: 60px;">
-                                        <i class="fas fa-file-alt text-muted"></i>
-                                    </div>
-                                    
-                                    <div class="flex-grow-1">
-                                        <h6 class="mb-1">
-                                            @if($related->section && $related->section->slug)
-                                                <a href="{{ route('content.show', [app()->getLocale(), $related->section->name_en ?: $related->section->slug, $related->id]) }}" class="text-dark text-decoration-none">
-                                                    {{ Str::limit($related->title, 50) }}
-                                                </a>
-                                            @else
-                                                <span class="text-muted">{{ Str::limit($related->title, 50) }}</span>
-                                            @endif
-                                        </h6>
-                                        <div class="d-flex align-items-center text-muted small">
-                                            <span class="me-2">
-                                                <i class="fas fa-eye me-1"></i>
-                                                {{ number_format($related->views_count) }}
-                                            </span>
-                                            <span>{{ $related->created_at->diffForHumans() }}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            @endif
             
             <!-- إحصائيات القسم -->
-            <div class="card border-0 shadow-sm">
+            {{-- <div class="card border-0 shadow-sm">
                 <div class="card-header bg-light">
                     <h6 class="card-title mb-0">
                         <i class="fas fa-chart-bar me-2"></i>
@@ -401,6 +157,137 @@
                         @endif
                     </div>
                 </div>
+            </div> --}}
+        </div>
+        <!-- الشريط الجانبي -->
+        <div class="col-lg-4">
+            <div class="sticky-top" style="top: 120px;">
+                @if($document->fieldValues->count() > 0)
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-list-ul me-2"></i>
+                                معلومات الوثيقة
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush">
+                                @foreach($document->fieldValues as $fieldValue)
+                                    <div class="list-group-item py-3">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="text-muted small fw-semibold">
+                                                <i class="fas fa-tag me-1"></i>
+                                                {{ $fieldValue->field->label }}
+                                            </div>
+                                            <div class="ms-2">
+                                                @switch($fieldValue->field->type)
+                                                    @case('date')
+                                                        <span class="fw-bold">
+                                                            <i class="fas fa-calendar text-success ms-2"></i>
+                                                            {{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}
+                                                        </span>
+                                                        @break
+                                                    @case('number')
+                                                        <span class="fw-bold">
+                                                            <i class="fas fa-hashtag text-info ms-2"></i>
+                                                            {{ number_format($fieldValue->value) }}
+                                                        </span>
+                                                        @break
+                                                    @case('select')
+                                                        @php
+                                                            $baseUrl = ($document->section && $document->section->slug)
+                                                                ? route('frontend.documents.section', [app()->getLocale(), $document->section->slug])
+                                                                : route('frontend.documents.index');
+                                                            $filterUrl = $baseUrl . '?' . http_build_query(['fields' => [ $fieldValue->field->id => $fieldValue->value ]]);
+                                                        @endphp
+                                                        <a href="{{ $filterUrl }}" class="badge bg-primary text-decoration-none" title="عرض كل الوثائق بنفس القيمة">
+                                                            {{ $fieldValue->value }}
+                                                        </a>
+                                                        @break
+                                                    @case('multiselect')
+                                                        @php
+                                                            $values = is_array($fieldValue->value) ? $fieldValue->value : (json_decode($fieldValue->value, true) ?: []);
+                                                            $baseUrl = ($document->section && $document->section->slug)
+                                                                ? route('frontend.documents.section', [app()->getLocale(), $document->section->slug])
+                                                                : route('frontend.documents.index');
+                                                        @endphp
+                                                        <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                                            @foreach($values as $value)
+                                                                @php($filterUrl = $baseUrl . '?' . http_build_query(['fields' => [ $fieldValue->field->id => $value ]]))
+                                                                <a href="{{ $filterUrl }}" class="badge bg-secondary text-decoration-none" title="عرض كل الوثائق بنفس القيمة">
+                                                                    {{ $value }}
+                                                                </a>
+                                                            @endforeach
+                                                        </div>
+                                                        @break
+                                                    @case('file')
+                                                        <a href="{{ asset('storage/' . $fieldValue->value) }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                                            <i class="fas fa-download me-2"></i>
+                                                            تحميل الملف
+                                                        </a>
+                                                        @break
+                                                    @case('textarea')
+                                                        <div class="text-break" style="white-space: pre-wrap; line-height: 1.6;">{{ $fieldValue->value }}</div>
+                                                        @break
+                                                    @default
+                                                        <span class="fw-bold text-dark">{{ $fieldValue->value }}</span>
+                                                @endswitch
+                                            </div>
+                                        </div>
+                                        @if($fieldValue->field->help_text)
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                {{ $fieldValue->field->help_text }}
+                                            </small>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                @if($relatedDocuments->count() > 0)
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="card-title mb-0">
+                                <i class="fas fa-file-alt me-2"></i>
+                                وثائق ذات صلة
+                            </h6>
+                        </div>
+                        <div class="card-body p-0">
+                            @foreach($relatedDocuments as $related)
+                                <div class="p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                    <div class="d-flex">
+                                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
+                                             style="width: 60px; height: 60px;">
+                                            <i class="fas fa-file-alt text-muted"></i>
+                                        </div>
+                                        
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                @if($related->section && $related->section->slug)
+                                                    <a href="{{ route('content.show', [app()->getLocale(), $related->section->name_en ?: $related->section->slug, $related->id]) }}" class="text-dark text-decoration-none">
+                                                        {{ Str::limit($related->title, 50) }}
+                                                    </a>
+                                                @else
+                                                    <span class="text-muted">{{ Str::limit($related->title, 50) }}</span>
+                                                @endif
+                                            </h6>
+                                            <div class="d-flex align-items-center text-muted small">
+                                                <span class="me-2">
+                                                    <i class="fas fa-eye me-1"></i>
+                                                    {{ number_format($related->views_count) }}
+                                                </span>
+                                                <span>{{ $related->created_at->diffForHumans() }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
@@ -412,8 +299,8 @@
 // مشاركة الوثيقة
 function shareDocument(platform) {
     const url = encodeURIComponent(window.location.href);
-    const title = encodeURIComponent('{{ $document->title }}');
-    const description = encodeURIComponent('{{ $document->excerpt ?: Str::limit(strip_tags($document->content), 100) }}');
+    const title = encodeURIComponent(@json($document->title));
+    const description = encodeURIComponent(@json($document->excerpt ?: Str::limit(strip_tags($document->content), 100)));
     
     let shareUrl = '';
     
@@ -435,23 +322,44 @@ function shareDocument(platform) {
 }
 
 // نسخ رابط الوثيقة
-function copyDocumentLink() {
-    navigator.clipboard.writeText(window.location.href).then(function() {
-        // إظهار رسالة نجاح
-        const button = event.target.closest('button');
-        const originalHtml = button.innerHTML;
+function copyDocumentLink(btn) {
+    const doUIFeedback = (button, originalHtml) => {
         button.innerHTML = '<i class="fas fa-check text-success me-1"></i> تم النسخ';
         button.classList.add('btn-success');
         button.classList.remove('btn-outline-secondary');
-        
         setTimeout(() => {
             button.innerHTML = originalHtml;
             button.classList.remove('btn-success');
             button.classList.add('btn-outline-secondary');
         }, 2000);
-    }).catch(function() {
-        alert('فشل في نسخ الرابط');
-    });
+    };
+
+    const button = btn;
+    const originalHtml = button.innerHTML;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(window.location.href)
+            .then(() => doUIFeedback(button, originalHtml))
+            .catch(() => {
+                // Fallback
+                const input = document.createElement('input');
+                input.value = window.location.href;
+                document.body.appendChild(input);
+                input.select();
+                try { document.execCommand('copy'); } catch (e) {}
+                document.body.removeChild(input);
+                doUIFeedback(button, originalHtml);
+            });
+    } else {
+        // Fallback
+        const input = document.createElement('input');
+        input.value = window.location.href;
+        document.body.appendChild(input);
+        input.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(input);
+        doUIFeedback(button, originalHtml);
+    }
 }
 
 // طباعة الوثيقة
@@ -459,32 +367,34 @@ function printDocument() {
     window.print();
 }
 
-$(document).ready(function() {
+// DOM Ready بدون jQuery
+document.addEventListener('DOMContentLoaded', function() {
     // تحسين تجربة القراءة
-    $('.document-content img').addClass('img-fluid rounded');
-    
+    document.querySelectorAll('.document-content img').forEach(img => {
+        img.classList.add('img-fluid', 'rounded');
+    });
+
     // إضافة تأثيرات للروابط
-    $('.document-content a').addClass('text-decoration-none').hover(
-        function() {
-            $(this).addClass('text-decoration-underline');
-        },
-        function() {
-            $(this).removeClass('text-decoration-underline');
-        }
-    );
-    
+    document.querySelectorAll('.document-content a').forEach(a => {
+        a.classList.add('text-decoration-none');
+        a.addEventListener('mouseenter', () => a.classList.add('text-decoration-underline'));
+        a.addEventListener('mouseleave', () => a.classList.remove('text-decoration-underline'));
+    });
+
     // تحسين الجداول
-    $('.document-content table').addClass('table table-striped table-responsive');
-    
+    document.querySelectorAll('.document-content table').forEach(tbl => {
+        tbl.classList.add('table', 'table-striped', 'table-responsive');
+    });
+
     // إضافة smooth scrolling للروابط الداخلية
-    $('a[href^="#"]').on('click', function(e) {
-        e.preventDefault();
-        const target = $(this.getAttribute('href'));
-        if (target.length) {
-            $('html, body').animate({
-                scrollTop: target.offset().top - 100
-            }, 500);
-        }
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                window.scrollTo({ top: target.offsetTop - 100, behavior: 'smooth' });
+            }
+        });
     });
 });
 </script>

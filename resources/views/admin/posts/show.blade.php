@@ -380,13 +380,13 @@
                                                     النوع: {{ $file->mime_type }}
                                                 </small>
                                             </div>
-                                            <div class="ms-3">
-                                                <a href="{{ $file->fileUrl }}" 
-                                                   class="btn btn-primary btn-sm"
-                                                   download="{{ $file->display_name }}">
+                                            <div class="ms-3 text-end">
+                                                <a href="{{ route('posts.files.download', ['locale' => 'ar', 'file' => $file->id]) }}" 
+                                                   class="btn btn-primary btn-sm">
                                                     <i class="fas fa-download me-1"></i>
                                                     تحميل
                                                 </a>
+                                                <div class="mt-1 text-muted small">عدد التحميلات: {{ $file->download_count ?? 0 }}</div>
                                             </div>
                                         </div>
                                     </div>

@@ -315,6 +315,29 @@ return [
     'operation_in_progress' => 'العملية قيد التنفيذ',
         'about' => 'عن الذاكرة',
     'contact' => 'أتصل بنا',
+
+    // Contact Page
+    'address' => 'العنوان',
+    'phone' => 'الهاتف',
+    'email' => 'البريد الإلكتروني',
+    'name' => 'الاسم',
+    'subject' => 'الموضوع',
+    'message' => 'الرسالة',
+    'send' => 'إرسال',
+    'contact_description' => 'يرجى التواصل معنا عبر المعلومات التالية أو إرسال رسالة عبر النموذج.',
+    'our_address' => 'عنواننا',
+    'our_phone' => 'هاتفنا',
+    'back_to_posts' => 'العودة إلى المواضيع',
+    'contact_submitted' => 'تم إرسال رسالتك بنجاح. سنعاود التواصل معك قريباً.',
+
+    // No Translation Page
+    'no_translation_title' => 'الترجمة غير متوفرة',
+    'no_translation_message' => 'عذراً، هذه الصفحة غير متوفرة باللغة المختارة حالياً.',
+    'back_home' => 'العودة إلى الصفحة الرئيسية',
+
+    // Privacy Page
+    'contact_privacy' => 'الخصوصية والتواصل',
+    'contact_privacy_text' => 'لأي استفسارات تتعلق بالخصوصية، يرجى التواصل معنا عبر المعلومات أدناه.',
     
     // Footer
     'all_rights_reserved' => 'جميع الحقوق محفوظة',

@@ -18,12 +18,14 @@ class Nashra extends Model
         'featured_image',
         'pdf_file',
         'status',
-        'sort_order'
+        'sort_order',
+        'download_count'
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
         'status' => 'boolean',
+        'download_count' => 'integer',
     ];
 
     /**

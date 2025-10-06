@@ -41,6 +41,9 @@ Route::group([
         }
         abort(404);
     })->where('slug', '[^0-9][^/]*'); // Only match non-numeric slugs
+    // Download specific attached file (placed before slug-based download to avoid route conflicts)
+    Route::get('/posts/files/{file}/download', [PostController::class, 'downloadAttachment'])->name('posts.files.download');
+    // Download post main file by category and slug
     Route::get('/posts/{category}/{slug}/download', [PostController::class, 'downloadFile'])->name('posts.download');
     
     // Documents Routes

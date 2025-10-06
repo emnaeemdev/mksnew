@@ -64,6 +64,9 @@
                             @if (session('success'))
                                 <div class="alert alert-success">{{ session('success') }}</div>
                             @endif
+                            @if (session('error'))
+                                <div class="alert alert-danger">{{ session('error') }}</div>
+                            @endif
                             @if ($errors->any())
                                 <div class="alert alert-danger">
                                     <ul class="mb-0">
@@ -96,13 +99,23 @@
                                     <label for="message" class="form-label">{{ __('messages.message') }}</label>
                                     <textarea id="message" name="message" rows="5" class="form-control" required>{{ old('message') }}</textarea>
                                 </div>
+
+                                <!-- حقل الكابتشا -->
+                                <div class="mb-3">
+                                    <label for="captcha_answer" class="form-label">{{ __('messages.captcha') }}: {{ $captchaQuestion ?? '' }}</label>
+                                    <input type="text" id="captcha_answer" name="captcha_answer" class="form-control @error('captcha_answer') is-invalid @enderror" value="{{ old('captcha_answer') }}" required>
+                                    @error('captcha_answer')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
                                 <button type="submit" class="btn btn-primary">{{ __('messages.send') }}</button>
                             </form>
                         </div>
                     </div>
 
                     <div class="text-center mt-4">
-                        <a href="{{ route('posts.index') }}" class="btn btn-secondary">
+                        <a href="{{ route('posts.index', [app()->getLocale()]) }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-2"></i>
                             {{ __('messages.back_to_posts') }}
                         </a>

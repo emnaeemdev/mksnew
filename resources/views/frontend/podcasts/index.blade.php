@@ -9,11 +9,15 @@
 <style>
 .podcast-card{box-shadow:0 2px 10px rgba(0,0,0,.08);border-radius:12px;overflow:hidden;transition:transform .2s;background:#fff}
 .podcast-card:hover{transform:translateY(-4px)}
-.podcast-cover{width:100%;height:180px;object-fit:cover;background:#f7f7f7}
+.podcast-cover{width:100%;height:400px;object-fit:cover;background:#f7f7f7}
 .podcast-body{padding:16px}
 .podcast-title{font-weight:700;font-size:1.05rem;color:#222;margin-bottom:8px}
 .podcast-meta{color:#777;font-size:.85rem}
 .search-input{border-radius:10px}
+
+/* جعل البطاقات بنفس الارتفاع */
+
+.row.g-4 > [class*="col-"] > a > .podcast-card{height:100%}
 </style>
 @endsection
 

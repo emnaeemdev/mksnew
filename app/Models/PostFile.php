@@ -16,12 +16,14 @@ class PostFile extends Model
         'file_size',
         'mime_type',
         'sort_order',
-        'language'
+        'language',
+        'download_count'
     ];
 
     protected $casts = [
         'file_size' => 'integer',
-        'sort_order' => 'integer'
+        'sort_order' => 'integer',
+        'download_count' => 'integer'
     ];
 
     /**
@@ -34,14 +36,6 @@ class PostFile extends Model
 
     /**
      * Get the post that owns the file.
-     */
-    public function post(): BelongsTo
-    {
-        return $this->belongsTo(Post::class);
-    }
-
-    /**
-     * Get the full URL for the file.
      */
     public function getFileUrlAttribute(): string
     {
@@ -90,5 +84,11 @@ class PostFile extends Model
         ];
         
         return in_array($this->mime_type, $documentTypes);
+    }
+
+    // إضافة علاقة مع Post
+    public function post(): BelongsTo
+    {
+        return $this->belongsTo(Post::class);
     }
 }

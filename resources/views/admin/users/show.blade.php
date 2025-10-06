@@ -48,14 +48,14 @@
                                     <td>{{ $user->email_verified_at->format('Y-m-d H:i:s') }}</td>
                                 </tr>
                                 @else
-                                <tr>
+                                {{-- <tr>
                                     <th>حالة البريد الإلكتروني</th>
                                     <td><span class="badge bg-warning">غير مؤكد</span></td>
-                                </tr>
+                                </tr> --}}
                                 @endif
                             </table>
                         </div>
-                        <div class="col-md-6">
+                        {{-- <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header">
                                     <h5 class="card-title">إحصائيات المستخدم</h5>
@@ -97,7 +97,7 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
             </div>

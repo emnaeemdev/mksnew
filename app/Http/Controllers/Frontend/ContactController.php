@@ -11,6 +11,19 @@ class ContactController extends Controller
 {
     public function submit($locale = null, Request $request)
     {
+        // تحقق الكابتشا قبل التحقق العام
+        $request->validate([
+            'captcha_answer' => 'required|numeric'
+        ], [
+            'captcha_answer.required' => __('messages.captcha_required'),
+            'captcha_answer.numeric' => __('messages.captcha_invalid'),
+        ]);
+
+        $expected = session('contact_captcha_answer');
+        if (!$expected || (int)$request->input('captcha_answer') !== (int)$expected) {
+            return back()->withInput()->with('error', __('messages.captcha_wrong'));
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -42,6 +55,9 @@ class ContactController extends Controller
                 \Log::warning('Mail send failed for inquiry', ['error' => $e->getMessage()]);
             }
         }
+
+        // إعادة توليد الكابتشا بعد الإرسال الناجح لمنع إعادة استخدام نفس الإجابة
+        session()->forget('contact_captcha_answer');
 
         return back()->with('success', __('messages.contact_submitted'));
     }

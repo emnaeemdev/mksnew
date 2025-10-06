@@ -1,6 +1,6 @@
 <footer class="footer mt-auto py-3 bg-light border-top">
     <div class="container-fluid">
-        <div class="row align-items-center">
+        {{-- <div class="row align-items-center">
             <div class="col-md-6">
                 <span class="text-muted">
                     &copy; {{ date('Y') }} {{ config('app.name', 'MK Snow') }}. جميع الحقوق محفوظة.
@@ -13,7 +13,7 @@
                     <a href="#" class="text-decoration-none">التوثيق</a>
                 </span>
             </div>
-        </div>
+        </div> --}}
     </div>
 </footer>
 

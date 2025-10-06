@@ -39,7 +39,7 @@
                         </h5>
                     </div>
                     <div class="col-md-6">
-                        <form method="GET" action="{{ route('posts.index', isset($category) ? ['category' => $category->name_en ?: $category->slug] : []) }}">
+                        <form method="GET" action="{{ route('posts.index', isset($category) ? [app()->getLocale(), 'category' => $category->slug] : [app()->getLocale()]) }}">
                             <div class="input-group">
                                 <input type="text" 
                                     class="form-control" 
@@ -62,7 +62,7 @@
                             {{ app()->getLocale() == 'ar' ? 'نتائج البحث عن:' : 'Search results for:' }} 
                             <strong>"{{ request('search') }}"</strong>
                         </span>
-                        <a href="{{ route('posts.index', isset($category) ? ['category' => $category->name_en ?: $category->slug] : []) }}" class="btn btn-sm btn-outline-secondary">
+                        <a href="{{ route('posts.index', isset($category) ? [app()->getLocale(), 'category' => $category->name_en ?: $category->slug] : [app()->getLocale()]) }}" class="btn btn-sm btn-outline-secondary">
                             <i class="fas fa-times me-1"></i>
                             {{ app()->getLocale() == 'ar' ? 'إلغاء البحث' : 'Clear Search' }}
                         </a>
@@ -83,9 +83,10 @@
                     @else
                     <img src="{{ asset('images/placeholder.jpg') }}" class="post-image post-image-hover" alt="{{ $post->title }}">
                     @endif
-                    <div class="post-title-overlay">
+                    <!-- Removed overlay to satisfy request -->
+                    <!-- <div class="post-title-overlay">
                         {{ $post->title }}
-                    </div>
+                    </div> -->
                 </a>
 
                 <div class="card-body">
@@ -123,7 +124,7 @@
             </p>
             
             @if(request('search'))
-            <a href="{{ route('posts.index', isset($category) ? ['category' => $category->name_en ?: $category->slug] : []) }}" class="btn btn-primary">
+            <a href="{{ route('posts.index', isset($category) ? [app()->getLocale(), 'category' => $category->slug] : [app()->getLocale()]) }}" class="btn btn-primary">
                 <i class="fas fa-arrow-left me-2"></i>
                 {{ app()->getLocale() == 'ar' ? 'عرض جميع المواضيع' : 'View All Topics' }}
             </a>

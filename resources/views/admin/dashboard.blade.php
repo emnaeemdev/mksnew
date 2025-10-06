@@ -173,7 +173,7 @@
                     
                     <hr>
                     
-                    <div class="text-center">
+                    {{-- <div class="text-center">
                         <h6 class="text-muted mb-2">تغيير اللغة</h6>
                         <div class="btn-group w-100" role="group">
                             <a href="{{ route('language.switch', 'ar') }}" class="btn btn-outline-secondary {{ app()->getLocale() == 'ar' ? 'active' : '' }}">
@@ -183,7 +183,7 @@
                                 English
                             </a>
                         </div>
-                    </div>
+                    </div> --}}
                 </div>
             </div>
         </div>
