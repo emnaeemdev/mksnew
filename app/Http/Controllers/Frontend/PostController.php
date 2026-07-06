@@ -266,7 +266,17 @@ class PostController extends Controller
         }
 
         // Use display name if available, else original name
-        $downloadName = $file->display_name ?: $file->original_name ?: basename($file->file_path);
-        return response()->download($fullPath, $downloadName);
+        // Use display name if available, else original name
+$downloadName = $file->display_name ?: $file->original_name ?: basename($file->file_path);
+
+// Get original extension
+$extension = pathinfo($file->original_name ?: $file->file_path, PATHINFO_EXTENSION);
+
+// Append extension if display name doesn't have one
+if ($file->display_name && pathinfo($downloadName, PATHINFO_EXTENSION) === '') {
+    $downloadName .= '.' . $extension;
+}
+
+return response()->download($fullPath, $downloadName);
     }
 }

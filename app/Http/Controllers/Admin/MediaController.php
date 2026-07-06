@@ -51,9 +51,12 @@ class MediaController extends Controller
     public function store(Request $request)
     {
 $request->validate([
-    'files.*' => 'nullable|mimes:jpg,jpeg,png,gif,svg,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:10240',
+    'files.*' => 'nullable|mimes:jpg,jpeg,png,gif,svg,webp,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:40240',
     'alt_text.*' => 'nullable|string|max:255',
     'description.*' => 'nullable|string'
+], [
+    'files.*.mimes' => 'نوع الملف غير مسموح به',
+    'files.*.max' => 'حجم الملف كبير جدًا'
 ]);
 
 

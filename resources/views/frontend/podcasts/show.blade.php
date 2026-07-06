@@ -7,31 +7,7 @@
 
 @section('styles')
 <style>
-.player{box-shadow:0 4px 20px rgba(0,0,0,.08);border-radius:16px;overflow:hidden;background:#fff}
-.player-cover{width:100%;height:360px;object-fit:contain;background:#f7f7f7}
-.player-body{padding:16px}
-.player-title{font-weight:800;font-size:1.3rem;margin-bottom:6px}
-.player-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.player-btn{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid #e5e5e5;background:#fff}
-.player-btn:hover{background:#f0f0f0}
-.seek{flex:1}
-.speed, .volume{min-width:120px}
-.wave{height:64px;background:#fafafa;border-radius:10px}
-.badges a{margin-inline-end:8px;margin-bottom:8px}
 
-/* تحسين شكل التحكم في الصوت */
-.volume-control{display:inline-flex;align-items:center;gap:8px}
-.volume-range{flex:1;appearance:none;height:6px;border-radius:999px;background:linear-gradient(90deg,#4caf50,#8bc34a)}
-.volume-range::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #4caf50;box-shadow:0 0 0 3px rgba(76,175,80,.15)}
-.volume-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #4caf50}
-
-/* تحسين شكل حلقات أخرى */
-.mini-episode{background:#fff;border:1px solid #eee;border-radius:12px;transition:transform .15s,box-shadow .15s}
-.mini-episode:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.08)}
-.mini-thumb{width:72px;height:72px;object-fit:cover;background:#f7f7f7}
-.mini-title{font-weight:700;color:#222}
-.mini-meta{color:#777;font-size:.85rem;padding-right: 7px;}
-.clamp-2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding-right: 7px;}
 </style>
 @endsection
 

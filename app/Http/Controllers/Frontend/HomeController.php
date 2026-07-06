@@ -40,14 +40,14 @@ class HomeController extends Controller
                                ->forReleasesAr()
                                ->orderBy('sort_order')
                                ->orderBy('published_at', 'desc')
-                               ->limit(8)
+                               ->limit(4)
                                ->get();
         } else {
             $releasePosts = Post::published()
                                ->forReleasesEn()
                                ->orderBy('sort_order')
                                ->orderBy('published_at', 'desc')
-                               ->limit(8)
+                               ->limit(4)
                                ->get();
         }
         
