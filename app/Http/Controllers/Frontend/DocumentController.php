@@ -548,11 +548,11 @@ class DocumentController extends Controller
     {
         $query = clone $baseQuery;
 
-        // البحث عبر العمود المُفهرَس مسبقاً
+        // البحث: نفس منطق نتائج البحث المصنّفة (بدون كلمات قصيرة مثل "و")
         if ($request->filled('search')) {
             $search = trim((string) $request->search);
             if ($search !== '') {
-                $query = $this->searchService->applySimpleSearchFilter($query, $search);
+                $query = $this->searchService->applySearchResultsFilter($query, $search, true);
             }
         }
 
@@ -620,7 +620,15 @@ class DocumentController extends Controller
      */
     protected function computeFieldCounts(DocumentSection $section, $customFields, Request $request)
     {
-        $cacheKey = 'doc_field_counts:' . $section->id . ':' . md5(json_encode($request->except(['page', 'page_phrase', 'page_all', 'page_p', 'page_a', 'page_any', 'page_w0', 'page_w1', 'page_w2', 'page_w3', 'tab'])));
+        $cacheKey = 'doc_field_counts:' . $section->id . ':' . md5(json_encode($request->except([
+            'page', 'page_phrase', 'page_all', 'page_p', 'page_a', 'page_any',
+            'page_w0', 'page_w1', 'page_w2', 'page_w3', 'tab', 'fragment',
+        ])));
+
+        // لا نخزّن أعداد الفلاتر أثناء البحث حتى تبقى محدّثة دائماً
+        if (trim((string) $request->get('search', '')) !== '') {
+            return $this->computeFieldCountsUncached($section, $customFields, $request);
+        }
 
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request) {
             return $this->computeFieldCountsUncached($section, $customFields, $request);

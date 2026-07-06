@@ -166,15 +166,37 @@ class DocumentSearchService
 
     public function applySimpleSearchFilter($query, string $searchTerm)
     {
+        return $this->applySearchResultsFilter($query, $searchTerm, false);
+    }
+
+    /**
+     * يقيّد الاستعلام بنفس مجموعة الوثائق الظاهرة في نتائج البحث المصنّفة.
+     */
+    public function applySearchResultsFilter($query, string $searchTerm, bool $withAlVariant = false)
+    {
         $parsed = $this->parseSearchQuery($searchTerm);
         if ($parsed['normalizedPhrase'] === '') {
             return $query;
         }
 
-        return $query->where(function (Builder $q) use ($parsed) {
+        if ($parsed['singleTokenExcluded']) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $q) use ($parsed, $withAlVariant) {
             $q->where('search_text', 'like', '%' . $parsed['normalizedPhrase'] . '%');
-            foreach ($parsed['tokens'] as $token) {
-                $q->orWhere('search_text', 'like', '%' . $token . '%');
+
+            if (!empty($parsed['tokensForAll'])) {
+                $q->orWhere(function (Builder $inner) use ($parsed, $withAlVariant) {
+                    $this->applyAllTokensMatch($inner, $parsed['tokensForAll'], $withAlVariant);
+                    $inner->where('search_text', 'not like', '%' . $parsed['normalizedPhrase'] . '%');
+                });
+            }
+
+            foreach ($parsed['tokensPerWord'] as $word) {
+                $q->orWhere(function (Builder $inner) use ($word, $withAlVariant) {
+                    $this->applyTokenOrVariants($inner, $word, $withAlVariant);
+                });
             }
         });
     }

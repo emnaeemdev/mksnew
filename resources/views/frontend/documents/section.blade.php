@@ -155,13 +155,16 @@
                                                             <option value="">جميع القيم</option>
                                                             @php
                                                                 $selectedValue = request("fields.{$field->id}");
-                                                                $hasActiveFilters = !empty(request('fields'));
+                                                                $hasActiveFilters = collect(request('fields', []))->flatten()->filter(fn ($v) => $v !== null && $v !== '')->isNotEmpty();
+                                                                $hasSearch = trim((string) request('search', '')) !== '';
                                                             @endphp
                                                             @if($field->options)
                                                                 @foreach($field->options as $option)
                                                                     @php
                                                                         $count = $fieldCounts[$field->id][$option] ?? null;
-                                                                        $showOption = !$hasActiveFilters || (!is_null($count) && (int)$count > 0) || ($selectedValue === $option);
+                                                                        $showOption = (!$hasActiveFilters && !$hasSearch)
+                                                                            || (!is_null($count) && (int) $count > 0)
+                                                                            || ($selectedValue === $option);
                                                                     @endphp
                                                                     @if($showOption)
                                                                         <option value="{{ $option }}" 
