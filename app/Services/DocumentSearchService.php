@@ -432,6 +432,27 @@ class DocumentSearchService
      *   unique: int
      * }
      */
+    protected function uniqueMatchSqlParts(string $table, array $parsed, bool $withAlVariant, array &$bindings): array
+    {
+        $parts = [$this->sqlPhraseMatch($table, $parsed, $withAlVariant, $bindings)];
+
+        if (count($parsed['tokens']) > 1 && !empty($parsed['tokensForAll'])) {
+            $andParts = [];
+            foreach ($parsed['tokensForAll'] as $token) {
+                $andParts[] = $this->sqlWordVariantsMatch($table, $token, $withAlVariant, $bindings);
+            }
+            $parts[] = '(' . implode(' AND ', $andParts) . ')';
+        }
+
+        if (count($parsed['tokens']) > 1) {
+            foreach ($parsed['tokensPerWord'] as $word) {
+                $parts[] = $this->sqlWordVariantsMatch($table, $word, $withAlVariant, $bindings);
+            }
+        }
+
+        return $parts;
+    }
+
     public function computeTabCounts(Builder $baseQuery, array $parsed, bool $withAlVariant = false): array
     {
         if ($parsed['singleTokenExcluded']) {
@@ -443,53 +464,44 @@ class DocumentSearchService
             return ['phrase' => 0, 'all' => 0, 'per_word' => $perWordCounts, 'unique' => 0];
         }
 
-        $query = clone $baseQuery;
-        $table = $query->getModel()->getTable();
+        $table = $baseQuery->getModel()->getTable();
+        $subAlias = 'search_docs';
+
+        $innerQuery = (clone $baseQuery)->select([
+            $table . '.search_text',
+            $table . '.search_words',
+        ]);
+
         $selects = [];
         $bindings = [];
 
-        $phraseCondition = $this->sqlPhraseMatch($table, $parsed, $withAlVariant, $bindings);
+        $phraseCondition = $this->sqlPhraseMatch($subAlias, $parsed, $withAlVariant, $bindings);
         $selects[] = 'SUM(CASE WHEN ' . $phraseCondition . ' THEN 1 ELSE 0 END) AS phrase_count';
 
-        if (!empty($parsed['tokensForAll'])) {
+        if (!empty($parsed['tokensForAll']) && count($parsed['tokens']) > 1) {
             $andParts = [];
             foreach ($parsed['tokensForAll'] as $token) {
-                $andParts[] = $this->sqlWordVariantsMatch($table, $token, $withAlVariant, $bindings);
+                $andParts[] = $this->sqlWordVariantsMatch($subAlias, $token, $withAlVariant, $bindings);
             }
             $allCondition = '(' . implode(' AND ', $andParts) . ')';
-            if (count($parsed['tokens']) > 1) {
-                $selects[] = 'SUM(CASE WHEN ' . $allCondition . ' AND ' . $table . '.search_text NOT LIKE ? THEN 1 ELSE 0 END) AS all_count';
-                $bindings[] = '%' . $parsed['normalizedPhrase'] . '%';
-            } else {
-                $selects[] = '0 AS all_count';
-            }
+            $selects[] = 'SUM(CASE WHEN ' . $allCondition . ' AND ' . $subAlias . '.search_text NOT LIKE ? THEN 1 ELSE 0 END) AS all_count';
+            $bindings[] = '%' . $parsed['normalizedPhrase'] . '%';
         } else {
             $selects[] = '0 AS all_count';
         }
 
         foreach ($parsed['tokensPerWord'] as $idx => $word) {
-            $wordCondition = $this->sqlWordVariantsMatch($table, $word, $withAlVariant, $bindings);
-            $alias = 'word_' . $idx;
-            $selects[] = 'SUM(CASE WHEN ' . $wordCondition . ' THEN 1 ELSE 0 END) AS ' . $alias;
+            $wordCondition = $this->sqlWordVariantsMatch($subAlias, $word, $withAlVariant, $bindings);
+            $selects[] = 'SUM(CASE WHEN ' . $wordCondition . ' THEN 1 ELSE 0 END) AS word_' . $idx;
         }
 
-        $uniqueSqlParts = [];
-        $uniqueBindings = [];
-        $uniqueSqlParts[] = $this->sqlPhraseMatch($table, $parsed, $withAlVariant, $uniqueBindings);
-        if (!empty($parsed['tokensForAll'])) {
-            $allUniqueParts = [];
-            foreach ($parsed['tokensForAll'] as $token) {
-                $allUniqueParts[] = $this->sqlWordVariantsMatch($table, $token, $withAlVariant, $uniqueBindings);
-            }
-            $uniqueSqlParts[] = '(' . implode(' AND ', $allUniqueParts) . ')';
-        }
-        foreach ($parsed['tokensPerWord'] as $word) {
-            $uniqueSqlParts[] = $this->sqlWordVariantsMatch($table, $word, $withAlVariant, $uniqueBindings);
-        }
-        $selects[] = 'SUM(CASE WHEN (' . implode(' OR ', $uniqueSqlParts) . ') THEN 1 ELSE 0 END) AS unique_count';
-        $bindings = array_merge($bindings, $uniqueBindings);
+        $uniqueParts = $this->uniqueMatchSqlParts($subAlias, $parsed, $withAlVariant, $bindings);
+        $selects[] = 'SUM(CASE WHEN (' . implode(' OR ', $uniqueParts) . ') THEN 1 ELSE 0 END) AS unique_count';
 
-        $row = $query->selectRaw(implode(', ', $selects), $bindings)->first();
+        $row = DB::query()
+            ->fromSub($innerQuery, $subAlias)
+            ->selectRaw(implode(', ', $selects), $bindings)
+            ->first();
 
         $perWordCounts = [];
         foreach ($parsed['tokensPerWord'] as $idx => $word) {
