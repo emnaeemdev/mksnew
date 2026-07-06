@@ -13,9 +13,10 @@ class DocumentObserver
 
     public function saved(Document $document): void
     {
-        $searchText = $this->searchService->buildSearchText($document);
-        if ($document->search_text !== $searchText) {
-            $document->search_text = $searchText;
+        $index = $this->searchService->buildSearchIndex($document);
+        if ($document->search_text !== $index['search_text'] || $document->search_words !== $index['search_words']) {
+            $document->search_text = $index['search_text'];
+            $document->search_words = $index['search_words'];
             $document->saveQuietly();
         }
     }

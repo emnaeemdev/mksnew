@@ -24,6 +24,7 @@ class Document extends Model
         'views_count',
         'user_id',
         'search_text',
+        'search_words',
     ];
 
     protected $casts = [

@@ -70,6 +70,20 @@ class DocumentController extends Controller
         ));
     }
 
+    protected function documentSearchHighlightData(): array
+    {
+        $searchQuery = trim((string) request('search', ''));
+        $searchHighlightTokens = [];
+        if ($searchQuery !== '') {
+            $parsed = $this->searchService->parseSearchQuery($searchQuery);
+            $searchHighlightTokens = $this->searchService->uniqueTokensPreserveOrder(
+                array_merge($parsed['tokensForAll'], $parsed['tokensPerWord'])
+            );
+        }
+
+        return compact('searchQuery', 'searchHighlightTokens');
+    }
+
     public function show($locale, $document)
     {
         \Log::info('Frontend.DocumentController@show invoked', ['locale' => $locale, 'param' => is_object($document) ? get_class($document) : $document]);
@@ -136,13 +150,16 @@ class DocumentController extends Controller
             'total_views' => (int) Document::published()->where('section_id', $doc->section_id)->sum('views_count'),
         ];
 
-        return view('frontend.documents.show', [
-            'document' => $doc,
-            'relatedDocuments' => $relatedDocuments,
-            'previousDocument' => $previousDocument,
-            'nextDocument' => $nextDocument,
-            'sectionStats' => $sectionStats,
-        ]);
+        return view('frontend.documents.show', array_merge(
+            [
+                'document' => $doc,
+                'relatedDocuments' => $relatedDocuments,
+                'previousDocument' => $previousDocument,
+                'nextDocument' => $nextDocument,
+                'sectionStats' => $sectionStats,
+            ],
+            $this->documentSearchHighlightData()
+        ));
     }
 
     public function search(Request $request)
@@ -544,17 +561,9 @@ class DocumentController extends Controller
     /**
      * تطبيق الفلاتر باستثناء حقل معين (لاستخدامه عند حساب الأعداد)
      */
-    protected function applyFiltersExcludingField($baseQuery, $customFields, Request $request, $excludeFieldId)
+    protected function applyFieldFiltersExcluding($baseQuery, $customFields, Request $request, $excludeFieldId)
     {
         $query = clone $baseQuery;
-
-        // البحث: نفس منطق نتائج البحث المصنّفة (بدون كلمات قصيرة مثل "و")
-        if ($request->filled('search')) {
-            $search = trim((string) $request->search);
-            if ($search !== '') {
-                $query = $this->searchService->applySearchResultsFilter($query, $search, true);
-            }
-        }
 
         foreach ($customFields as $field) {
             if ($field->id === $excludeFieldId) continue;
@@ -615,6 +624,19 @@ class DocumentController extends Controller
         return $query;
     }
 
+    protected function applyFiltersExcludingField($baseQuery, $customFields, Request $request, $excludeFieldId)
+    {
+        $query = clone $baseQuery;
+        if ($request->filled('search')) {
+            $search = trim((string) $request->search);
+            if ($search !== '') {
+                $query = $this->searchService->applySearchResultsFilter($query, $search, true);
+            }
+        }
+
+        return $this->applyFieldFiltersExcluding($query, $customFields, $request, $excludeFieldId);
+    }
+
     /**
      * حساب الأعداد لكل الخيارات في القوائم المنسدلة ومكونات التاريخ
      */
@@ -625,11 +647,7 @@ class DocumentController extends Controller
             'page_w0', 'page_w1', 'page_w2', 'page_w3', 'tab', 'fragment',
         ])));
 
-        // لا نخزّن أعداد الفلاتر أثناء البحث حتى تبقى محدّثة دائماً
-        if (trim((string) $request->get('search', '')) !== '') {
-            return $this->computeFieldCountsUncached($section, $customFields, $request);
-        }
-
+        // تخزين مؤقت لأعداد الفلاتر (يشمل البحث) لتجنب عشرات الاستعلامات الثقيلة
         return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request) {
             return $this->computeFieldCountsUncached($section, $customFields, $request);
         });
@@ -639,10 +657,13 @@ class DocumentController extends Controller
     {
         $counts = [];
         $baseQuery = Document::query()->published()->where('section_id', $section->id);
+        $searchTerm = trim((string) $request->get('search', ''));
+        if ($searchTerm !== '') {
+            $baseQuery = $this->searchService->applySearchResultsFilter($baseQuery, $searchTerm, true);
+        }
 
         foreach ($customFields as $field) {
-            // طبّق جميع الفلاتر ما عدا هذا الحقل
-            $filteredQuery = $this->applyFiltersExcludingField($baseQuery, $customFields, $request, $field->id);
+            $filteredQuery = $this->applyFieldFiltersExcluding($baseQuery, $customFields, $request, $field->id);
 
             if (in_array($field->type, ['select', 'radio'])) {
                 $rows = (clone $filteredQuery)
@@ -993,7 +1014,13 @@ class DocumentController extends Controller
             // توجيه إلى المسار القانوني إذا كان السِّـلَج الوارد غير مطابق، وذلك لكل من الوثائق والمقالات، مع الحفاظ على سلوك الزيادة في المشاهدات وجلب العناصر ذات الصلة.
             $expectedSectionSlug = optional($doc->section)->name_en ?: optional($doc->section)->slug;
             if ($expectedSectionSlug && $expectedSectionSlug !== $sectionSlug) {
-                return redirect()->route('content.show', [$locale, $expectedSectionSlug, $doc->id], 301);
+                $url = route('content.show', [$locale, $expectedSectionSlug, $doc->id]);
+                $queryString = request()->getQueryString();
+                if ($queryString) {
+                    $url .= '?' . $queryString;
+                }
+
+                return redirect()->to($url, 301);
             }
 
             // زيادة عدد المشاهدات
@@ -1038,13 +1065,16 @@ class DocumentController extends Controller
                 'total_views' => (int) Document::published()->where('section_id', $doc->section_id)->sum('views_count'),
             ];
 
-            return view('frontend.documents.show', [
-                'document' => $doc,
-                'relatedDocuments' => $relatedDocuments,
-                'previousDocument' => $previousDocument,
-                'nextDocument' => $nextDocument,
-                'sectionStats' => $sectionStats,
-            ]);
+            return view('frontend.documents.show', array_merge(
+                [
+                    'document' => $doc,
+                    'relatedDocuments' => $relatedDocuments,
+                    'previousDocument' => $previousDocument,
+                    'nextDocument' => $nextDocument,
+                    'sectionStats' => $sectionStats,
+                ],
+                $this->documentSearchHighlightData()
+            ));
         }
 
         // إذا لم يُعثر على وثيقة ولا مقال بهذا المعرّف

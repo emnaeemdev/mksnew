@@ -3,7 +3,23 @@
 @section('title', $document->title)
 @section('description', $document->excerpt ?: Str::limit(strip_tags($document->content), 160))
 
+@push('styles')
+<style>
+    .document-content mark,
+    h1 mark,
+    .alert mark {
+        background-color: #fff3cd;
+        padding: 0 .15em;
+        border-radius: 2px;
+    }
+</style>
+@endpush
+
 @section('content')
+@php
+    $searchHelper = app(\App\Services\DocumentSearchService::class);
+    $hasSearchHighlight = !empty($searchHighlightTokens ?? []);
+@endphp
 <div class="container py-5">
     <!-- التنقل -->
     <div class="row mb-4">
@@ -60,7 +76,19 @@
                     </div>
                     
                     <!-- العنوان -->
-                    <h1 class="display-6 fw-bold text-dark mb-3">{{ $document->title }}</h1>
+                    <h1 class="display-6 fw-bold text-dark mb-3">
+                        @if($hasSearchHighlight)
+                            @php
+                                $titleHighlighted = $document->title;
+                                foreach ($searchHighlightTokens as $token) {
+                                    $titleHighlighted = $searchHelper->highlightTokenInText($titleHighlighted, $token, true);
+                                }
+                            @endphp
+                            {!! $titleHighlighted !!}
+                        @else
+                            {{ $document->title }}
+                        @endif
+                    </h1>
                     
                     <!-- الملخص -->
                     @if($document->excerpt)
@@ -69,7 +97,19 @@
                                 <i class="fas fa-info-circle me-2"></i>
                                 ملخص الوثيقة
                             </h6>
-                            <p class="mb-0 lead">{{ $document->excerpt }}</p>
+                            <p class="mb-0 lead">
+                                @if($hasSearchHighlight)
+                                    @php
+                                        $excerptHighlighted = $document->excerpt;
+                                        foreach ($searchHighlightTokens as $token) {
+                                            $excerptHighlighted = $searchHelper->highlightTokenInText($excerptHighlighted, $token, true);
+                                        }
+                                    @endphp
+                                    {!! $excerptHighlighted !!}
+                                @else
+                                    {{ $document->excerpt }}
+                                @endif
+                            </p>
                         </div>
                     @endif
                     
@@ -118,7 +158,11 @@
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
                     <div class="document-content">
-                        {!! $document->content !!}
+                        @if($hasSearchHighlight)
+                            {!! $searchHelper->highlightTokensInHtml($document->content, $searchHighlightTokens, true) !!}
+                        @else
+                            {!! $document->content !!}
+                        @endif
                     </div>
                 </div>
             </div>

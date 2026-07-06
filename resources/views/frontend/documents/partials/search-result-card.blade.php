@@ -5,6 +5,11 @@
         $documentShowUrl = $sectionSlug
             ? route('content.show', [$locale, $sectionSlug, $document->id])
             : route('content.show', [$locale, 'documents', $document->id]);
+        $searchHelper = app(\App\Services\DocumentSearchService::class);
+        $searchParam = trim((string) request('search', $rawSearch ?? ''));
+        if ($searchParam !== '') {
+            $documentShowUrl .= (str_contains($documentShowUrl, '?') ? '&' : '?') . 'search=' . urlencode($searchParam);
+        }
     @endphp
     <a href="{{ $documentShowUrl }}" 
        class="text-decoration-none">
@@ -77,74 +82,21 @@
                             <p class="text-muted mb-3">
                                 @if($matchType === 'exact' && !empty($rawSearch))
                                     @php
-                                        $pattern = '/' . preg_quote($rawSearch, '/') . '/iu';
-                                        $excerptMarked = preg_replace($pattern, '<mark>$0</mark>', $excerptShort);
+                                        $excerptMarked = $searchHelper->highlightTokenInText($excerptShort, $searchHelper->normalizeArabic($rawSearch), true);
                                     @endphp
                                     {!! $excerptMarked !!}
                                 @elseif($matchType === 'all')
                                     @php
-                                        $words = [];
-                                        if(isset($tokens) && is_array($tokens)) { $words = $tokens; }
-                                        else {
-                                            $words = preg_split('/\s+/u', trim(request('search', '')), -1, PREG_SPLIT_NO_EMPTY);
-                                        }
-                                        $uniqueWords = [];
-                                        foreach($words as $w){ $w = trim($w); if($w !== '' && !in_array($w, $uniqueWords, true)) $uniqueWords[] = $w; }
-                                        // Arabic-aware pattern builder for excerpt highlighting (tolerates variants and diacritics/tatweel)
-                                        $makePatternInline = function($word) {
-                                            $chars = preg_split('//u', (string)$word, -1, PREG_SPLIT_NO_EMPTY);
-                                            $map = [
-                                                'ا' => '[اأإآٱ]',
-                                                'أ' => '[اأإآٱ]',
-                                                'إ' => '[اأإآٱ]',
-                                                'آ' => '[اأإآٱ]',
-                                                'ٱ' => '[اأإآٱ]',
-                                                'ه' => '[هة]',
-                                                'ة' => '[هة]',
-                                                'ي' => '[يىئ]',
-                                                'ى' => '[يىئ]',
-                                                'ؤ' => '[وؤ]',
-                                                'و' => '[وؤ]',
-                                                'ئ' => '[يىئ]',
-                                            ];
-                                            $pat = '';
-                                            foreach($chars as $ch){
-                                                $pat .= ($map[$ch] ?? preg_quote($ch, '/')) . '[\x{064B}-\x{0652}\x{0640}]*';
-                                            }
-                                            return '/(' . $pat . ')/iu';
-                                        };
+                                        $words = isset($tokens) && is_array($tokens) ? $tokens : preg_split('/\s+/u', trim(request('search', '')), -1, PREG_SPLIT_NO_EMPTY);
                                         $excerptMarked = $excerptShort;
-                                        foreach($uniqueWords as $w){
-                                            $excerptMarked = preg_replace($makePatternInline($w), '<mark>$0</mark>', $excerptMarked);
+                                        foreach (array_unique(array_filter($words)) as $w) {
+                                            $excerptMarked = $searchHelper->highlightTokenInText($excerptMarked, $searchHelper->normalizeArabic($w), true);
                                         }
                                     @endphp
                                     {!! $excerptMarked !!}
                                 @elseif($matchType === 'any' && !empty($word))
                                     @php
-                                        // Use Arabic-aware regex for highlighting single word in excerpt
-                                        $makePatternInline = function($word) {
-                                            $chars = preg_split('//u', (string)$word, -1, PREG_SPLIT_NO_EMPTY);
-                                            $map = [
-                                                'ا' => '[اأإآٱ]',
-                                                'أ' => '[اأإآٱ]',
-                                                'إ' => '[اأإآٱ]',
-                                                'آ' => '[اأإآٱ]',
-                                                'ٱ' => '[اأإآٱ]',
-                                                'ه' => '[هة]',
-                                                'ة' => '[هة]',
-                                                'ي' => '[يىئ]',
-                                                'ى' => '[يىئ]',
-                                                'ؤ' => '[وؤ]',
-                                                'و' => '[وؤ]',
-                                                'ئ' => '[يىئ]',
-                                            ];
-                                            $pat = '';
-                                            foreach($chars as $ch){
-                                                $pat .= ($map[$ch] ?? preg_quote($ch, '/')) . '[\x{064B}-\x{0652}\x{0640}]*';
-                                            }
-                                            return '/(' . $pat . ')/iu';
-                                        };
-                                        $excerptMarked = preg_replace($makePatternInline($word), '<mark>$0</mark>', $excerptShort);
+                                        $excerptMarked = $searchHelper->highlightTokenInText($excerptShort, $word, true);
                                     @endphp
                                     {!! $excerptMarked !!}
                                 @else
@@ -185,226 +137,27 @@
 
                             <div class="mt-2 border-top pt-2">
                                 <div class="small text-muted" style="min-height: 80px; max-height: 140px; overflow: hidden; direction: rtl;">
-                                    @php
-                                        // Arabic normalization and pattern utilities for robust highlighting
-                                        $normalizeArabic = function($s) {
-                                            $s = (string)$s;
-                                            // remove tatweel
-                                            $s = preg_replace('/\x{0640}/u', '', $s);
-                                            // remove diacritics
-                                            $s = preg_replace('/[\x{064B}-\x{0652}]/u', '', $s);
-                                            // normalize common letter variants
-                                            $s = str_replace(['أ','إ','آ','ٱ','ة','ى','ؤ','ئ'], ['ا','ا','ا','ا','ه','ي','و','ي'], $s);
-                                            return $s;
-                                        };
-                                        $makePattern = function($word) {
-                                            $chars = preg_split('//u', (string)$word, -1, PREG_SPLIT_NO_EMPTY);
-                                            $map = [
-                                                'ا' => '[اأإآٱ]',
-                                                'أ' => '[اأإآٱ]',
-                                                'إ' => '[اأإآٱ]',
-                                                'آ' => '[اأإآٱ]',
-                                                'ٱ' => '[اأإآٱ]',
-                                                'ه' => '[هة]',
-                                                'ة' => '[هة]',
-                                                'ي' => '[يىئ]',
-                                                'ى' => '[يىئ]',
-                                                'ؤ' => '[وؤ]',
-                                                'و' => '[وؤ]',
-                                                'ئ' => '[يىئ]',
-                                            ];
-                                            $pat = '';
-                                            foreach($chars as $ch){
-                                                $pat .= $map[$ch] ?? preg_quote($ch, '/');
-                                            }
-                                            return '/(' . $pat . ')/iu';
-                                        };
-                                    @endphp
                                     @if($matchType === 'exact' && !empty($rawSearch))
-                                        @php
-                                            $needle = trim($rawSearch);
-                                            $sn = null;
-                                            if ($needle !== '') {
-                                                $sources = [];
-                                                $cTitle = html_entity_decode(strip_tags($document->title ?? ''), ENT_QUOTES, 'UTF-8');
-                                                $cExcerpt = html_entity_decode(strip_tags($document->excerpt ?? ''), ENT_QUOTES, 'UTF-8');
-                                                $cContent = html_entity_decode(strip_tags($document->content ?? ''), ENT_QUOTES, 'UTF-8');
-                                                foreach ([$cContent, $cExcerpt, $cTitle] as $cand) {
-                                                    if (is_string($cand) && trim($cand) !== '') { $sources[] = $cand; }
-                                                }
-                                                $source = '';
-                                                $pos = false;
-                                                foreach($sources as $cand) {
-                                                    $p = mb_stripos($cand, $needle);
-                                                    if ($p !== false) { $source = $cand; $pos = $p; break; }
-                                                }
-                                                if ($pos !== false) {
-                                                    $len = mb_strlen($needle);
-                                                    $beforeText = mb_substr($source, 0, $pos);
-                                                    $afterText = mb_substr($source, $pos + $len);
-                                                    $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY);
-                                                    $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY);
-                                                    $beforeStr = implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - 8, 0)));
-                                                    $matchStr = mb_substr($source, $pos, $len);
-                                                    $afterStr = implode(' ', array_slice($afterTokens, 0, 8));
-                                                    $sn = [$beforeStr, $matchStr, $afterStr];
-                                                }
-                                            }
-                                        @endphp
+                                        @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($rawSearch), true); @endphp
                                         @if($sn)
-                                            <div>
-                                                كلمات البحث:
-                                                {!! e($sn[0]) !!}<mark>{!! e($sn[1]) !!}</mark>{!! e($sn[2]) !!}
-                                            </div>
-                                        @else
-                                            @php
-                                                $fallbackSource = '';
-                                                foreach([$cExcerpt, $cContent, $cTitle] as $cand){
-                                                    if(is_string($cand) && trim($cand) !== ''){
-                                                        if (mb_stripos($cand, $needle) !== false){ $fallbackSource = $cand; break; }
-                                                    }
-                                                }
-                                                if ($fallbackSource === '') { $fallbackSource = $sources[0] ?? ''; }
-                                                $fallback = Str::limit($fallbackSource, 180);
-                                                $fallbackMarked = preg_replace('/(' . preg_quote($needle, '/') . ')/iu', '<mark>$1</mark>', $fallback);
-                                            @endphp
-                                            {!! $fallbackMarked !!}
+                                            <div>{!! e($sn['before']) !!}<mark>{!! e($sn['match']) !!}</mark>{!! e($sn['after']) !!}</div>
                                         @endif
                                     @elseif($matchType === 'all')
                                         @php
-                                            $words = [];
-                                            if(isset($tokens) && is_array($tokens)) { $words = $tokens; }
-                                            else {
-                                                $words = preg_split('/\s+/u', trim(request('search', '')), -1, PREG_SPLIT_NO_EMPTY);
-                                            }
-                                            $uniqueWords = [];
-                                            foreach($words as $w) {
-                                                $w = trim($w);
-                                                if($w !== '' && !in_array($w, $uniqueWords, true)) $uniqueWords[] = $w;
-                                            }
+                                            $words = isset($tokens) && is_array($tokens) ? $tokens : preg_split('/\s+/u', trim(request('search', '')), -1, PREG_SPLIT_NO_EMPTY);
                                         @endphp
-                                        @foreach($uniqueWords as $w)
-                                            @php
-                                                $needle = $w;
-                                                $sn = null;
-                                                if ($needle !== '') {
-                                                    $sources = [];
-                                                    $cTitle = html_entity_decode(strip_tags($document->title ?? ''), ENT_QUOTES, 'UTF-8');
-                                                    $cExcerpt = html_entity_decode(strip_tags($document->excerpt ?? ''), ENT_QUOTES, 'UTF-8');
-                                                    $cContent = html_entity_decode(strip_tags($document->content ?? ''), ENT_QUOTES, 'UTF-8');
-                                                    foreach ([$cContent, $cExcerpt, $cTitle] as $cand) {
-                                                        if (is_string($cand) && trim($cand) !== '') { $sources[] = $cand; }
-                                                    }
-                                                    $source = '';
-                                                    $pos = false;
-                                                    foreach($sources as $cand) {
-                                                        $p = mb_stripos($cand, $needle);
-                                                        if ($p === false) {
-                                                            // Try regex-based Arabic-aware match to get the actual matched substring
-                                                            if (preg_match($makePattern($needle), $cand, $m)) {
-                                                                $source = $cand;
-                                                                $pos = mb_stripos($cand, $m[1] ?? $m[0]);
-                                                                $matchedLen = mb_strlen($m[1] ?? $m[0]);
-                                                                break;
-                                                            }
-                                                        } else { $source = $cand; $pos = $p; $matchedLen = mb_strlen($needle); break; }
-                                                    }
-                                                    if ($pos !== false) {
-                                                        $len = $matchedLen ?? mb_strlen($needle);
-                                                        $beforeText = mb_substr($source, 0, $pos);
-                                                        $afterText = mb_substr($source, $pos + $len);
-                                                        $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY);
-                                                        $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY);
-                                                        $beforeStr = implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - 8, 0)));
-                                                        $matchStr = mb_substr($source, $pos, $len);
-                                                        $afterStr = implode(' ', array_slice($afterTokens, 0, 8));
-                                                        $sn = [$beforeStr, $matchStr, $afterStr];
-                                                    }
-                                                }
-                                            @endphp
+                                        @foreach(array_unique(array_filter($words)) as $w)
+                                            @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($w), true); @endphp
                                             @if($sn)
-                                                <div>
-                                                    {{-- كلمة البحث --}}
-                                                     {!! e($sn[0]) !!}<mark>{!! e($sn[1]) !!}</mark>{!! e($sn[2]) !!}
-                                                </div>
-                                            @else
-                                                @php
-                                                    $fallbackSource = '';
-                                                    foreach([$cExcerpt, $cContent, $cTitle] as $cand){
-                                                        if(is_string($cand) && trim($cand) !== ''){
-                                                            if (preg_match($makePattern($needle), $cand)) { $fallbackSource = $cand; break; }
-                                                        }
-                                                    }
-                                                    if ($fallbackSource === '') { $fallbackSource = $sources[0] ?? ''; }
-                                                    $fallback = Illuminate\Support\Str::limit($fallbackSource, 180);
-                                                    $fallbackMarked = preg_replace($makePattern($needle), '<mark>$0</mark>', $fallback);
-                                                @endphp
-                                                <div>
-                                                    {{-- كلمة البحث "{{ $w }}": --}}
-                                                     {!! $fallbackMarked !!}
-                                                </div>
+                                                <div>{!! e($sn['before']) !!}<mark>{!! e($sn['match']) !!}</mark>{!! e($sn['after']) !!}</div>
                                             @endif
                                         @endforeach
                                     @elseif($matchType === 'any' && !empty($word))
-                                        @php
-                                            $needle = $word;
-                                            $sn = null;
-                                            if ($needle !== '') {
-                                                $sources = [];
-                                                $cTitle = html_entity_decode(strip_tags($document->title ?? ''), ENT_QUOTES, 'UTF-8');
-                                                $cExcerpt = html_entity_decode(strip_tags($document->excerpt ?? ''), ENT_QUOTES, 'UTF-8');
-                                                $cContent = html_entity_decode(strip_tags($document->content ?? ''), ENT_QUOTES, 'UTF-8');
-                                                foreach ([$cContent, $cExcerpt, $cTitle] as $cand) {
-                                                    if (is_string($cand) && trim($cand) !== '') { $sources[] = $cand; }
-                                                }
-                                                $source = '';
-                                                $pos = false;
-                                                foreach($sources as $cand) {
-                                                    $p = mb_stripos($cand, $needle);
-                                                    if ($p === false) {
-                                                        // Try regex-based Arabic-aware match to get the actual matched substring
-                                                        if (preg_match($makePattern($needle), $cand, $m)) {
-                                                            $source = $cand;
-                                                            $pos = mb_stripos($cand, $m[1] ?? $m[0]);
-                                                            $matchedLen = mb_strlen($m[1] ?? $m[0]);
-                                                            break;
-                                                        }
-                                                    } else { $source = $cand; $pos = $p; $matchedLen = mb_strlen($needle); break; }
-                                                }
-                                                if ($pos !== false) {
-                                                    $len = $matchedLen ?? mb_strlen($needle);
-                                                    $beforeText = mb_substr($source, 0, $pos);
-                                                    $afterText = mb_substr($source, $pos + $len);
-                                                    $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY);
-                                                    $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY);
-                                                    $beforeStr = implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - 8, 0)));
-                                                    $matchStr = mb_substr($source, $pos, $len);
-                                                    $afterStr = implode(' ', array_slice($afterTokens, 0, 8));
-                                                    $sn = [$beforeStr, $matchStr, $afterStr];
-                                                }
-                                            }
-                                        @endphp
+                                        @php $sn = $searchHelper->findSnippetInDocument($document, $word, true); @endphp
                                         @if($sn)
-                                            <div>
-                                                {{-- كلمة البحث "{{ $word }}": --}}
-                                                 {!! e($sn[0]) !!}<mark>{!! e($sn[1]) !!}</mark>{!! e($sn[2]) !!}
-                                            </div>
+                                            <div>{!! e($sn['before']) !!}<mark>{!! e($sn['match']) !!}</mark>{!! e($sn['after']) !!}</div>
                                         @else
-                                            @php
-                                                $fallbackSource = '';
-                                                foreach([$cExcerpt, $cContent, $cTitle] as $cand){
-                                                    if(is_string($cand) && trim($cand) !== ''){
-                                                        if (preg_match($makePattern($needle), $cand)) { $fallbackSource = $cand; break; }
-                                                    }
-                                                }
-                                                if ($fallbackSource === '') { $fallbackSource = $sources[0] ?? ''; }
-                                                $fallback = Illuminate\Support\Str::limit($fallbackSource, 180);
-                                                $fallbackMarked = preg_replace($makePattern($needle), '<mark>$0</mark>', $fallback);
-                                            @endphp
-                                            <div>
-                                                {{-- كلمة البحث "{{ $word }}":  --}}
-                                                {!! $fallbackMarked !!}
-                                            </div>
+                                            <div class="text-muted">لم يُعثر على مقطع مطابق في النص المعروض.</div>
                                         @endif
                                     @endif
                                 </div>

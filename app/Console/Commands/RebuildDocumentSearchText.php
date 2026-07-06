@@ -10,7 +10,7 @@ class RebuildDocumentSearchText extends Command
 {
     protected $signature = 'documents:rebuild-search-text {--chunk=100 : Number of documents per batch}';
 
-    protected $description = 'Rebuild pre-normalized search_text for all documents';
+    protected $description = 'Rebuild pre-normalized search_text and search_words for all documents';
 
     public function handle(DocumentSearchService $searchService): int
     {
@@ -24,7 +24,9 @@ class RebuildDocumentSearchText extends Command
             ->orderBy('id')
             ->chunkById($chunk, function ($documents) use ($searchService, $bar) {
                 foreach ($documents as $document) {
-                    $document->search_text = $searchService->buildSearchText($document);
+                    $index = $searchService->buildSearchIndex($document);
+                    $document->search_text = $index['search_text'];
+                    $document->search_words = $index['search_words'];
                     $document->saveQuietly();
                     $bar->advance();
                 }
@@ -32,7 +34,7 @@ class RebuildDocumentSearchText extends Command
 
         $bar->finish();
         $this->newLine();
-        $this->info('Document search_text rebuild completed.');
+        $this->info('Document search index rebuild completed.');
 
         return self::SUCCESS;
     }

@@ -92,10 +92,188 @@ class DocumentSearchService
     {
         $vars = [$token];
         if (preg_match('/^ال/u', $token)) {
-            $vars[] = mb_substr($token, 2);
+            $without = mb_substr($token, 2);
+            if ($without !== '') {
+                $vars[] = $without;
+            }
+        } else {
+            $vars[] = 'ال' . $token;
         }
 
         return array_values(array_unique(array_filter($vars, fn ($v) => $v !== null && $v !== '')));
+    }
+
+    protected function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
+    /**
+     * مطابقة كلمة كاملة عبر عمود الكلمات المفصولة بمسافات (أسرع بكثير من REGEXP).
+     */
+    protected function wholeWordLike(string $normalizedToken): string
+    {
+        return '% ' . $this->escapeLike($normalizedToken) . ' %';
+    }
+
+    protected function escapeMysqlRegexp(string $value): string
+    {
+        return preg_replace('/([.\\\\+*?\\[\\]^$(){}=!<>|:\\-])/', '\\\\$1', $value);
+    }
+
+    /**
+     * @deprecated استُبدل بـ wholeWordLike على عمود search_words
+     */
+    public function mysqlWordBoundaryRegexp(string $normalizedToken): string
+    {
+        $escaped = $this->escapeMysqlRegexp($normalizedToken);
+
+        return '(^|[^[:alpha:]])' . $escaped . '([^[:alpha:]]|$)';
+    }
+
+    protected function buildArabicCorePattern(string $normalizedToken): string
+    {
+        $map = [
+            'ا' => '[اأإآٱ]',
+            'أ' => '[اأإآٱ]',
+            'إ' => '[اأإآٱ]',
+            'آ' => '[اأإآٱ]',
+            'ٱ' => '[اأإآٱ]',
+            'ه' => '[هة]',
+            'ة' => '[هة]',
+            'ي' => '[يىئ]',
+            'ى' => '[يىئ]',
+            'ؤ' => '[وؤ]',
+            'و' => '[وؤ]',
+            'ئ' => '[يىئ]',
+        ];
+        $pat = '';
+        foreach (preg_split('//u', $normalizedToken, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $ch) {
+            $pat .= ($map[$ch] ?? preg_quote($ch, '/')) . '[\x{064B}-\x{0652}\x{0640}]*';
+        }
+
+        return $pat;
+    }
+
+    public function buildArabicTokenPattern(string $normalizedToken, bool $withAlVariant = true, bool $wholeWord = true): string
+    {
+        $variants = $withAlVariant ? $this->variantsFor($normalizedToken) : [$normalizedToken];
+        $parts = array_map(fn ($v) => $this->buildArabicCorePattern($v), $variants);
+        $core = '(?:' . implode('|', $parts) . ')';
+
+        if ($wholeWord) {
+            return '/(?<![\p{Arabic}])(' . $core . ')(?![\p{Arabic}])/iu';
+        }
+
+        return '/(' . $core . ')/iu';
+    }
+
+    /**
+     * @return array{before:string,match:string,after:string}|null
+     */
+    public function findTokenSnippet(string $text, string $normalizedToken, bool $withAlVariant = true, int $contextWords = 8): ?array
+    {
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES, 'UTF-8');
+        if (trim($text) === '') {
+            return null;
+        }
+
+        $pattern = $this->buildArabicTokenPattern($normalizedToken, $withAlVariant, true);
+        if (!preg_match($pattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
+            return null;
+        }
+
+        $matchStr = $matches[1][0];
+        $bytePos = $matches[1][1];
+        $prefix = substr($text, 0, $bytePos);
+        $pos = mb_strlen($prefix, 'UTF-8');
+        $len = mb_strlen($matchStr, 'UTF-8');
+
+        $beforeText = mb_substr($text, 0, $pos);
+        $afterText = mb_substr($text, $pos + $len);
+        $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return [
+            'before' => implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - $contextWords, 0))),
+            'match' => $matchStr,
+            'after' => implode(' ', array_slice($afterTokens, 0, $contextWords)),
+        ];
+    }
+
+    /**
+     * @return array{before:string,match:string,after:string}|null
+     */
+    public function findSnippetInDocument($document, string $normalizedToken, bool $withAlVariant = true, int $contextWords = 8): ?array
+    {
+        foreach ([$document->content ?? '', $document->excerpt ?? '', $document->title ?? ''] as $source) {
+            if (!is_string($source) || trim($source) === '') {
+                continue;
+            }
+            $snippet = $this->findTokenSnippet($source, $normalizedToken, $withAlVariant, $contextWords);
+            if ($snippet !== null) {
+                return $snippet;
+            }
+        }
+
+        return null;
+    }
+
+    public function highlightTokenInText(string $text, string $normalizedToken, bool $withAlVariant = true): string
+    {
+        $pattern = $this->buildArabicTokenPattern($normalizedToken, $withAlVariant, true);
+
+        return preg_replace($pattern, '<mark>$1</mark>', $text) ?? $text;
+    }
+
+    /**
+     * @param array<int, string> $normalizedTokens
+     */
+    public function highlightTokensInHtml(string $html, array $normalizedTokens, bool $withAlVariant = true): string
+    {
+        if ($html === '' || $normalizedTokens === []) {
+            return $html;
+        }
+
+        $parts = preg_split('/(<[^>]+>)/u', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+        if ($parts === false) {
+            return $html;
+        }
+
+        foreach ($parts as $i => $part) {
+            if ($part === '' || str_starts_with($part, '<')) {
+                continue;
+            }
+            foreach ($normalizedTokens as $token) {
+                if ($token === '') {
+                    continue;
+                }
+                $parts[$i] = $this->highlightTokenInText($parts[$i], $token, $withAlVariant);
+            }
+        }
+
+        return implode('', $parts);
+    }
+
+    /**
+     * @return array{search_text: string, search_words: string}
+     */
+    public function buildSearchIndex(Document $document): array
+    {
+        $searchText = $this->buildSearchText($document);
+        $tokens = $this->uniqueTokensPreserveOrder($this->tokenizeArabic($searchText));
+
+        return [
+            'search_text' => $searchText,
+            'search_words' => $tokens === [] ? '' : ' ' . implode(' ', $tokens) . ' ',
+        ];
+    }
+
+    public function buildSearchWordsFromText(string $searchText): string
+    {
+        $tokens = $this->uniqueTokensPreserveOrder($this->tokenizeArabic($searchText));
+
+        return $tokens === [] ? '' : ' ' . implode(' ', $tokens) . ' ';
     }
 
     public function buildSearchText(Document $document): string
@@ -129,17 +307,43 @@ class DocumentSearchService
 
     public function rebuildSearchText(Document $document): void
     {
-        $document->search_text = $this->buildSearchText($document);
+        $index = $this->buildSearchIndex($document);
+        $document->search_text = $index['search_text'];
+        $document->search_words = $index['search_words'];
         $document->saveQuietly();
     }
 
-    public function applyPhraseMatch(Builder $query, string $normalizedPhrase): Builder
+    public function applyPhraseMatch(Builder $query, string $normalizedPhrase, bool $withAlVariant = false, ?array $parsed = null): Builder
     {
         if ($normalizedPhrase === '') {
             return $query;
         }
 
+        if ($parsed !== null && count($parsed['tokens'] ?? []) === 1) {
+            return $this->applyTokenOrVariants($query, $parsed['tokens'][0], $withAlVariant);
+        }
+
         return $query->where('search_text', 'like', '%' . $normalizedPhrase . '%');
+    }
+
+    protected function applyPhraseMatchCondition(Builder $query, array $parsed, bool $withAlVariant): Builder
+    {
+        if (count($parsed['tokens'] ?? []) === 1) {
+            return $this->applyTokenOrVariants($query, $parsed['tokens'][0], $withAlVariant);
+        }
+
+        return $query->where('search_text', 'like', '%' . $parsed['normalizedPhrase'] . '%');
+    }
+
+    protected function sqlPhraseMatch(string $table, array $parsed, bool $withAlVariant, array &$bindings): string
+    {
+        if (count($parsed['tokens'] ?? []) === 1) {
+            return $this->sqlWordVariantsMatch($table, $parsed['tokens'][0], $withAlVariant, $bindings);
+        }
+
+        $bindings[] = '%' . $parsed['normalizedPhrase'] . '%';
+
+        return $table . '.search_text LIKE ?';
     }
 
     public function applyAllTokensMatch(Builder $query, array $tokens, bool $withAlVariant = false): Builder
@@ -156,10 +360,11 @@ class DocumentSearchService
     public function applyTokenOrVariants(Builder $query, string $token, bool $withAlVariant = false): Builder
     {
         $variants = $withAlVariant ? $this->variantsFor($token) : [$token];
+        $column = $query->getModel()->getTable() . '.search_words';
 
-        return $query->where(function (Builder $q) use ($variants) {
+        return $query->where(function (Builder $q) use ($variants, $column) {
             foreach ($variants as $variant) {
-                $q->orWhere('search_text', 'like', '%' . $variant . '%');
+                $q->orWhere($column, 'like', $this->wholeWordLike($variant));
             }
         });
     }
@@ -184,12 +389,18 @@ class DocumentSearchService
         }
 
         return $query->where(function (Builder $q) use ($parsed, $withAlVariant) {
-            $q->where('search_text', 'like', '%' . $parsed['normalizedPhrase'] . '%');
+            $q->where(function (Builder $inner) use ($parsed, $withAlVariant) {
+                $this->applyPhraseMatchCondition($inner, $parsed, $withAlVariant);
+            });
 
             if (!empty($parsed['tokensForAll'])) {
                 $q->orWhere(function (Builder $inner) use ($parsed, $withAlVariant) {
                     $this->applyAllTokensMatch($inner, $parsed['tokensForAll'], $withAlVariant);
-                    $inner->where('search_text', 'not like', '%' . $parsed['normalizedPhrase'] . '%');
+                    if (count($parsed['tokens']) > 1) {
+                        $inner->where('search_text', 'not like', '%' . $parsed['normalizedPhrase'] . '%');
+                    } else {
+                        $inner->whereRaw('1 = 0');
+                    }
                 });
             }
 
@@ -201,11 +412,24 @@ class DocumentSearchService
         });
     }
 
+    protected function sqlWordVariantsMatch(string $table, string $token, bool $withAlVariant, array &$bindings): string
+    {
+        $variants = $withAlVariant ? $this->variantsFor($token) : [$token];
+        $variantParts = [];
+        foreach ($variants as $variant) {
+            $variantParts[] = $table . '.search_words LIKE ?';
+            $bindings[] = $this->wholeWordLike($variant);
+        }
+
+        return '(' . implode(' OR ', $variantParts) . ')';
+    }
+
     /**
      * @return array{
      *   phrase: int,
      *   all: int,
-     *   per_word: array<int, int>
+     *   per_word: array<int, int>,
+     *   unique: int
      * }
      */
     public function computeTabCounts(Builder $baseQuery, array $parsed, bool $withAlVariant = false): array
@@ -216,7 +440,7 @@ class DocumentSearchService
                 $perWordCounts[$idx] = 0;
             }
 
-            return ['phrase' => 0, 'all' => 0, 'per_word' => $perWordCounts];
+            return ['phrase' => 0, 'all' => 0, 'per_word' => $perWordCounts, 'unique' => 0];
         }
 
         $query = clone $baseQuery;
@@ -224,36 +448,46 @@ class DocumentSearchService
         $selects = [];
         $bindings = [];
 
-        $selects[] = 'SUM(CASE WHEN ' . $table . '.search_text LIKE ? THEN 1 ELSE 0 END) AS phrase_count';
-        $bindings[] = '%' . $parsed['normalizedPhrase'] . '%';
+        $phraseCondition = $this->sqlPhraseMatch($table, $parsed, $withAlVariant, $bindings);
+        $selects[] = 'SUM(CASE WHEN ' . $phraseCondition . ' THEN 1 ELSE 0 END) AS phrase_count';
 
         if (!empty($parsed['tokensForAll'])) {
             $andParts = [];
             foreach ($parsed['tokensForAll'] as $token) {
-                $variants = $withAlVariant ? $this->variantsFor($token) : [$token];
-                $variantParts = [];
-                foreach ($variants as $variant) {
-                    $variantParts[] = $table . '.search_text LIKE ?';
-                    $bindings[] = '%' . $variant . '%';
-                }
-                $andParts[] = '(' . implode(' OR ', $variantParts) . ')';
+                $andParts[] = $this->sqlWordVariantsMatch($table, $token, $withAlVariant, $bindings);
             }
-            $selects[] = 'SUM(CASE WHEN (' . implode(' AND ', $andParts) . ') AND ' . $table . '.search_text NOT LIKE ? THEN 1 ELSE 0 END) AS all_count';
-            $bindings[] = '%' . $parsed['normalizedPhrase'] . '%';
+            $allCondition = '(' . implode(' AND ', $andParts) . ')';
+            if (count($parsed['tokens']) > 1) {
+                $selects[] = 'SUM(CASE WHEN ' . $allCondition . ' AND ' . $table . '.search_text NOT LIKE ? THEN 1 ELSE 0 END) AS all_count';
+                $bindings[] = '%' . $parsed['normalizedPhrase'] . '%';
+            } else {
+                $selects[] = '0 AS all_count';
+            }
         } else {
             $selects[] = '0 AS all_count';
         }
 
         foreach ($parsed['tokensPerWord'] as $idx => $word) {
-            $variants = $withAlVariant ? $this->variantsFor($word) : [$word];
-            $variantParts = [];
-            foreach ($variants as $variant) {
-                $variantParts[] = $table . '.search_text LIKE ?';
-                $bindings[] = '%' . $variant . '%';
-            }
+            $wordCondition = $this->sqlWordVariantsMatch($table, $word, $withAlVariant, $bindings);
             $alias = 'word_' . $idx;
-            $selects[] = 'SUM(CASE WHEN (' . implode(' OR ', $variantParts) . ') THEN 1 ELSE 0 END) AS ' . $alias;
+            $selects[] = 'SUM(CASE WHEN ' . $wordCondition . ' THEN 1 ELSE 0 END) AS ' . $alias;
         }
+
+        $uniqueSqlParts = [];
+        $uniqueBindings = [];
+        $uniqueSqlParts[] = $this->sqlPhraseMatch($table, $parsed, $withAlVariant, $uniqueBindings);
+        if (!empty($parsed['tokensForAll'])) {
+            $allUniqueParts = [];
+            foreach ($parsed['tokensForAll'] as $token) {
+                $allUniqueParts[] = $this->sqlWordVariantsMatch($table, $token, $withAlVariant, $uniqueBindings);
+            }
+            $uniqueSqlParts[] = '(' . implode(' AND ', $allUniqueParts) . ')';
+        }
+        foreach ($parsed['tokensPerWord'] as $word) {
+            $uniqueSqlParts[] = $this->sqlWordVariantsMatch($table, $word, $withAlVariant, $uniqueBindings);
+        }
+        $selects[] = 'SUM(CASE WHEN (' . implode(' OR ', $uniqueSqlParts) . ') THEN 1 ELSE 0 END) AS unique_count';
+        $bindings = array_merge($bindings, $uniqueBindings);
 
         $row = $query->selectRaw(implode(', ', $selects), $bindings)->first();
 
@@ -267,6 +501,7 @@ class DocumentSearchService
             'phrase' => (int) ($row->phrase_count ?? 0),
             'all' => (int) ($row->all_count ?? 0),
             'per_word' => $perWordCounts,
+            'unique' => (int) ($row->unique_count ?? 0),
         ];
     }
 
@@ -352,8 +587,8 @@ class DocumentSearchService
             ];
         }
 
-        $phraseQuery = $this->applyPhraseMatch(clone $baseQuery, $parsed['normalizedPhrase']);
-        $allQuery = !empty($parsed['tokensForAll'])
+        $phraseQuery = $this->applyPhraseMatch(clone $baseQuery, $parsed['normalizedPhrase'], $withAlVariant, $parsed);
+        $allQuery = !empty($parsed['tokensForAll']) && count($parsed['tokens']) > 1
             ? $this->applyAllTokensMatch(clone $baseQuery, $parsed['tokensForAll'], $withAlVariant)
                 ->where('search_text', 'not like', '%' . $parsed['normalizedPhrase'] . '%')
             : null;
@@ -410,7 +645,7 @@ class DocumentSearchService
                 : $this->makePaginatorFromCount($request, 'page_any', $perPage, $anyTotal);
         }
 
-        $uniqueTotal = $this->computeUniqueTotalFromQuery($baseQuery, $parsed, $withAlVariant);
+        $uniqueTotal = $counts['unique'] ?? 0;
 
         return [
             'phrase' => $phrasePaginated,
@@ -467,12 +702,18 @@ class DocumentSearchService
         $query = clone $baseQuery;
 
         return $query->where(function (Builder $q) use ($parsed, $withAlVariant) {
-            $q->where('search_text', 'like', '%' . $parsed['normalizedPhrase'] . '%');
+            $q->where(function (Builder $inner) use ($parsed, $withAlVariant) {
+                $this->applyPhraseMatchCondition($inner, $parsed, $withAlVariant);
+            });
 
             if (!empty($parsed['tokensForAll'])) {
                 $q->orWhere(function (Builder $inner) use ($parsed, $withAlVariant) {
                     $this->applyAllTokensMatch($inner, $parsed['tokensForAll'], $withAlVariant);
-                    $inner->where('search_text', 'not like', '%' . $parsed['normalizedPhrase'] . '%');
+                    if (count($parsed['tokens']) > 1) {
+                        $inner->where('search_text', 'not like', '%' . $parsed['normalizedPhrase'] . '%');
+                    } else {
+                        $inner->whereRaw('1 = 0');
+                    }
                 });
             }
 
