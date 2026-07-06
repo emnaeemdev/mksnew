@@ -12,9 +12,19 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use App\Models\Post;
 use App\Models\Category;
+use App\Services\DocumentSearchService;
+use Illuminate\Support\Facades\Cache;
 
 class DocumentController extends Controller
 {
+    public function __construct(protected DocumentSearchService $searchService)
+    {
+    }
+
+    protected function wantsSearchFragment(Request $request): bool
+    {
+        return $request->boolean('fragment') || $request->header('X-Search-Fragment') === '1';
+    }
     public function index(Request $request)
     {
         // منع عرض الوثائق في الواجهة الإنجليزية لعدم توفر ترجمة
@@ -176,15 +186,7 @@ class DocumentController extends Controller
         }
 
         // Normalize and tokenize Arabic query
-        $normalizedPhrase = $this->normalizeArabic($searchTerm);
-        $tokens = $this->tokenizeArabic($normalizedPhrase);
-        $filteredTokens = array_values(array_filter($tokens, function($t) {
-            return mb_strlen($t) >= 3 && !in_array($t, $this->arabicStopWords(), true);
-        }));
-        // حد أقصى 4 كلمات للتبويبات
-        $filteredTokens = array_slice($filteredTokens, 0, 4);
-
-        $perPage = (int) $request->get('per_page', 12);
+        $perPage = (int) $request->get('per_page', 6);
         $sort = $request->get('sort', 'relevance');
 
         // Base query with common filters
@@ -222,158 +224,25 @@ class DocumentController extends Controller
             }
         };
 
-        // في حال وجود عبارة بحث، ابنِ ثلاة نتائج: مطابقة العبارة، جميع الكلمات، وكل كلمة على حدة
+        // في حال وجود عبارة بحث، ابنِ نتائج مصنّفة (تبويب نشط واحد فقط يُحمَّل بالكامل)
         if ($searchTerm !== '') {
-            $exprTitle = $this->normalizeSql('documents.title');
-            $exprContent = $this->normalizeSql('documents.content');
-            $exprExcerpt = $this->normalizeSql('documents.excerpt');
-            $exprFieldHas = $this->normalizeSql('value');
+            $categorizedResults = $this->searchService->searchCategorized(
+                clone $baseQuery,
+                $searchTerm,
+                $request,
+                $applySort,
+                withAlVariant: false,
+                includeAnyTab: false
+            );
 
-            // قواعد التصفية حسب الطلب: الاستبعاد يطبّق فقط على تبويب "كل كلمة على حدة" عند تعدد الكلمات
-            $stopWords = $this->arabicStopWords();
-            $isSingleToken = count($tokens) === 1;
-            $singleTokenExcluded = $isSingleToken && (mb_strlen($tokens[0] ?? '') < 4 || in_array($tokens[0] ?? '', $stopWords, true));
-            // لجميع الكلمات (AND) وأي كلمة (OR): استخدم كل التوكينات عند تعدد الكلمات، وعطّل عند كلمة واحدة قصيرة/مستبعدة
-            $tokensForAll = $singleTokenExcluded ? [] : $tokens;
-            // لكل كلمة على حدة: استبعد الكلمات القصيرة (<4) والمستبعدة
-            $tokensPerWord = array_values(array_filter($tokens, function($t) {
-                return mb_strlen($t) >= 4 && !in_array($t, $this->arabicStopWords(), true);
-            }));
-            $tokensPerWord = array_slice($tokensPerWord, 0, 4);
-
-            // مطابقة العبارة كاملة
-            $likePhrase = "%$normalizedPhrase%";
-            $phraseQuery = (clone $baseQuery)
-                ->where(function($q) use ($likePhrase, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                    $q->whereRaw("$exprTitle LIKE ?", [$likePhrase])
-                      ->orWhereRaw("$exprContent LIKE ?", [$likePhrase])
-                      ->orWhereRaw("$exprExcerpt LIKE ?", [$likePhrase])
-                      ->orWhereExists(function($sub) use ($likePhrase, $exprFieldHas) {
-                          $sub->select(DB::raw(1))
-                              ->from('document_field_values as dfv')
-                              ->whereColumn('dfv.document_id', 'documents.id')
-                              ->whereRaw("$exprFieldHas LIKE ?", [$likePhrase]);
-                      });
-                });
-            $phraseIds = (clone $phraseQuery)
-                ->select('documents.id')
-                ->distinct()
-                ->pluck('documents.id')
-                ->all();
-
-            $phrasePaginated = $applySort($phraseQuery)
-                ->paginate($perPage, ['*'], 'page_p')
-                ->appends($request->except('page_p'));
-            // تعطيل المطابقة التامة إذا كانت كلمة واحدة قصيرة/مستبعدة
-            if ($singleTokenExcluded) {
-                $phraseIds = [];
-                $phrasePaginated = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, (int) $request->input('page_p', 1), ['path' => request()->url(), 'pageName' => 'page_p']);
-            }
-
-            // جميع الكلمات (AND)
-            if (!empty($tokensForAll)) {
-                $allQuery = (clone $baseQuery)
-                    ->where(function($q) use ($tokensForAll, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                        foreach ($tokensForAll as $token) {
-                            $like = "%$token%";
-                            $q->where(function($qq) use ($like, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                                $qq->whereRaw("$exprTitle LIKE ?", [$like])
-                                   ->orWhereRaw("$exprContent LIKE ?", [$like])
-                                   ->orWhereRaw("$exprExcerpt LIKE ?", [$like])
-                                   ->orWhereExists(function($sub) use ($like, $exprFieldHas) {
-                                       $sub->select(DB::raw(1))
-                                           ->from('document_field_values as dfv')
-                                           ->whereColumn('dfv.document_id', 'documents.id')
-                                           ->whereRaw("$exprFieldHas LIKE ?", [$like]);
-                                   });
-                            });
-                        }
-                    });
-                if (!empty($phraseIds)) {
-                    $allQuery->whereNotIn('documents.id', $phraseIds);
-                }
-                $allIds = (clone $allQuery)
-                    ->select('documents.id')
-                    ->distinct()
-                    ->pluck('documents.id')
-                    ->all();
-
-                $allWordsPaginated = $applySort($allQuery)
-                    ->paginate($perPage, ['*'], 'page_a')
-                    ->appends($request->except('page_a'));
-            } else {
-                $allWordsPaginated = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, (int) $request->input('page_a', 1), ['path' => request()->url(), 'pageName' => 'page_a']);
-                $allIds = [];
-            }
-
-            // أي كلمة (OR)
-            $anyQuery = (clone $baseQuery)
-                ->where(function($q) use ($tokensForAll, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                    foreach ($tokensForAll as $token) {
-                        $like = "%$token%";
-                        $q->orWhere(function($qq) use ($like, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                            $qq->whereRaw("$exprTitle LIKE ?", [$like])
-                               ->orWhereRaw("$exprContent LIKE ?", [$like])
-                               ->orWhereRaw("$exprExcerpt LIKE ?", [$like])
-                               ->orWhereExists(function($sub) use ($like, $exprFieldHas) {
-                                   $sub->select(DB::raw(1))
-                                       ->from('document_field_values as dfv')
-                                       ->whereColumn('dfv.document_id', 'documents.id')
-                                       ->whereRaw("$exprFieldHas LIKE ?", [$like]);
-                               });
-                        });
-                    }
-                });
-            if (!empty($phraseIds)) {
-                $anyQuery->whereNotIn('documents.id', $phraseIds);
-            }
-            $anyWordsPaginated = $applySort($anyQuery)
-                ->paginate($perPage, ['*'], 'page_any')
-                ->appends($request->except('page_any'));
-
-            // كل كلمة على حدة
-            $perWord = [];
-            foreach ($tokensPerWord as $idx => $word) {
-                $like = "%$word%";
-                $wordQuery = (clone $baseQuery)
-                    ->where(function($q) use ($like, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                        $q->whereRaw("$exprTitle LIKE ?", [$like])
-                          ->orWhereRaw("$exprContent LIKE ?", [$like])
-                          ->orWhereRaw("$exprExcerpt LIKE ?", [$like])
-                          ->orWhereExists(function($sub) use ($like, $exprFieldHas) {
-                              $sub->select(DB::raw(1))
-                                  ->from('document_field_values as dfv')
-                                  ->whereColumn('dfv.document_id', 'documents.id')
-                                  ->whereRaw("$exprFieldHas LIKE ?", [$like]);
-                          });
-                    });
-                $perWord[$word] = $applySort($wordQuery)
-                    ->paginate($perPage, ['*'], 'page_w' . $idx)
-                    ->appends($request->except('page_w' . $idx));
-            }
-
-            // حساب معرفات all و phrase موجود بالفعل
-            // حساب معرفات per_word لتجميعها في unique_total
-            $perWordIds = [];
-            foreach ($perWord as $word => $page) {
-                $ids = $page->pluck('id')->all();
-                $perWordIds = array_merge($perWordIds, $ids);
-            }
-            $uniqueTotal = count(array_unique(array_merge($phraseIds ?? [], $allIds ?? [], $perWordIds ?? [])));
-
-            $categorizedResults = [
-                'phrase' => $phrasePaginated,
-                'all' => $allWordsPaginated,
-                'any' => $anyWordsPaginated,
-                'per_word' => $perWord,
-                'tokens' => $tokensPerWord,
-                'raw' => $searchTerm,
-                'unique_total' => $uniqueTotal,
-            ];
-
-            // لا حاجة لقائمة documents مسطحة هنا
             $documents = collect();
-            $totalResults = $uniqueTotal;
+            $totalResults = $categorizedResults['unique_total'];
+
+            if ($this->wantsSearchFragment($request)) {
+                return response()->view('frontend.documents.partials.categorized-search-tab-content', [
+                    'categorizedResults' => $categorizedResults,
+                ]);
+            }
 
             return view('frontend.documents.search', compact(
                 'documents', 'searchTerm', 'totalResults', 'sections', 'popularSearches', 'customFieldFilters', 'activeFilters', 'categorizedResults'
@@ -394,50 +263,22 @@ class DocumentController extends Controller
      */
     protected function normalizeArabic(string $text): string
     {
-        $text = trim(mb_strtolower($text, 'UTF-8'));
-        // Remove tashkeel and tatweel
-        $tashkeel = ["\u{064B}", "\u{064C}", "\u{064D}", "\u{064E}", "\u{064F}", "\u{0650}", "\u{0651}", "\u{0652}", "\u{0640}"]; // tanween, fatha, damma, kasra, shadda, sukun, tatweel
-        $text = str_replace($tashkeel, '', $text);
-        // Normalize hamza forms and alef/ya/ta marbuta variants
-        $map = [
-            'أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا',
-            'ؤ' => 'و', 'ئ' => 'ي',
-            'ى' => 'ي',
-            'ة' => 'ه',
-        ];
-        $text = strtr($text, $map);
-        // Collapse whitespace
-        $text = preg_replace('/\s+/u', ' ', $text);
-        return $text ?? '';
+        return $this->searchService->normalizeArabic($text);
     }
 
     protected function normalizeSql(string $column): string
     {
-        // Build SQL expression to normalize Arabic for LIKE comparisons
-        $expr = "LOWER($column)";
-        // Remove tashkeel and tatweel
-        foreach (["\u{064B}", "\u{064C}", "\u{064D}", "\u{064E}", "\u{064F}", "\u{0650}", "\u{0651}", "\u{0652}", "\u{0640}"] as $mark) {
-            $expr = "REPLACE($expr, '" . json_decode('"' . $mark . '"') . "', '')";
-        }
-        // Normalize characters
-        foreach ([['أ','ا'],['إ','ا'],['آ','ا'],['ؤ','و'],['ئ','ي'],['ى','ي'],['ة','ه']] as $pair) {
-            [$from, $to] = $pair;
-            $expr = "REPLACE($expr, '$from', '$to')";
-        }
-        return $expr;
+        return "LOWER($column)";
     }
 
     protected function tokenizeArabic(string $normalized): array
     {
-        $parts = preg_split('/[^\p{L}\p{N}]+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY);
-        return array_values($parts ?: []);
+        return $this->searchService->tokenizeArabic($normalized);
     }
 
     protected function arabicStopWords(): array
     {
-        return [
-            'او','أو','او','على','الى','إلى','في','رقم','طعن','من','عن','ما','ماذا','هل','ثم','كما','بل','لكن','لم','لن','لا','أن','إن','اذا','إذا','قد','و','يا','ذلك','هذه','هذا','هناك','هنا','مع','كل','بعد','قبل','حتى','بين','أي','أى','اي','أين','أين','هي','هو','هم','هن','أنا','نحن','انت','أنت','انتم','أنتم','كان','كانت','يكون','تكون','يكونون','قانون'
-        ];
+        return $this->searchService->arabicStopWords();
     }
 
     /**
@@ -707,18 +548,11 @@ class DocumentController extends Controller
     {
         $query = clone $baseQuery;
 
-        // البحث البسيط
+        // البحث عبر العمود المُفهرَس مسبقاً
         if ($request->filled('search')) {
-            $search = trim($request->search);
-            if (strlen($search) >= 1) {
-                $query->where(function($q) use ($search) {
-                    $q->where('title', 'like', "%{$search}%")
-                      ->orWhere('content', 'like', "%{$search}%")
-                      ->orWhere('excerpt', 'like', "%{$search}%")
-                      ->orWhereHas('fieldValues', function($fieldQ) use ($search) {
-                          $fieldQ->where('value', 'like', "%{$search}%");
-                      });
-                });
+            $search = trim((string) $request->search);
+            if ($search !== '') {
+                $query = $this->searchService->applySimpleSearchFilter($query, $search);
             }
         }
 
@@ -786,8 +620,17 @@ class DocumentController extends Controller
      */
     protected function computeFieldCounts(DocumentSection $section, $customFields, Request $request)
     {
+        $cacheKey = 'doc_field_counts:' . $section->id . ':' . md5(json_encode($request->except(['page', 'page_phrase', 'page_all', 'page_p', 'page_a', 'page_any', 'page_w0', 'page_w1', 'page_w2', 'page_w3', 'tab'])));
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request) {
+            return $this->computeFieldCountsUncached($section, $customFields, $request);
+        });
+    }
+
+    protected function computeFieldCountsUncached(DocumentSection $section, $customFields, Request $request)
+    {
         $counts = [];
-        $baseQuery = $section->documents()->published();
+        $baseQuery = Document::query()->published()->where('section_id', $section->id);
 
         foreach ($customFields as $field) {
             // طبّق جميع الفلاتر ما عدا هذا الحقل
@@ -923,24 +766,10 @@ class DocumentController extends Controller
         // تطبيق فلاتر الحقول المخصصة
         [$query, $appliedFilters] = $this->applyCustomFieldFilters($query, $customFields, $request);
 
-        // إذا وُجد نص بحث: نفّذ التصنيف الثلاثي
+        // إذا وُجد نص بحث: نفّذ التصنيف المصنّف (تبويب نشط واحد فقط يُحمَّل بالكامل)
         if ($searchTerm !== '') {
-            $normalizedPhrase = $this->normalizeArabic($searchTerm);
-            $tokens = $this->tokenizeArabic($normalizedPhrase);
-            // منطق الاستبعاد حسب المطلوب
-            $stopWords = $this->arabicStopWords();
-            $isSingleToken = count($tokens) === 1;
-            $singleTokenExcluded = $isSingleToken && (mb_strlen($tokens[0] ?? '') < 4 || in_array($tokens[0] ?? '', $stopWords, true));
-            // للتبويب "جميع الكلمات" نستخدم كل التوكينات عند تعدد الكلمات، ونعطّل عند كلمة واحدة قصيرة/مستبعدة
-            $tokensForAll = $singleTokenExcluded ? [] : $tokens;
-            // لتبويب "كل كلمة على حدة" نستبعد القصيرة (<4) والمستبعدة
-            $tokensPerWord = array_values(array_filter($tokens, function($t) {
-                return mb_strlen($t) >= 4 && !in_array($t, $this->arabicStopWords(), true);
-            }));
-            $tokensPerWord = array_slice($tokensPerWord, 0, 4);
-
             $sort = $request->get('sort', 'latest');
-            $applySort = function($q) use ($sort) {
+            $applySort = function ($q) use ($sort) {
                 switch ($sort) {
                     case 'oldest':
                         return $q->oldest('published_at');
@@ -953,132 +782,15 @@ class DocumentController extends Controller
                 }
             };
 
-            $perPage = (int) $request->get('per_page', 12);
+            $categorizedResults = $this->searchService->searchCategorized(
+                clone $query,
+                $searchTerm,
+                $request,
+                $applySort,
+                withAlVariant: true,
+                includeAnyTab: false
+            );
 
-            // أعمدة مطبّق عليها التطبيع
-            $exprTitle = $this->normalizeSql('documents.title');
-            $exprContent = $this->normalizeSql('documents.content');
-            $exprExcerpt = $this->normalizeSql('documents.excerpt');
-            $exprFieldHas = $this->normalizeSql('value');
-
-            $baseQuery = (clone $query);
-
-            // توليد بدائل للكلمات للتعامل مع "ال" في بداية الكلمة
-            $variantsFor = function(string $t): array {
-                $vars = [$t];
-                if (preg_match('/^ال/u', $t)) {
-                    $vars[] = mb_substr($t, 2);
-                }
-                // إزالة الفراغات الفارغة وتوحيد العناصر
-                $vars = array_values(array_unique(array_filter($vars, function($v){ return $v !== null && $v !== ''; })));
-                return $vars;
-            };
-
-            // المطابقة التامة لعبارة البحث
-            $phrasePattern = '%' . $normalizedPhrase . '%';
-            $phraseQuery = (clone $baseQuery)->where(function($q) use ($phrasePattern, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                $q->whereRaw("$exprTitle LIKE ?", [$phrasePattern])
-                  ->orWhereRaw("$exprContent LIKE ?", [$phrasePattern])
-                  ->orWhereRaw("$exprExcerpt LIKE ?", [$phrasePattern])
-                  ->orWhereExists(function($sub) use ($phrasePattern, $exprFieldHas) {
-                      $sub->select(\DB::raw(1))
-                          ->from('document_field_values as dfv')
-                          ->whereColumn('dfv.document_id', 'documents.id')
-                          ->whereRaw("$exprFieldHas LIKE ?", [$phrasePattern]);
-                  });
-            });
-
-            $phraseIds = (clone $phraseQuery)
-                ->select('documents.id')
-                ->distinct()
-                ->pluck('documents.id')
-                ->all();
-
-            $phrasePaginated = $applySort($phraseQuery)
-                ->paginate($perPage, ['*'], 'page_phrase')
-                ->appends($request->except('page_phrase'));
-            // تعطيل المطابقة التامة إذا كانت كلمة واحدة قصيرة/مستبعدة
-            if ($singleTokenExcluded) {
-                $phraseIds = [];
-                $phrasePaginated = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, (int) $request->input('page_phrase', 1), ['path' => request()->url(), 'pageName' => 'page_phrase']);
-            }
-
-            // جميع الكلمات (AND)
-            if (!empty($tokensForAll)) {
-                $allWordsQuery = (clone $baseQuery)->where(function($q) use ($tokensForAll, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas, $variantsFor) {
-                    foreach ($tokensForAll as $token) {
-                        $variants = $variantsFor($token);
-                        $q->where(function($qq) use ($variants, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                            foreach ($variants as $v) {
-                                $like = "%$v%";
-                                $qq->orWhere(function($qqq) use ($like, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                                    $qqq->whereRaw("$exprTitle LIKE ?", [$like])
-                                       ->orWhereRaw("$exprContent LIKE ?", [$like])
-                                       ->orWhereRaw("$exprExcerpt LIKE ?", [$like])
-                                       ->orWhereExists(function($sub) use ($like, $exprFieldHas) {
-                                           $sub->select(\DB::raw(1))
-                                               ->from('document_field_values as dfv')
-                                               ->whereColumn('dfv.document_id', 'documents.id')
-                                               ->whereRaw("$exprFieldHas LIKE ?", [$like]);
-                                       });
-                                });
-                            }
-                        });
-                    }
-                });
-                if (!empty($phraseIds)) {
-                    $allWordsQuery->whereNotIn('documents.id', $phraseIds);
-                }
-                $allIds = (clone $allWordsQuery)
-                    ->select('documents.id')
-                    ->distinct()
-                    ->pluck('documents.id')
-                    ->all();
-
-                $allWordsPaginated = $applySort($allWordsQuery)
-                    ->paginate($perPage, ['*'], 'page_all')
-                    ->appends($request->except('page_all'));
-            } else {
-                $allIds = [];
-                $allWordsPaginated = new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, (int) $request->input('page_all', 1), ['path' => request()->url(), 'pageName' => 'page_all']);
-            }
-
-            // نتائجة حسب كل كلمة بمفردها
-            $perWord = [];
-            $perWordIds = [];
-            foreach ($tokensPerWord as $idx => $word) {
-                $variants = $variantsFor($word);
-                $wordQuery = (clone $baseQuery)
-                    ->where(function($q) use ($variants, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                        foreach ($variants as $v) {
-                            $like = "%$v%";
-                            $q->orWhere(function($qq) use ($like, $exprTitle, $exprContent, $exprExcerpt, $exprFieldHas) {
-                                $qq->whereRaw("$exprTitle LIKE ?", [$like])
-                                   ->orWhereRaw("$exprContent LIKE ?", [$like])
-                                   ->orWhereRaw("$exprExcerpt LIKE ?", [$like])
-                                   ->orWhereExists(function($sub) use ($like, $exprFieldHas) {
-                                       $sub->select(\DB::raw(1))
-                                           ->from('document_field_values as dfv')
-                                           ->whereColumn('dfv.document_id', 'documents.id')
-                                           ->whereRaw("$exprFieldHas LIKE ?", [$like]);
-                                   });
-                            });
-                        }
-                    });
-                // جمع المعرفات الفريدة قبل التقسيم إلى صفحات لهذا التبويب
-                $wordIds = (clone $wordQuery)
-                    ->select('documents.id')
-                    ->distinct()
-                    ->pluck('documents.id')
-                    ->all();
-                $perWordIds = array_merge($perWordIds, $wordIds);
-
-                $perWord["$word"] = $applySort($wordQuery)
-                    ->paginate($perPage, ['*'], 'page_w' . $idx)
-                    ->appends($request->except('page_w' . $idx));
-            }
-
-            // الحقول المخصصة مع خياراتها (تُحمّل فقط داخل قسم محدد)
             if (!$scopeAllSections) {
                 foreach ($customFields as $field) {
                     if (in_array($field->type, ['select', 'multiselect', 'radio'])) {
@@ -1088,7 +800,6 @@ class DocumentController extends Controller
             }
             $fieldCounts = !$scopeAllSections ? $this->computeFieldCounts($section, $customFields, $request) : [];
 
-            // إحصائيات عامة/خاصة بالقسم
             if ($scopeAllSections) {
                 $totalDocuments = Document::published()->count();
                 $totalViews = (int) Document::published()->sum('views_count');
@@ -1097,17 +808,11 @@ class DocumentController extends Controller
                 $totalViews = $section->documents()->published()->sum('views_count');
             }
 
-            // حساب العدد الفريد عبر كل التبويبات
-            $uniqueTotal = count(array_unique(array_merge($phraseIds ?? [], $allIds ?? [], $perWordIds ?? [])));
-
-            $categorizedResults = [
-                'phrase' => $phrasePaginated,
-                'all' => $allWordsPaginated,
-                'per_word' => $perWord,
-                'tokens' => $tokensPerWord,
-                'raw' => $searchTerm,
-                'unique_total' => $uniqueTotal,
-            ];
+            if ($this->wantsSearchFragment($request)) {
+                return response()->view('frontend.documents.partials.categorized-search-tab-content', [
+                    'categorizedResults' => $categorizedResults,
+                ]);
+            }
 
             return view('frontend.documents.section', compact(
                 'section', 'customFields', 'appliedFilters', 'totalDocuments', 'totalViews', 'fieldCounts', 'categorizedResults', 'searchTerm', 'allSections'
@@ -1130,7 +835,7 @@ class DocumentController extends Controller
                 $query->latest('published_at');
         }
 
-        $perPage = (int) $request->get('per_page', 12);
+        $perPage = (int) $request->get('per_page', 6);
         $documents = $query->paginate($perPage);
 
         // إحصائيات القسم/العامة

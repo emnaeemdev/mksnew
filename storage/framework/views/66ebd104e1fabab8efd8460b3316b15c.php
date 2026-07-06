@@ -1,14 +1,14 @@
 <div class="col-lg-4 col-md-6">
-    @php
+    <?php
         $locale = app()->getLocale();
         $sectionSlug = optional($document->section)->slug;
         $documentShowUrl = $sectionSlug
             ? route('content.show', [$locale, $sectionSlug, $document->id])
             : route('content.show', [$locale, 'documents', $document->id]);
-    @endphp
-    <a href="{{ $documentShowUrl }}" 
+    ?>
+    <a href="<?php echo e($documentShowUrl); ?>" 
        class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100 document-card @if($matchType === 'exact') border-success @elseif($matchType === 'all') border-primary @elseif($matchType === 'any') border-info @endif">
+        <div class="card border-0 shadow-sm h-100 document-card <?php if($matchType === 'exact'): ?> border-success <?php elseif($matchType === 'all'): ?> border-primary <?php elseif($matchType === 'any'): ?> border-info <?php endif; ?>">
             <div class="card-body p-3">
                 <div class="row">
                     <!-- أيقونة الملف -->
@@ -17,32 +17,27 @@
                     <div class="col-md-9 col-lg-10">
                         <!-- العلامات والحالة -->
                         <div class="mb-2">
-                            <span class="badge bg-primary me-2">{{ app()->getLocale() === 'ar' ? (optional($document->section)->name ?? 'غير مصنّف') : (optional($document->section)->name_en ?? 'Uncategorized') }}</span>
-                            @if($document->is_featured)
+                            <span class="badge bg-primary me-2"><?php echo e(app()->getLocale() === 'ar' ? (optional($document->section)->name ?? 'غير مصنّف') : (optional($document->section)->name_en ?? 'Uncategorized')); ?></span>
+                            <?php if($document->is_featured): ?>
                                 <span class="badge bg-warning text-dark me-2">مميز</span>
-                            @endif
+                            <?php endif; ?>
                             <span class="badge bg-light text-dark">
                                 <i class="fas fa-eye me-1"></i>
-                                {{ number_format($document->views_count) }}
+                                <?php echo e(number_format($document->views_count)); ?>
+
                             </span>
                             
                             <!-- نوع المطابقة -->
-                            @if($matchType === 'exact')
-                                {{-- <span class="badge bg-success me-2">
-                                    <i class="fas fa-quote-left me-1"></i>
-                                    مطابقة تامة
-                                </span> --}}
-                            @elseif($matchType === 'all')
-                                {{-- <span class="badge bg-primary me-2">
-                                    <i class="fas fa-check-double me-1"></i>
-                                    جميع الكلمات
-                                </span> --}}
-                            @elseif($matchType === 'any')
-                                {{-- <span class="badge bg-info me-2"> --}}
-                                     {{-- الكلمات الموجودة في الوثيقة من البحث --}}
-                                    {{-- <i class="fas fa-check me-1"></i> --}}
-                                    @if(request('search'))
-                                        @php
+                            <?php if($matchType === 'exact'): ?>
+                                
+                            <?php elseif($matchType === 'all'): ?>
+                                
+                            <?php elseif($matchType === 'any'): ?>
+                                
+                                     
+                                    
+                                    <?php if(request('search')): ?>
+                                        <?php
                                             $searchWords = explode(' ', trim(request('search')));
                                             $matchedWords = [];
                                             foreach($searchWords as $searchWord) {
@@ -52,37 +47,39 @@
                                                     $matchedWords[] = $searchWord;
                                                 }
                                             }
-                                        @endphp
-                                        @if(count($matchedWords) > 0)
-                                            {{-- <small class="d-block mt-1"> --}}
-                                                {{-- ({{ implode(', ', $matchedWords) }}) --}}
-                                            {{-- </small> --}}
-                                        @endif
-                                    @endif
-                                {{-- </span> --}}
-                            @endif
+                                        ?>
+                                        <?php if(count($matchedWords) > 0): ?>
+                                            
+                                                
+                                            
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                
+                            <?php endif; ?>
                         </div>
                         
                         <!-- العنوان -->
                         <h5 class="card-title mb-2">
-                            {{ $document->title }}
+                            <?php echo e($document->title); ?>
+
                         </h5>
                         
                         <!-- المقتطف -->
-                        @if($document->excerpt)
-                            @php
+                        <?php if($document->excerpt): ?>
+                            <?php
                                 $excerptPlain = strip_tags($document->excerpt);
                                 $excerptShort = Str::limit($excerptPlain, 150);
-                            @endphp
+                            ?>
                             <p class="text-muted mb-3">
-                                @if($matchType === 'exact' && !empty($rawSearch))
-                                    @php
+                                <?php if($matchType === 'exact' && !empty($rawSearch)): ?>
+                                    <?php
                                         $pattern = '/' . preg_quote($rawSearch, '/') . '/iu';
                                         $excerptMarked = preg_replace($pattern, '<mark>$0</mark>', $excerptShort);
-                                    @endphp
-                                    {!! $excerptMarked !!}
-                                @elseif($matchType === 'all')
-                                    @php
+                                    ?>
+                                    <?php echo $excerptMarked; ?>
+
+                                <?php elseif($matchType === 'all'): ?>
+                                    <?php
                                         $words = [];
                                         if(isset($tokens) && is_array($tokens)) { $words = $tokens; }
                                         else {
@@ -117,10 +114,11 @@
                                         foreach($uniqueWords as $w){
                                             $excerptMarked = preg_replace($makePatternInline($w), '<mark>$0</mark>', $excerptMarked);
                                         }
-                                    @endphp
-                                    {!! $excerptMarked !!}
-                                @elseif($matchType === 'any' && !empty($word))
-                                    @php
+                                    ?>
+                                    <?php echo $excerptMarked; ?>
+
+                                <?php elseif($matchType === 'any' && !empty($word)): ?>
+                                    <?php
                                         // Use Arabic-aware regex for highlighting single word in excerpt
                                         $makePatternInline = function($word) {
                                             $chars = preg_split('//u', (string)$word, -1, PREG_SPLIT_NO_EMPTY);
@@ -145,47 +143,51 @@
                                             return '/(' . $pat . ')/iu';
                                         };
                                         $excerptMarked = preg_replace($makePatternInline($word), '<mark>$0</mark>', $excerptShort);
-                                    @endphp
-                                    {!! $excerptMarked !!}
-                                @else
-                                    {{ $excerptShort }}
-                                @endif
+                                    ?>
+                                    <?php echo $excerptMarked; ?>
+
+                                <?php else: ?>
+                                    <?php echo e($excerptShort); ?>
+
+                                <?php endif; ?>
                             </p>
-                        @endif
+                        <?php endif; ?>
                         
                         <!-- معلومات إضافية -->
                         <div class="d-flex flex-wrap justify-content-between align-items-center">
                             <div class="text-muted small">
-                                @if($document->plainFieldValues->count() > 0)
+                                <?php if($document->plainFieldValues->count() > 0): ?>
                                     <div class="mb-3">
-                                        @foreach($document->plainFieldValues->take(5) as $fieldValue)
-                                            @if($fieldValue->field->type == 'select' || $fieldValue->field->type == 'date' || $fieldValue->field->type == 'text')
+                                        <?php $__currentLoopData = $document->plainFieldValues->take(5); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $fieldValue): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php if($fieldValue->field->type == 'select' || $fieldValue->field->type == 'date' || $fieldValue->field->type == 'text'): ?>
                                                 <div class="small text-muted mb-1">
-                                                    <strong>{{ $fieldValue->field->label }}:</strong>
-                                                    @if($fieldValue->field->type == 'date')
-                                                        {{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}
-                                                    @else
-                                                        {{ $fieldValue->value }}
-                                                    @endif
+                                                    <strong><?php echo e($fieldValue->field->label); ?>:</strong>
+                                                    <?php if($fieldValue->field->type == 'date'): ?>
+                                                        <?php echo e(\Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d')); ?>
+
+                                                    <?php else: ?>
+                                                        <?php echo e($fieldValue->value); ?>
+
+                                                    <?php endif; ?>
                                                 </div>
-                                            @endif
-                                        @endforeach
+                                            <?php endif; ?>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                     </div>
-                                @endif
+                                <?php endif; ?>
                             </div>
 
 
                         </div>
-                            @php
+                            <?php
                                 $sourceText = $document->content ?: ($document->excerpt ?: $document->title);
                                 $sourceText = is_string($sourceText) ? $sourceText : '';
                                 $clean = strip_tags($sourceText ?? '');
                                 $clean = html_entity_decode($clean, ENT_QUOTES, 'UTF-8');
-                            @endphp
+                            ?>
 
                             <div class="mt-2 border-top pt-2">
                                 <div class="small text-muted" style="min-height: 80px; max-height: 140px; overflow: hidden; direction: rtl;">
-                                    @php
+                                    <?php
                                         // Arabic normalization and pattern utilities for robust highlighting
                                         $normalizeArabic = function($s) {
                                             $s = (string)$s;
@@ -219,9 +221,9 @@
                                             }
                                             return '/(' . $pat . ')/iu';
                                         };
-                                    @endphp
-                                    @if($matchType === 'exact' && !empty($rawSearch))
-                                        @php
+                                    ?>
+                                    <?php if($matchType === 'exact' && !empty($rawSearch)): ?>
+                                        <?php
                                             $needle = trim($rawSearch);
                                             $sn = null;
                                             if ($needle !== '') {
@@ -250,14 +252,15 @@
                                                     $sn = [$beforeStr, $matchStr, $afterStr];
                                                 }
                                             }
-                                        @endphp
-                                        @if($sn)
+                                        ?>
+                                        <?php if($sn): ?>
                                             <div>
                                                 كلمات البحث:
-                                                {!! e($sn[0]) !!}<mark>{!! e($sn[1]) !!}</mark>{!! e($sn[2]) !!}
+                                                <?php echo e($sn[0]); ?><mark><?php echo e($sn[1]); ?></mark><?php echo e($sn[2]); ?>
+
                                             </div>
-                                        @else
-                                            @php
+                                        <?php else: ?>
+                                            <?php
                                                 $fallbackSource = '';
                                                 foreach([$cExcerpt, $cContent, $cTitle] as $cand){
                                                     if(is_string($cand) && trim($cand) !== ''){
@@ -267,11 +270,12 @@
                                                 if ($fallbackSource === '') { $fallbackSource = $sources[0] ?? ''; }
                                                 $fallback = Str::limit($fallbackSource, 180);
                                                 $fallbackMarked = preg_replace('/(' . preg_quote($needle, '/') . ')/iu', '<mark>$1</mark>', $fallback);
-                                            @endphp
-                                            {!! $fallbackMarked !!}
-                                        @endif
-                                    @elseif($matchType === 'all')
-                                        @php
+                                            ?>
+                                            <?php echo $fallbackMarked; ?>
+
+                                        <?php endif; ?>
+                                    <?php elseif($matchType === 'all'): ?>
+                                        <?php
                                             $words = [];
                                             if(isset($tokens) && is_array($tokens)) { $words = $tokens; }
                                             else {
@@ -282,9 +286,9 @@
                                                 $w = trim($w);
                                                 if($w !== '' && !in_array($w, $uniqueWords, true)) $uniqueWords[] = $w;
                                             }
-                                        @endphp
-                                        @foreach($uniqueWords as $w)
-                                            @php
+                                        ?>
+                                        <?php $__currentLoopData = $uniqueWords; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $w): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                            <?php
                                                 $needle = $w;
                                                 $sn = null;
                                                 if ($needle !== '') {
@@ -321,14 +325,15 @@
                                                         $sn = [$beforeStr, $matchStr, $afterStr];
                                                     }
                                                 }
-                                            @endphp
-                                            @if($sn)
+                                            ?>
+                                            <?php if($sn): ?>
                                                 <div>
-                                                    {{-- كلمة البحث --}}
-                                                     {!! e($sn[0]) !!}<mark>{!! e($sn[1]) !!}</mark>{!! e($sn[2]) !!}
+                                                    
+                                                     <?php echo e($sn[0]); ?><mark><?php echo e($sn[1]); ?></mark><?php echo e($sn[2]); ?>
+
                                                 </div>
-                                            @else
-                                                @php
+                                            <?php else: ?>
+                                                <?php
                                                     $fallbackSource = '';
                                                     foreach([$cExcerpt, $cContent, $cTitle] as $cand){
                                                         if(is_string($cand) && trim($cand) !== ''){
@@ -338,15 +343,16 @@
                                                     if ($fallbackSource === '') { $fallbackSource = $sources[0] ?? ''; }
                                                     $fallback = Illuminate\Support\Str::limit($fallbackSource, 180);
                                                     $fallbackMarked = preg_replace($makePattern($needle), '<mark>$0</mark>', $fallback);
-                                                @endphp
+                                                ?>
                                                 <div>
-                                                    {{-- كلمة البحث "{{ $w }}": --}}
-                                                     {!! $fallbackMarked !!}
+                                                    
+                                                     <?php echo $fallbackMarked; ?>
+
                                                 </div>
-                                            @endif
-                                        @endforeach
-                                    @elseif($matchType === 'any' && !empty($word))
-                                        @php
+                                            <?php endif; ?>
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                                    <?php elseif($matchType === 'any' && !empty($word)): ?>
+                                        <?php
                                             $needle = $word;
                                             $sn = null;
                                             if ($needle !== '') {
@@ -383,14 +389,15 @@
                                                     $sn = [$beforeStr, $matchStr, $afterStr];
                                                 }
                                             }
-                                        @endphp
-                                        @if($sn)
+                                        ?>
+                                        <?php if($sn): ?>
                                             <div>
-                                                {{-- كلمة البحث "{{ $word }}": --}}
-                                                 {!! e($sn[0]) !!}<mark>{!! e($sn[1]) !!}</mark>{!! e($sn[2]) !!}
+                                                
+                                                 <?php echo e($sn[0]); ?><mark><?php echo e($sn[1]); ?></mark><?php echo e($sn[2]); ?>
+
                                             </div>
-                                        @else
-                                            @php
+                                        <?php else: ?>
+                                            <?php
                                                 $fallbackSource = '';
                                                 foreach([$cExcerpt, $cContent, $cTitle] as $cand){
                                                     if(is_string($cand) && trim($cand) !== ''){
@@ -400,13 +407,14 @@
                                                 if ($fallbackSource === '') { $fallbackSource = $sources[0] ?? ''; }
                                                 $fallback = Illuminate\Support\Str::limit($fallbackSource, 180);
                                                 $fallbackMarked = preg_replace($makePattern($needle), '<mark>$0</mark>', $fallback);
-                                            @endphp
+                                            ?>
                                             <div>
-                                                {{-- كلمة البحث "{{ $word }}":  --}}
-                                                {!! $fallbackMarked !!}
+                                                
+                                                <?php echo $fallbackMarked; ?>
+
                                             </div>
-                                        @endif
-                                    @endif
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                     </div>
@@ -415,3 +423,4 @@
             </div> <!-- closes .card -->
          </a>
      </div> <!-- closes .col-lg-4 .col-md-6 -->
+<?php /**PATH C:\xampp\htdocs\mksnew\resources\views/frontend/documents/partials/search-result-card.blade.php ENDPATH**/ ?>

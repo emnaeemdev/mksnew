@@ -98,6 +98,7 @@
                             <div class="col-lg-2">
                                 <label for="per_page" class="form-label">عدد النتائج</label>
                                 <select class="form-select" id="per_page" name="per_page" onchange="document.getElementById('filterForm').submit()">
+                                    <option value="6" {{ request('per_page', '6') == '6' ? 'selected' : '' }}>6</option>
                                     <option value="12" {{ request('per_page') == '12' ? 'selected' : '' }}>12</option>
                                     <option value="24" {{ request('per_page') == '24' ? 'selected' : '' }}>24</option>
                                     <option value="48" {{ request('per_page') == '48' ? 'selected' : '' }}>48</option>
@@ -333,140 +334,7 @@
 
     {{-- نتائج البحث المصنفة (داخل .container) --}}
     @if(isset($categorizedResults) && $categorizedResults)
-        @php $raw = $categorizedResults['raw'] ?? ''; @endphp
-
-        @php
-            $activeTab = request('tab');
-            if(!$activeTab) {
-                $firstWordTab = null;
-                $wi = 0;
-                foreach(($categorizedResults['per_word'] ?? []) as $w => $page) {
-                    if(!$firstWordTab && $page->count()) { $firstWordTab = 'word-'.$wi; }
-                    $wi++;
-                }
-                $activeTab = (($categorizedResults['phrase'] ?? null) && $categorizedResults['phrase']->count()) ? 'phrase'
-                    : (($categorizedResults['all'] ?? null) && $categorizedResults['all']->count() ? 'all'
-                    : ($firstWordTab ?: 'phrase'));
-            }
-            $baseQuery = request()->except(['page','page_p','page_a','page_any']);
-            $phraseTotal = ($categorizedResults['phrase'] ?? null) ? $categorizedResults['phrase']->total() : 0;
-            $allTotal = ($categorizedResults['all'] ?? null) ? $categorizedResults['all']->total() : 0;
-            $anyTotal = ($categorizedResults['any'] ?? null) ? $categorizedResults['any']->total() : 0;
-            $perWordTotal = 0;
-            if(!empty($categorizedResults['per_word'])) {
-                foreach($categorizedResults['per_word'] as $page) { $perWordTotal += $page->total(); }
-            }
-        @endphp
-
-        <div class="row mt-3" id="results-tabs">
-            <div class="col-12">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                        <button id="tab-link-phrase" class="nav-link {{ $activeTab=='phrase' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-phrase" aria-controls="tab-phrase">مطابقة تامة <span class="badge rounded-pill bg-secondary ms-1">{{ $phraseTotal }}</span></button>
-                    </li>
-                    <li class="nav-item">
-                        <button id="tab-link-all" class="nav-link {{ $activeTab=='all' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-all" aria-controls="tab-all">جميع الكلمات <span class="badge rounded-pill bg-secondary ms-1">{{ $allTotal }}</span></button>
-                    </li>
-                    @php $tokensCount = isset($categorizedResults['tokens']) && is_array($categorizedResults['tokens']) ? count($categorizedResults['tokens']) : 0; @endphp
-                    @if(!empty($categorizedResults['per_word']) && $tokensCount > 1)
-                        @foreach($categorizedResults['per_word'] as $word => $page)
-                            <li class="nav-item">
-                                <button id="tab-link-word-{{ $loop->index }}" class="nav-link {{ $activeTab=='word-'.$loop->index ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-word-{{ $loop->index }}" aria-controls="tab-word-{{ $loop->index }}">
-                                    نتائج بها كلمة <b style="color: rgb(124, 190, 86);">"{{ $word }}"</b> <span class="badge rounded-pill bg-secondary ms-1">{{ $page->total() }}</span>
-                                </button>
-                            </li>
-                        @endforeach
-                    @endif
-                </ul>
-            </div>
-        </div>
-
-        <div class="tab-content">
-        <div id="tab-phrase" class="tab-pane fade row mt-2 {{ $activeTab=='phrase' ? 'show active' : '' }}" role="tabpanel" aria-labelledby="tab-link-phrase">
-            <div class="col-12">
-                <h5 class="mb-3"><i class="fas fa-quote-left ms-1"></i> وثائق مطابقة  تمامًا لجملة البحث</h5>
-                @if(($categorizedResults['phrase'] ?? null) && $categorizedResults['phrase']->count())
-                    <div class="row g-3 mb-3">
-                        @foreach($categorizedResults['phrase'] as $document)
-                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'exact', 'rawSearch' => $raw])
-                        @endforeach
-                    </div>
-                    <div class="d-flex justify-content-center mb-4">
-                        {{ $categorizedResults['phrase']->appends(array_merge(request()->except('page_p'), ['tab' => 'phrase']))->links() }}
-                    </div>
-                @else
-                    <div class="alert alert-light">لا توجد نتائج مطابقة تمامًا لعبارة "{{ $raw }}"</div>
-                    
-                @endif
-            </div>
-        </div>
-
-        <div id="tab-all" class="tab-pane fade row mt-2 {{ $activeTab=='all' ? 'show active' : '' }}" role="tabpanel" aria-labelledby="tab-link-all">
-            <div class="col-12">
-                <h5 class="mb-3"><i class="fas fa-check-double ms-1"></i>وثائق بها جميع كلمات البحث</h5>
-                @if(($categorizedResults['all'] ?? null) && $categorizedResults['all']->count())
-                    <div class="row g-3 mb-3">
-                        @foreach($categorizedResults['all'] as $document)
-                            @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'all', 'tokens' => ($categorizedResults['tokens'] ?? [])])
-                            @endforeach
-                    </div>
-                    <div class="d-flex justify-content-center mb-4">
-                        {{ $categorizedResults['all']->appends(array_merge(request()->except('page_a'), ['tab' => 'all']))->links() }}
-                    </div>
-                @else
-                   <div class="alert alert-light">لا توجد نتائج تحتوي كل كلمات البحث.</div>
-                
-                @endif
-            </div>
-        </div>
-
-{{-- تمت إزالة تبويب "أي كلمة" واستبدلنا تبويبات ديناميكية لكل كلمة بحث --}}
-
-        @php $tokensCount = isset($categorizedResults['tokens']) && is_array($categorizedResults['tokens']) ? count($categorizedResults['tokens']) : 0; @endphp
-        @if(!empty($categorizedResults['per_word']) && $tokensCount > 1)
-            @foreach($categorizedResults['per_word'] as $word => $page)
-                <div id="tab-word-{{ $loop->index }}" class="tab-pane fade row mt-2 {{ $activeTab=='word-'.$loop->index ? 'show active' : '' }}" role="tabpanel" aria-labelledby="tab-link-word-{{ $loop->index }}">
-                    <div class="col-12">
-                        <h5 class="mb-3"><i class="fas fa-check ms-1"></i>نتائج بها كلمة "{{ $word }}"</h5>
-                        @if($page->count())
-                            <div class="row g-3 mb-3">
-                                @foreach($page as $document)
-                                    @include('frontend.documents.partials.search-result-card', ['document' => $document, 'matchType' => 'any', 'word' => $word])
-                                @endforeach
-                            </div>
-                            <div class="d-flex justify-content-center mb-4">
-                                {{ $page->appends(array_merge(request()->except('page_w'.$loop->index), ['tab' => 'word-'.$loop->index]))->links() }}
-                            </div>
-                        @else
-                            <div class="alert alert-light">لا توجد نتائج تحتوي كلمة "{{ $word }}".</div>
-                          
-                        @endif
-                    </div>
-                </div>
-            @endforeach
-        @endif
-
-        </div> <!-- نهاية tab-content -->
-
-        {{-- <div class="row mt-4" id="results-tabs-bottom">
-            <div class="col-12">
-                <ul class="nav nav-tabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link {{ $activeTab=='phrase' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-phrase" aria-controls="tab-phrase">مطابقة تامة <span class="badge rounded-pill bg-secondary ms-1">{{ $phraseTotal }}</span></button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link {{ $activeTab=='all' ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-all" aria-controls="tab-all">جميع الكلمات <span class="badge rounded-pill bg-secondary ms-1">{{ $allTotal }}</span></button>
-                    </li>
-                    @if(!empty($categorizedResults['per_word']))
-                        @foreach($categorizedResults['per_word'] as $word => $page)
-                            <li class="nav-item">
-                                <button class="nav-link {{ $activeTab=='word-'.$loop->index ? 'active' : '' }}" data-bs-toggle="tab" type="button" role="tab" data-bs-target="#tab-word-{{ $loop->index }}" aria-controls="tab-word-{{ $loop->index }}">نتائج بها كلمة "{{ $word }}" <span class="badge rounded-pill bg-secondary ms-1">{{ $page->total() }}</span></button>
-                            </li>
-                        @endforeach
-                    @endif
-                </ul>
-            </div>
-        </div> --}}
+        @include('frontend.documents.partials.categorized-search-results', ['categorizedResults' => $categorizedResults])
     @endif
 
     <!-- قائمة الوثائق -->
@@ -1030,35 +898,6 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 @endsection
 
-@push('scripts')
-<script>
-    (function(){
-        function setActiveInBothNavs(target){
-            var links = document.querySelectorAll('[data-bs-toggle="tab"]');
-            links.forEach(function(link){
-                var href = link.getAttribute('data-bs-target');
-                if(href === target){
-                    link.classList.add('active');
-                } else {
-                    link.classList.remove('active');
-                }
-            });
-        }
-        function updateUrlTabParam(tab){
-            var url = new URL(window.location.href);
-            url.searchParams.set('tab', tab);
-            history.replaceState(null, '', url.toString());
-        }
-        document.addEventListener('shown.bs.tab', function (event) {
-            var target = event.target.getAttribute('data-bs-target'); // #tab-*
-            var tab = target.replace('#tab-','');
-            setActiveInBothNavs(target);
-            updateUrlTabParam(tab);
-        });
-    })();
-</script>
-@endpush
-
 @push('styles')
 <style>
 /* تقليل المسافة قبل وبعد تنبيهات عدم وجود نتائج داخل التبويبات */
@@ -1066,20 +905,8 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
 }
+#search-tab-content-wrapper {
+    transition: opacity 0.15s ease;
+}
 </style>
-@endpush
-
-@push('scripts')
-<script>
-// منع أي تمرير غير مرغوب فيه عند الضغط على التبويبات
-document.addEventListener('DOMContentLoaded', function() {
-    const tabButtons = document.querySelectorAll('#results-tabs .nav-link, #results-tabs-bottom .nav-link');
-    tabButtons.forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            const y = window.scrollY;
-            setTimeout(function(){ window.scrollTo(0, y); }, 0);
-        });
-    });
-});
-</script>
 @endpush

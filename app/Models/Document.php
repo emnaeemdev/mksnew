@@ -22,7 +22,8 @@ class Document extends Model
         'is_featured',
         'published_at',
         'views_count',
-        'user_id'
+        'user_id',
+        'search_text',
     ];
 
     protected $casts = [
@@ -90,6 +91,11 @@ class Document extends Model
             ->join('document_custom_fields', 'document_field_values.field_id', '=', 'document_custom_fields.id')
             ->orderBy('document_custom_fields.sort_order')
             ->select('document_field_values.*');
+    }
+
+    public function plainFieldValues()
+    {
+        return $this->hasMany(DocumentFieldValue::class, 'document_id');
     }
 
     /**

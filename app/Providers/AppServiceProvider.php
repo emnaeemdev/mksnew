@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\View;
 use App\Http\View\Composers\SidebarComposer;
 use Illuminate\Pagination\Paginator; // added
 use App\Models\Setting; // added
+use App\Models\Document;
+use App\Models\DocumentFieldValue;
+use App\Observers\DocumentObserver;
+use App\Observers\DocumentFieldValueObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,5 +40,8 @@ class AppServiceProvider extends ServiceProvider
         $footerHtml = Setting::get('footer_html', '');
         View::share('siteName', $siteName);
         View::share('footerHtml', $footerHtml);
+
+        Document::observe(DocumentObserver::class);
+        DocumentFieldValue::observe(DocumentFieldValueObserver::class);
     }
 }
