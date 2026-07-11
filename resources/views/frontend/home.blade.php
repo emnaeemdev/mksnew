@@ -48,7 +48,7 @@
 
         <!-- العمود الأيسر -->
         <div class="sidebar text-white">
-            <a href="#" class="text-white text-decoration-none">
+            <a href="{{ url('/ar/posts?category=nawafez') }}" class="text-white text-decoration-none">
                 <div class="sidebar-item">
                     <i class="fas fa-window-restore fa-4x mb-4"></i>
                     <h6 class="law-title">مجلة نوافذ</h6>
