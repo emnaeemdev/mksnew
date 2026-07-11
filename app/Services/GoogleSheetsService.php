@@ -26,7 +26,7 @@ class GoogleSheetsService
             $this->client = new Client();
             $this->client->setApplicationName('Monthly Newsletter System');
             $this->client->setScopes([Sheets::SPREADSHEETS_READONLY]);
-            $this->client->setAuthConfig(storage_path('app/credentials.json'));
+            $this->client->setAuthConfig(storage_path('app/google/credentials.json'));
             $this->client->setAccessType('offline');
             
             $this->service = new Sheets($this->client);
