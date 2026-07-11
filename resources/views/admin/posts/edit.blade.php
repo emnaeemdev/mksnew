@@ -127,22 +127,14 @@
                                             @enderror
                                         </div>
                                         
-                                        <!-- Arabic Slug -->
-                                        <!-- <div class="col-md-6 mb-3">
-                                            <label for="slug_ar" class="form-label">
-                                                <i class="fas fa-link me-1"></i>
-                                                الرابط المختصر
-                                            </label>
-                                            <input type="text" 
-                                                   class="form-control @error('slug') is-invalid @enderror" 
-                                                   id="slug_ar" 
-                                                   name="slug" 
-                                                   value="{{ old('slug', $post->slug) }}" 
-                                                   placeholder="الرابط المختصر للموضوع">
-                                            @error('slug')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div> -->
+                                        <!-- Arabic Slug hidden: auto-generated -->
+                                    </div>
+
+                                    <div class="mb-3">
+                                        @include('admin.partials.keyword-picker', [
+                                            'keywordScope' => 'post',
+                                            'selectedKeywords' => $post->keywords,
+                                        ])
                                     </div>
                                     
                                     <!-- Arabic Content -->
@@ -277,7 +269,7 @@
                                onchange="previewImage(this, 'featured-preview-ar')">
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
-                            الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
+                            الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
                         </div>
                         <div id="featured-preview-ar" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة الصورة المميزة العربية">
@@ -324,7 +316,7 @@
                                onchange="previewImage(this, 'bg-preview-ar')">
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
-                            الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
+                            الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
                         </div>
                         <div id="bg-preview-ar" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة صورة الخلفية العربية">
@@ -376,7 +368,7 @@
                                onchange="previewImage(this, 'featured-preview-en')">
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
-                            الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
+                            الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
                         </div>
                         <div id="featured-preview-en" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة الصورة المميزة الإنجليزية">
@@ -423,7 +415,7 @@
                                onchange="previewImage(this, 'bg-preview-en')">
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
-                            الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
+                            الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
                         </div>
                         <div id="bg-preview-en" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة صورة الخلفية الإنجليزية">
@@ -471,23 +463,30 @@
                                             </h6>
                                             @foreach($arabicFiles as $file)
                                                 <div class="current-file mb-2 border-start border-primary border-3 ps-3">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <div>
+                                                    <div class="row align-items-center g-2">
+                                                        <div class="col-md-5">
                                                             <i class="fas fa-file text-info me-2"></i>
-                                                            <strong>{{ $file->display_name }}</strong>
-                                                            <span class="text-muted">({{ $file->original_name }})</span>
+                                                            <span class="text-muted small">({{ $file->original_name }})</span>
                                                             <span class="badge bg-primary ms-2">عربي</span>
                                                             <a href="{{ $file->fileUrl }}" target="_blank" class="ms-2">
                                                                 <i class="fas fa-download"></i> تحميل
                                                             </a>
                                                         </div>
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" 
-                                                                   name="remove_files[]" value="{{ $file->id }}" 
-                                                                   id="remove_file_{{ $file->id }}">
-                                                            <label class="form-check-label text-danger" for="remove_file_{{ $file->id }}">
-                                                                حذف
-                                                            </label>
+                                                        <div class="col-md-5">
+                                                            <label class="form-label small mb-1">اسم العرض للزوار</label>
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                   name="existing_file_names[{{ $file->id }}]"
+                                                                   value="{{ old('existing_file_names.'.$file->id, $file->display_name) }}">
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" 
+                                                                       name="remove_files[]" value="{{ $file->id }}" 
+                                                                       id="remove_file_{{ $file->id }}">
+                                                                <label class="form-check-label text-danger" for="remove_file_{{ $file->id }}">
+                                                                    حذف
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -503,23 +502,30 @@
                                             </h6>
                                             @foreach($englishFiles as $file)
                                                 <div class="current-file mb-2 border-start border-success border-3 ps-3">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <div>
+                                                    <div class="row align-items-center g-2">
+                                                        <div class="col-md-5">
                                                             <i class="fas fa-file text-info me-2"></i>
-                                                            <strong>{{ $file->display_name }}</strong>
-                                                            <span class="text-muted">({{ $file->original_name }})</span>
+                                                            <span class="text-muted small">({{ $file->original_name }})</span>
                                                             <span class="badge bg-success ms-2">إنجليزي</span>
                                                             <a href="{{ $file->fileUrl }}" target="_blank" class="ms-2">
                                                                 <i class="fas fa-download"></i> تحميل
                                                             </a>
                                                         </div>
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" 
-                                                                   name="remove_files[]" value="{{ $file->id }}" 
-                                                                   id="remove_file_{{ $file->id }}">
-                                                            <label class="form-check-label text-danger" for="remove_file_{{ $file->id }}">
-                                                                حذف
-                                                            </label>
+                                                        <div class="col-md-5">
+                                                            <label class="form-label small mb-1">اسم العرض للزوار</label>
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                   name="existing_file_names[{{ $file->id }}]"
+                                                                   value="{{ old('existing_file_names.'.$file->id, $file->display_name) }}">
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" 
+                                                                       name="remove_files[]" value="{{ $file->id }}" 
+                                                                       id="remove_file_{{ $file->id }}">
+                                                                <label class="form-check-label text-danger" for="remove_file_{{ $file->id }}">
+                                                                    حذف
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -535,23 +541,30 @@
                                             </h6>
                                             @foreach($noLanguageFiles as $file)
                                                 <div class="current-file mb-2 border-start border-warning border-3 ps-3">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <div>
+                                                    <div class="row align-items-center g-2">
+                                                        <div class="col-md-5">
                                                             <i class="fas fa-file text-info me-2"></i>
-                                                            <strong>{{ $file->display_name }}</strong>
-                                                            <span class="text-muted">({{ $file->original_name }})</span>
+                                                            <span class="text-muted small">({{ $file->original_name }})</span>
                                                             <span class="badge bg-warning text-dark ms-2">غير محدد</span>
                                                             <a href="{{ $file->fileUrl }}" target="_blank" class="ms-2">
                                                                 <i class="fas fa-download"></i> تحميل
                                                             </a>
                                                         </div>
-                                                        <div class="form-check">
-                                                            <input class="form-check-input" type="checkbox" 
-                                                                   name="remove_files[]" value="{{ $file->id }}" 
-                                                                   id="remove_file_{{ $file->id }}">
-                                                            <label class="form-check-label text-danger" for="remove_file_{{ $file->id }}">
-                                                                حذف
-                                                            </label>
+                                                        <div class="col-md-5">
+                                                            <label class="form-label small mb-1">اسم العرض للزوار</label>
+                                                            <input type="text" class="form-control form-control-sm"
+                                                                   name="existing_file_names[{{ $file->id }}]"
+                                                                   value="{{ old('existing_file_names.'.$file->id, $file->display_name) }}">
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" 
+                                                                       name="remove_files[]" value="{{ $file->id }}" 
+                                                                       id="remove_file_{{ $file->id }}">
+                                                                <label class="form-check-label text-danger" for="remove_file_{{ $file->id }}">
+                                                                    حذف
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -916,74 +929,13 @@
 @section('scripts')
 <!-- TinyMCE -->
 <script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
+<script src="{{ asset('js/admin-tinymce.js') }}"></script>
 <script>
-// Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if TinyMCE is loaded
-    if (typeof tinymce === 'undefined') {
-        console.error('TinyMCE is not loaded');
-        return;
+    if (typeof initAdminTinyMCE === 'function') {
+        initAdminTinyMCE('#content_ar', { directionality: 'rtl' });
+        initAdminTinyMCE('#content_en', { directionality: 'ltr' });
     }
-    
-    // Initialize TinyMCE for Arabic content
-    tinymce.init({
-        selector: '#content_ar',
-        height: 400,
-        directionality: 'rtl',
-        plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-            'codesample', 'nonbreaking', 'pagebreak', 'save', 'directionality'
-        ],
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
-                'alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | ' +
-                'forecolor backcolor removeformat | pagebreak | charmap emoticons | ' +
-                'fullscreen preview save print | insertfile image media template link anchor codesample | ' +
-                'ltr rtl | help',
-        menubar: 'file edit view insert format tools table help',
-        content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; direction: rtl; }',
-        font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
-        font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; AkrutiKndPadmini=Akpdmi-n; Times New Roman=times new roman,times,serif; Tahoma=tahoma,arial,helvetica,sans-serif; Verdana=verdana,geneva,sans-serif',
-        image_advtab: true,
-        link_assume_external_targets: true,
-        file_picker_types: 'image',
-        automatic_uploads: true,
-        images_upload_url: '/upload',
-        relative_urls: false,
-        remove_script_host: false,
-        convert_urls: true
-    });
-
-    // Initialize TinyMCE for English content
-    tinymce.init({
-        selector: '#content_en',
-        height: 400,
-        directionality: 'ltr',
-        plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-            'codesample', 'nonbreaking', 'pagebreak', 'save', 'directionality'
-        ],
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
-                'alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | ' +
-                'forecolor backcolor removeformat | pagebreak | charmap emoticons | ' +
-                'fullscreen preview save print | insertfile image media template link anchor codesample | ' +
-                'ltr rtl | help',
-        menubar: 'file edit view insert format tools table help',
-        content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; direction: ltr; }',
-        font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
-        font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; AkrutiKndPadmini=Akpdmi-n; Times New Roman=times new roman,times,serif; Tahoma=tahoma,arial,helvetica,sans-serif; Verdana=verdana,geneva,sans-serif',
-        image_advtab: true,
-        link_assume_external_targets: true,
-        file_picker_types: 'image',
-        automatic_uploads: true,
-        images_upload_url: '/upload',
-        relative_urls: false,
-        remove_script_host: false,
-        convert_urls: true
-    });
 
     // Auto-generate slug from English title (only if current slug matches the pattern)
     document.getElementById('title_en').addEventListener('input', function() {

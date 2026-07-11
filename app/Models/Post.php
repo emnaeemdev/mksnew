@@ -8,9 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Models\Concerns\HasKeywords;
 
 class Post extends Model
 {
+    use HasKeywords;
     protected $fillable = [
         'category_id',
         'user_id',

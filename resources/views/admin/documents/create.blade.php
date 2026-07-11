@@ -50,6 +50,10 @@
                                             @enderror
                                             <div class="form-text">سيتم استخدام هذا العنوان في نتائج البحث وإنشاء الرابط</div>
                                         </div>
+                                        @include('admin.partials.keyword-picker', [
+                                            'keywordScope' => 'document',
+                                            'selectedKeywords' => old('keywords', []),
+                                        ])
                                     </div>
                                 </div>
                                 
@@ -99,11 +103,11 @@
                                                             @break
                                                             
                                                         @case('date')
-                                                            <input type="date" class="form-control" 
-                                                                   id="custom_field_{{ $field->id }}" 
-                                                                   name="custom_fields[{{ $field->id }}]" 
-                                                                   value="{{ $currentValue }}" 
-                                                                   {{ $field->is_required ? 'required' : '' }}>
+                                                            @include('admin.partials.date-selects', [
+                                                                'fieldId' => $field->id,
+                                                                'value' => $currentValue,
+                                                                'required' => (bool) $field->is_required,
+                                                            ])
                                                             @break
                                                             
                                                         @case('select')
@@ -141,6 +145,15 @@
                                                                     @endforeach
                                                                 @endif
                                                             </select>
+                                                            @break
+
+                                                        @case('file')
+                                                            <input type="file" class="form-control"
+                                                                   id="custom_field_{{ $field->id }}"
+                                                                   name="custom_fields[{{ $field->id }}][]"
+                                                                   multiple
+                                                                   {{ $field->is_required ? 'required' : '' }}>
+                                                            <div class="form-text">يمكنك اختيار عدة ملفات</div>
                                                             @break
                                                     @endswitch
                                                     
@@ -273,6 +286,16 @@
                                             </div>
                                             <div class="form-text">الوثائق المميزة تظهر في المقدمة</div>
                                         </div>
+
+                                        <div class="mb-3">
+                                            <label for="sort_order" class="form-label">ترتيب العرض</label>
+                                            <input type="number" class="form-control @error('sort_order') is-invalid @enderror"
+                                                   id="sort_order" name="sort_order" value="{{ old('sort_order', 0) }}" min="0">
+                                            @error('sort_order')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                            <div class="form-text">الأرقام الأصغر تظهر أولاً</div>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -299,21 +322,33 @@
                                 
                                 <!-- رفع الملفات -->
                                 <div class="card mt-4">
-                                    <div class="card-header">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
                                         <h5 class="card-title mb-0">الملفات المرفقة</h5>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addDocumentFileRow()">
+                                            <i class="fas fa-plus"></i> إضافة ملف
+                                        </button>
                                     </div>
                                     <div class="card-body">
-                                        <div class="mb-3">
-                                            <label for="document_files" class="form-label">رفع ملفات</label>
-                                            <input type="file" class="form-control" id="document_files" name="document_files[]" multiple>
-                                            <div class="form-text">يمكنك رفع عدة ملفات في نفس الوقت</div>
+                                        <div id="document-files-container">
+                                            <div class="document-file-row border rounded p-3 mb-3">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">الملف</label>
+                                                        <input type="file" class="form-control document-file-input" name="document_files[]" onchange="updateDocumentFileDisplayName(this)">
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <label class="form-label">اسم العرض للزوار</label>
+                                                        <input type="text" class="form-control" name="file_display_names[]" placeholder="اسم الملف كما سيظهر للزوار">
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <button type="button" class="btn btn-outline-danger w-100" onclick="removeDocumentFileRow(this)">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                        
-                                        <!-- معاينة الملفات المحددة -->
-                                        <div id="files-preview" class="mt-3" style="display: none;">
-                                            <h6>الملفات المحددة:</h6>
-                                            <div id="files-list"></div>
-                                        </div>
+                                        <div class="form-text">يمكنك إضافة عدة ملفات — اضغط «إضافة ملف» لكل ملف جديد</div>
                                     </div>
                                 </div>
                             </div>
@@ -403,6 +438,10 @@ $(document).ready(function() {
                         
                         fieldsHtml += '</div></div>';
                         $('#customFieldsContainer').html(fieldsHtml);
+
+                        if (window.AdminDateSelects && typeof window.AdminDateSelects.initAll === 'function') {
+                            window.AdminDateSelects.initAll(document.getElementById('customFieldsContainer'));
+                        }
                         
                         // إعادة تهيئة TinyMCE للحقول الجديدة
                         if (typeof initCustomFieldsTinyMCE === 'function') {
@@ -455,8 +494,52 @@ $(document).ready(function() {
             $('#is_published').val('0');
         }
     });
-    
+
 });
+
+function addDocumentFileRow() {
+    const container = document.getElementById('document-files-container');
+    const row = document.createElement('div');
+    row.className = 'document-file-row border rounded p-3 mb-3';
+    row.innerHTML = `
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label">الملف</label>
+                <input type="file" class="form-control document-file-input" name="document_files[]" onchange="updateDocumentFileDisplayName(this)">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">اسم العرض للزوار</label>
+                <input type="text" class="form-control" name="file_display_names[]" placeholder="اسم الملف كما سيظهر للزوار">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-outline-danger w-100" onclick="removeDocumentFileRow(this)">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function removeDocumentFileRow(btn) {
+    const container = document.getElementById('document-files-container');
+    const rows = container.querySelectorAll('.document-file-row');
+    if (rows.length <= 1) {
+        const row = btn.closest('.document-file-row');
+        row.querySelectorAll('input').forEach(function (input) { input.value = ''; });
+        return;
+    }
+    btn.closest('.document-file-row').remove();
+}
+
+function updateDocumentFileDisplayName(fileInput) {
+    const row = fileInput.closest('.document-file-row');
+    const nameInput = row.querySelector('input[name="file_display_names[]"]');
+    if (fileInput.files && fileInput.files[0] && nameInput && !nameInput.value) {
+        const fileName = fileInput.files[0].name;
+        nameInput.value = fileName.replace(/\.[^/.]+$/, '');
+    }
+}
 
 // إنشاء HTML للحقول المخصصة
 function generateFieldHtml(field) {
@@ -493,10 +576,17 @@ function generateFieldHtml(field) {
             break;
             
         case 'date':
-            fieldHtml += `<input type="date" class="form-control" 
-                id="custom_field_${field.id}" 
-                name="custom_fields[${field.id}]" 
-                ${field.is_required ? 'required' : ''}>`;
+            if (window.AdminDateSelects && typeof window.AdminDateSelects.buildHtml === 'function') {
+                fieldHtml += window.AdminDateSelects.buildHtml(field.id, {
+                    required: !!field.is_required,
+                    name: `custom_fields[${field.id}]`
+                });
+            } else {
+                fieldHtml += `<input type="date" class="form-control"
+                    id="custom_field_${field.id}"
+                    name="custom_fields[${field.id}]"
+                    ${field.is_required ? 'required' : ''}>`;
+            }
             break;
             
         case 'select':
@@ -526,6 +616,15 @@ function generateFieldHtml(field) {
             }
             fieldHtml += '</select>';
             break;
+
+        case 'file':
+            fieldHtml += `<input type="file" class="form-control" 
+                id="custom_field_${field.id}" 
+                name="custom_fields[${field.id}][]" 
+                multiple 
+                ${field.is_required ? 'required' : ''}>
+                <div class="form-text">يمكنك اختيار عدة ملفات</div>`;
+            break;
     }
     
     if (field.help_text) {
@@ -542,122 +641,28 @@ function removeImagePreview() {
     $('#imagePreview').hide();
     $('#previewImg').attr('src', '');
 }
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
 </script>
 @endpush
 
 @push('scripts')
+<script src="{{ asset('js/admin-date-selects.js') }}"></script>
 <script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
+<script src="{{ asset('js/admin-tinymce.js') }}"></script>
 <script src="{{ asset('js/custom-fields-tinymce.js') }}"></script>
 <script>
-// Initialize TinyMCE for main content field
-document.addEventListener('DOMContentLoaded', function() {
-    tinymce.init({
-        selector: '#content',
-        height: 400,
-        language: 'ar',
-        directionality: 'rtl',
-        plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount',
-            'nonbreaking', 'save', 'directionality'
-        ],
-        toolbar: 'undo redo | blocks fontsize | bold italic underline | ' +
-                'alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | ' +
-                'forecolor backcolor removeformat | charmap | image media | ' +
-                'fullscreen preview | link | ltr rtl | help',
-        menubar: false,
-        content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; direction: rtl; }',
-        font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt',
-        block_formats: 'فقرة=p; عنوان 1=h1; عنوان 2=h2; عنوان 3=h3; عنوان 4=h4; عنوان 5=h5; عنوان 6=h6; مُنسق مسبقاً=pre',
-        setup: function(editor) {
-            editor.on('change', function() {
-                editor.save();
-            });
-        }
-    });
-        
-        // معالجة رفع الملفات
-        $('#document_files').on('change', function() {
-            const files = this.files;
-            const filesPreview = $('#files-preview');
-            const filesList = $('#files-list');
-            
-            if (files.length > 0) {
-                filesPreview.show();
-                filesList.empty();
-                
-                Array.from(files).forEach((file, index) => {
-                    const fileItem = $(`
-                        <div class="file-item border rounded p-3 mb-2" data-index="${index}">
-                            <div class="row align-items-center">
-                                <div class="col-md-4">
-                                    <strong>الملف الأصلي:</strong><br>
-                                    <small class="text-muted">${file.name}</small><br>
-                                    <small class="text-muted">${formatFileSize(file.size)}</small>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label">اسم العرض:</label>
-                                    <input type="text" class="form-control file-display-name" 
-                                           name="file_display_names[]" 
-                                           value="${file.name.replace(/\.[^/.]+$/, '')}" 
-                                           placeholder="أدخل اسم العرض للملف">
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-danger btn-sm remove-file">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                    filesList.append(fileItem);
-                });
-            } else {
-                filesPreview.hide();
-            }
-        });
-        
-        // إزالة ملف من القائمة
-        $(document).on('click', '.remove-file', function() {
-            const fileItem = $(this).closest('.file-item');
-            const index = fileItem.data('index');
-            
-            // إزالة العنصر من DOM
-            fileItem.remove();
-            
-            // إعادة تعيين input الملفات
-            const fileInput = $('#document_files')[0];
-            const dt = new DataTransfer();
-            
-            Array.from(fileInput.files).forEach((file, i) => {
-                if (i !== index) {
-                    dt.items.add(file);
-                }
-            });
-            
-            fileInput.files = dt.files;
-            
-            // إخفاء المعاينة إذا لم تعد هناك ملفات
-            if (fileInput.files.length === 0) {
-                $('#files-preview').hide();
-            }
-            
-            // إعادة ترقيم العناصر
-            $('.file-item').each(function(newIndex) {
-                $(this).attr('data-index', newIndex);
-            });
-        });
-        
-        // دالة لتنسيق حجم الملف
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-    });
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initAdminTinyMCE === 'function') {
+        initAdminTinyMCE('#content', { language: 'ar', directionality: 'rtl' });
+    }
+});
 </script>
 @endpush
 

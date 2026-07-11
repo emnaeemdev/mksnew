@@ -84,11 +84,9 @@
                                 <td>
                                     <div>
                                         <strong>
-                                            
+                                            <a href="{{ route('admin.posts.edit', $post) }}" class="text-decoration-none text-dark">
                                                 {{ Str::limit($post->title_ar, 40) }}
-
-
-
+                                            </a>
                                         </strong>
                                         @if($post->show_in_slider_ar)
                                             <span class="badge bg-info ms-1" title="يظهر في السلايدر - عربي">
@@ -112,7 +110,9 @@
                                     @if($post->title_en)
                                     <div>
                                     <span class="badge bg-success"> English </span>
-                                      {{ Str::limit($post->title_en, 40) }}
+                                      <a href="{{ route('admin.posts.edit', $post) }}" class="text-decoration-none text-dark">
+                                        {{ Str::limit($post->title_en, 40) }}
+                                      </a>
                                       @endif
                                       @if($post->show_in_slider_en)
                                             <span class="badge bg-info ms-1" title="يظهر في السلايدر - إنجليزي">

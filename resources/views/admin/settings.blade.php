@@ -351,34 +351,13 @@
 
 @section('scripts')
 <script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
+<script src="{{ asset('js/admin-tinymce.js') }}"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    const arabicSelectors = ['#about_html_ar', '#contact_description_ar'];
-    const englishSelectors = ['#about_html_en', '#contact_description_en'];
-    const commonSelectors = ['#footer_html'];
-
-    // RTL editors (Arabic)
-    tinymce.init({
-      selector: arabicSelectors.concat(commonSelectors).join(','),
-      directionality: 'rtl',
-      menubar: false,
-      plugins: 'link lists code table',
-      toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table | code',
-      height: 280,
-      branding: false,
-      content_style: 'body { font-family: Cairo, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, \"Apple Color Emoji\", \"Segoe UI Emoji\"; }'
-    });
-
-    // LTR editors (English)
-    tinymce.init({
-      selector: englishSelectors.join(','),
-      directionality: 'ltr',
-      menubar: false,
-      plugins: 'link lists code table',
-      toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table | code',
-      height: 280,
-      branding: false
-    });
+    if (typeof initAdminTinyMCE === 'function') {
+      initAdminTinyMCE('#about_html_ar, #contact_description_ar, #footer_html', { directionality: 'rtl' });
+      initAdminTinyMCE('#about_html_en, #contact_description_en', { directionality: 'ltr' });
+    }
   });
 </script>
 @endsection

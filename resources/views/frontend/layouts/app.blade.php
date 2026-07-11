@@ -25,6 +25,7 @@
     <link href="{{ asset('css/pagination-fix.css') }}" rel="stylesheet">
     
     @yield('styles')
+    @stack('styles')
 </head>
 <body>
     <!-- Header -->
@@ -37,6 +38,8 @@
     
     <!-- Footer -->
     @include('frontend.partials.footer')
+
+    @include('frontend.partials.newsletter-banner')
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

@@ -125,26 +125,14 @@
                                             @enderror
                                         </div>
                                         
-                                        <!-- Arabic Slug -->
-                                        <div class="col-md-6 mb-3">
-                                            <label for="slug" class="form-label">
-                                                <i class="fas fa-link me-1"></i>
-                                                الرابط المختصر
-                                            </label>
-                                            <input type="text" 
-                                                   class="form-control @error('slug') is-invalid @enderror" 
-                                                   id="slug" 
-                                                   name="slug" 
-                                                   value="{{ old('slug') }}" 
-                                                   placeholder="سيتم إنشاؤه تلقائياً من العنوان">
-                                            <div class="form-text">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                سيتم إنشاؤه تلقائياً إذا تُرك فارغاً
-                                            </div>
-                                            @error('slug')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
+                                        <!-- Arabic Slug hidden: auto-generated -->
+                                    </div>
+
+                                    <div class="mb-3">
+                                        @include('admin.partials.keyword-picker', [
+                                            'keywordScope' => 'post',
+                                            'selectedKeywords' => old('keywords', []),
+                                        ])
                                     </div>
                                     
                                     <!-- Arabic Content -->
@@ -248,7 +236,31 @@
                                 <!-- Arabic Images Tab -->
                                 <div class="tab-pane fade show active" id="arabic-images" role="tabpanel" aria-labelledby="arabic-images-tab">
                                     <div class="row">
-                                        <!-- Background Image Arabic -->
+                                        <!-- صورة الموضوع (يمين) -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="featured_image_ar" class="form-label">
+                                                <i class="fas fa-star me-1"></i>
+                                                صورة الموضوع
+                                            </label>
+                                            <input type="file" 
+                                                   class="form-control @error('featured_image_ar') is-invalid @enderror" 
+                                                   id="featured_image_ar" 
+                                                   name="featured_image_ar" 
+                                                   accept="image/*"
+                                                   onchange="previewImage(this, 'featured-preview-ar')">
+                                            <div class="form-text">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                                            </div>
+                                            <div id="featured-preview-ar" class="image-preview" style="display: none;">
+                                                <img src="" alt="معاينة صورة الموضوع العربية">
+                                            </div>
+                                            @error('featured_image_ar')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <!-- صورة الخلفية (يسار) -->
                                         <div class="col-md-6 mb-3">
                                             <label for="background_image_ar" class="form-label">
                                                 <i class="fas fa-image me-1"></i>
@@ -262,36 +274,12 @@
                                                    onchange="previewImage(this, 'bg-preview-ar')">
                                             <div class="form-text">
                                                 <i class="fas fa-info-circle me-1"></i>
-                                                الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
+                                                الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
                                             </div>
                                             <div id="bg-preview-ar" class="image-preview" style="display: none;">
                                                 <img src="" alt="معاينة صورة الخلفية العربية">
                                             </div>
                                             @error('background_image_ar')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        
-                                        <!-- Featured Image Arabic -->
-                                        <div class="col-md-6 mb-3">
-                                            <label for="featured_image_ar" class="form-label">
-                                                <i class="fas fa-star me-1"></i>
-                                                الصورة المميزة
-                                            </label>
-                                            <input type="file" 
-                                                   class="form-control @error('featured_image_ar') is-invalid @enderror" 
-                                                   id="featured_image_ar" 
-                                                   name="featured_image_ar" 
-                                                   accept="image/*"
-                                                   onchange="previewImage(this, 'featured-preview-ar')">
-                                            <div class="form-text">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
-                                            </div>
-                                            <div id="featured-preview-ar" class="image-preview" style="display: none;">
-                                                <img src="" alt="معاينة الصورة المميزة العربية">
-                                            </div>
-                                            @error('featured_image_ar')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
@@ -301,7 +289,31 @@
                                 <!-- English Images Tab -->
                                 <div class="tab-pane fade" id="english-images" role="tabpanel" aria-labelledby="english-images-tab">
                                     <div class="row">
-                                        <!-- Background Image English -->
+                                        <!-- صورة الموضوع (يمين) -->
+                                        <div class="col-md-6 mb-3">
+                                            <label for="featured_image_en" class="form-label">
+                                                <i class="fas fa-star me-1"></i>
+                                                صورة الموضوع (إنجليزي)
+                                            </label>
+                                            <input type="file" 
+                                                   class="form-control @error('featured_image_en') is-invalid @enderror" 
+                                                   id="featured_image_en" 
+                                                   name="featured_image_en" 
+                                                   accept="image/*"
+                                                   onchange="previewImage(this, 'featured-preview-en')">
+                                            <div class="form-text">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                                            </div>
+                                            <div id="featured-preview-en" class="image-preview" style="display: none;">
+                                                <img src="" alt="معاينة صورة الموضوع الإنجليزية">
+                                            </div>
+                                            @error('featured_image_en')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <!-- صورة الخلفية (يسار) -->
                                         <div class="col-md-6 mb-3">
                                             <label for="background_image_en" class="form-label">
                                                 <i class="fas fa-image me-1"></i>
@@ -315,36 +327,12 @@
                                                    onchange="previewImage(this, 'bg-preview-en')">
                                             <div class="form-text">
                                                 <i class="fas fa-info-circle me-1"></i>
-                                                الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
+                                                الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
                                             </div>
                                             <div id="bg-preview-en" class="image-preview" style="display: none;">
                                                 <img src="" alt="معاينة صورة الخلفية الإنجليزية">
                                             </div>
                                             @error('background_image_en')
-                                                <div class="invalid-feedback">{{ $message }}</div>
-                                            @enderror
-                                        </div>
-                                        
-                                        <!-- Featured Image English -->
-                                        <div class="col-md-6 mb-3">
-                                            <label for="featured_image_en" class="form-label">
-                                                <i class="fas fa-star me-1"></i>
-                                                الصورة المميزة (إنجليزي)
-                                            </label>
-                                            <input type="file" 
-                                                   class="form-control @error('featured_image_en') is-invalid @enderror" 
-                                                   id="featured_image_en" 
-                                                   name="featured_image_en" 
-                                                   accept="image/*"
-                                                   onchange="previewImage(this, 'featured-preview-en')">
-                                            <div class="form-text">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                الحد الأقصى: 2MB، الأنواع المدعومة: JPG, PNG, GIF
-                                            </div>
-                                            <div id="featured-preview-en" class="image-preview" style="display: none;">
-                                                <img src="" alt="معاينة الصورة المميزة الإنجليزية">
-                                            </div>
-                                            @error('featured_image_en')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
                                         </div>
@@ -667,76 +655,16 @@
 @section('scripts')
 <!-- TinyMCE -->
 <script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
+<script src="{{ asset('js/admin-tinymce.js') }}"></script>
 <script>
-// Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if TinyMCE is loaded
-    if (typeof tinymce === 'undefined') {
-        console.error('TinyMCE is not loaded');
-        return;
+    if (typeof initAdminTinyMCE === 'function') {
+        initAdminTinyMCE('#content_ar', { directionality: 'rtl' });
+        initAdminTinyMCE('#content_en', { directionality: 'ltr' });
     }
-    
-    // Initialize TinyMCE for Arabic content
-    tinymce.init({
-        selector: '#content_ar',
-        height: 400,
-        directionality: 'rtl',
-        plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-            'codesample', 'nonbreaking', 'pagebreak', 'save', 'directionality'
-        ],
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
-                'alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | ' +
-                'forecolor backcolor removeformat | pagebreak | charmap emoticons | ' +
-                'fullscreen preview save print | insertfile image media template link anchor codesample | ' +
-                'ltr rtl | help',
-        menubar: 'file edit view insert format tools table help',
-        content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; direction: rtl; }',
-        font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
-        font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; AkrutiKndPadmini=Akpdmi-n; Times New Roman=times new roman,times,serif; Tahoma=tahoma,arial,helvetica,sans-serif; Verdana=verdana,geneva,sans-serif',
-        image_advtab: true,
-        link_assume_external_targets: true,
-        file_picker_types: 'image',
-        automatic_uploads: true,
-        images_upload_url: '/upload',
-        relative_urls: false,
-        remove_script_host: false,
-        convert_urls: true
-    });
-
-    // Initialize TinyMCE for English content
-    tinymce.init({
-        selector: '#content_en',
-        height: 400,
-        directionality: 'ltr',
-        plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-            'codesample', 'nonbreaking', 'pagebreak', 'save', 'directionality'
-        ],
-        toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
-                'alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | ' +
-                'forecolor backcolor removeformat | pagebreak | charmap emoticons | ' +
-                'fullscreen preview save print | insertfile image media template link anchor codesample | ' +
-                'ltr rtl | help',
-        menubar: 'file edit view insert format tools table help',
-        content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; direction: ltr; }',
-        font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
-        font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; AkrutiKndPadmini=Akpdmi-n; Times New Roman=times new roman,times,serif; Tahoma=tahoma,arial,helvetica,sans-serif; Verdana=verdana,geneva,sans-serif',
-        image_advtab: true,
-        link_assume_external_targets: true,
-        file_picker_types: 'image',
-        automatic_uploads: true,
-        images_upload_url: '/upload',
-        relative_urls: false,
-        remove_script_host: false,
-        convert_urls: true
-    });
 });
-
+</script>
+<script>
 // Auto-generate slug from English title
 document.getElementById('title_en').addEventListener('input', function() {
     const titleEn = this.value;

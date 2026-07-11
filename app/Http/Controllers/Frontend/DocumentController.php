@@ -25,6 +25,17 @@ class DocumentController extends Controller
     {
         return $request->boolean('fragment') || $request->header('X-Search-Fragment') === '1';
     }
+
+    protected function applyDocumentListingSort($query, string $sort = 'latest')
+    {
+        return match ($sort) {
+            'oldest' => $query->orderBy('sort_order')->orderBy('published_at'),
+            'title' => $query->orderBy('title'),
+            'views' => $query->orderBy('views_count', 'desc'),
+            'newest', 'latest' => $query->orderBy('sort_order')->orderByDesc('published_at'),
+            default => $query->orderBy('sort_order')->orderByDesc('published_at'),
+        };
+    }
     public function index(Request $request)
     {
         // منع عرض الوثائق في الواجهة الإنجليزية لعدم توفر ترجمة
@@ -47,14 +58,16 @@ class DocumentController extends Controller
         $featuredDocuments = Document::with(['section', 'user'])
             ->published()
             ->where('is_featured', true)
-            ->latest('published_at')
+            ->orderBy('sort_order')
+            ->orderByDesc('published_at')
             ->take(6)
             ->get();
 
         // أحدث الوثائق
         $recentDocuments = Document::with(['section', 'user'])
             ->published()
-            ->latest('published_at')
+            ->orderBy('sort_order')
+            ->orderByDesc('published_at')
             ->take(9)
             ->get();
 
@@ -136,13 +149,8 @@ class DocumentController extends Controller
             ->orderBy('id', 'asc')
             ->first();
 
-        // الوثائق ذات الصلة
-        $relatedDocuments = Document::published()
-            ->where('section_id', $doc->section_id)
-            ->where('id', '!=', $doc->id)
-            ->latest('published_at')
-            ->take(6)
-            ->get();
+        // الوثائق ذات الصلة (كلمات مشتركة ثم عشوائي من نفس القسم)
+        $relatedDocuments = $this->searchService->findRelatedDocuments($doc, 6);
 
         // إحصائيات القسم المستخدم في صفحة عرض الوثيقة
         $sectionStats = [
@@ -225,20 +233,8 @@ class DocumentController extends Controller
             $activeFilters[] = ['label' => __('إلى'), 'value' => (string)$request->input('date_to'), 'remove_url' => request()->fullUrlWithQuery(['date_to' => null])];
         }
 
-        // Helper for applying sort
         $applySort = function($query) use ($sort) {
-            switch ($sort) {
-                case 'newest':
-                    return $query->latest('published_at');
-                case 'oldest':
-                    return $query->oldest('published_at');
-                case 'title':
-                    return $query->orderBy('title');
-                case 'views':
-                    return $query->orderBy('views_count', 'desc');
-                default:
-                    return $query->latest('published_at');
-            }
+            return $this->applyDocumentListingSort($query, $sort === 'relevance' ? 'latest' : $sort);
         };
 
         // في حال وجود عبارة بحث، ابنِ نتائج مصنّفة (تبويب نشط واحد فقط يُحمَّل بالكامل)
@@ -248,7 +244,7 @@ class DocumentController extends Controller
                 $searchTerm,
                 $request,
                 $applySort,
-                withAlVariant: false,
+                withAlVariant: true,
                 includeAnyTab: false
             );
 
@@ -640,30 +636,90 @@ class DocumentController extends Controller
     /**
      * حساب الأعداد لكل الخيارات في القوائم المنسدلة ومكونات التاريخ
      */
-    protected function computeFieldCounts(DocumentSection $section, $customFields, Request $request)
+    protected function computeFieldCounts(DocumentSection $section, $customFields, Request $request, ?array $precomputedRankedIds = null)
     {
-        $cacheKey = 'doc_field_counts:' . $section->id . ':' . md5(json_encode($request->except([
-            'page', 'page_phrase', 'page_all', 'page_p', 'page_a', 'page_any',
-            'page_w0', 'page_w1', 'page_w2', 'page_w3', 'tab', 'fragment',
+        $cacheKey = 'doc_field_counts_v5:' . $section->id . ':' . md5(json_encode($request->except([
+            'page', 'page_ranked', 'page_phrase', 'page_all', 'page_p', 'page_a', 'page_any',
+            'page_w0', 'page_w1', 'page_w2', 'page_w3', 'page_w4', 'tab', 'fragment',
         ])));
 
         // تخزين مؤقت لأعداد الفلاتر (يشمل البحث) لتجنب عشرات الاستعلامات الثقيلة
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request) {
-            return $this->computeFieldCountsUncached($section, $customFields, $request);
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request, $precomputedRankedIds) {
+            return $this->computeFieldCountsUncached($section, $customFields, $request, $precomputedRankedIds);
         });
     }
 
-    protected function computeFieldCountsUncached(DocumentSection $section, $customFields, Request $request)
+    protected function requestHasActiveFieldFilters(Request $request): bool
     {
-        $counts = [];
-        $baseQuery = Document::query()->published()->where('section_id', $section->id);
-        $searchTerm = trim((string) $request->get('search', ''));
-        if ($searchTerm !== '') {
-            $baseQuery = $this->searchService->applySearchResultsFilter($baseQuery, $searchTerm, true);
+        $fields = $request->input('fields', []);
+        if (!is_array($fields) || $fields === []) {
+            return false;
         }
 
+        foreach ($fields as $value) {
+            if (is_array($value)) {
+                foreach ($value as $part) {
+                    if ($part !== null && $part !== '') {
+                        return true;
+                    }
+                }
+            } elseif ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function computeFieldCountsUncached(DocumentSection $section, $customFields, Request $request, ?array $precomputedRankedIds = null)
+    {
+        $counts = [];
+        $searchTerm = trim((string) $request->get('search', ''));
+        $sort = $request->get('sort', 'latest');
+        $applySort = fn ($q) => $this->applyDocumentListingSort($q, $sort);
+
+        $scopedIdsCache = [];
+        $canReusePrecomputed = is_array($precomputedRankedIds) && !$this->requestHasActiveFieldFilters($request);
+
         foreach ($customFields as $field) {
-            $filteredQuery = $this->applyFieldFiltersExcluding($baseQuery, $customFields, $request, $field->id);
+            $fieldBaseQuery = Document::query()->published()->where('section_id', $section->id);
+            $fieldBaseQuery = $this->applyFieldFiltersExcluding($fieldBaseQuery, $customFields, $request, $field->id);
+
+            if ($searchTerm !== '') {
+                if ($canReusePrecomputed) {
+                    $scopedIds = $precomputedRankedIds;
+                } else {
+                    $scopeKey = md5(
+                        $fieldBaseQuery->toSql()
+                        . '|' . json_encode($fieldBaseQuery->getBindings())
+                        . '|' . $searchTerm
+                        . '|' . (string) $request->input('match_group', '')
+                    );
+
+                    if (!isset($scopedIdsCache[$scopeKey])) {
+                        $scopedIdsCache[$scopeKey] = $this->searchService->collectRankedDocumentIds(
+                            clone $fieldBaseQuery,
+                            $searchTerm,
+                            $request,
+                            $applySort,
+                            true
+                        );
+                    }
+
+                    $scopedIds = $scopedIdsCache[$scopeKey];
+                }
+
+                if ($scopedIds === []) {
+                    $counts[$field->id] = in_array($field->type, ['date', 'datetime'], true)
+                        ? ['day' => [], 'month' => [], 'year' => []]
+                        : [];
+                    continue;
+                }
+
+                $filteredQuery = Document::query()->published()->whereIn('documents.id', $scopedIds);
+            } else {
+                $filteredQuery = $fieldBaseQuery;
+            }
 
             if (in_array($field->type, ['select', 'radio'])) {
                 $rows = (clone $filteredQuery)
@@ -798,18 +854,7 @@ class DocumentController extends Controller
         // إذا وُجد نص بحث: نفّذ التصنيف المصنّف (تبويب نشط واحد فقط يُحمَّل بالكامل)
         if ($searchTerm !== '') {
             $sort = $request->get('sort', 'latest');
-            $applySort = function ($q) use ($sort) {
-                switch ($sort) {
-                    case 'oldest':
-                        return $q->oldest('published_at');
-                    case 'title':
-                        return $q->orderBy('title');
-                    case 'views':
-                        return $q->orderBy('views_count', 'desc');
-                    default:
-                        return $q->latest('published_at');
-                }
-            };
+            $applySort = fn ($q) => $this->applyDocumentListingSort($q, $sort);
 
             $categorizedResults = $this->searchService->searchCategorized(
                 clone $query,
@@ -820,6 +865,12 @@ class DocumentController extends Controller
                 includeAnyTab: false
             );
 
+            if ($this->wantsSearchFragment($request)) {
+                return response()->view('frontend.documents.partials.categorized-search-tab-content', [
+                    'categorizedResults' => $categorizedResults,
+                ]);
+            }
+
             if (!$scopeAllSections) {
                 foreach ($customFields as $field) {
                     if (in_array($field->type, ['select', 'multiselect', 'radio'])) {
@@ -827,7 +878,14 @@ class DocumentController extends Controller
                     }
                 }
             }
-            $fieldCounts = !$scopeAllSections ? $this->computeFieldCounts($section, $customFields, $request) : [];
+
+            $precomputedRankedIds = null;
+            if (!$this->requestHasActiveFieldFilters($request)) {
+                $precomputedRankedIds = $categorizedResults['ranked_ids'] ?? null;
+            }
+            $fieldCounts = !$scopeAllSections
+                ? $this->computeFieldCounts($section, $customFields, $request, $precomputedRankedIds)
+                : [];
 
             if ($scopeAllSections) {
                 $totalDocuments = Document::published()->count();
@@ -837,12 +895,6 @@ class DocumentController extends Controller
                 $totalViews = $section->documents()->published()->sum('views_count');
             }
 
-            if ($this->wantsSearchFragment($request)) {
-                return response()->view('frontend.documents.partials.categorized-search-tab-content', [
-                    'categorizedResults' => $categorizedResults,
-                ]);
-            }
-
             return view('frontend.documents.section', compact(
                 'section', 'customFields', 'appliedFilters', 'totalDocuments', 'totalViews', 'fieldCounts', 'categorizedResults', 'searchTerm', 'allSections'
             ));
@@ -850,19 +902,7 @@ class DocumentController extends Controller
 
         // الترتيب
         $sort = $request->get('sort', 'latest');
-        switch ($sort) {
-            case 'oldest':
-                $query->oldest('published_at');
-                break;
-            case 'title':
-                $query->orderBy('title');
-                break;
-            case 'views':
-                $query->orderBy('views_count', 'desc');
-                break;
-            default:
-                $query->latest('published_at');
-        }
+        $this->applyDocumentListingSort($query, $sort);
 
         $perPage = (int) $request->get('per_page', 6);
         $documents = $query->paginate($perPage);
@@ -916,7 +956,7 @@ class DocumentController extends Controller
         // إذا كان القسم فئة مقالات، ابحث في المقالات أولاً
         if ($category) {
             $post = Post::published()
-                ->with('category')
+                ->with(['category', 'keywords'])
                 ->where('id', $id)
                 ->where('category_id', $category->id)
                 ->first();
@@ -969,21 +1009,8 @@ class DocumentController extends Controller
                     ->toArray();
                 $otherReportsIds = array_unique(array_merge($otherReportsIds, $allOtherReportsIds));
 
-                // مقالات ذات صلة (استبعاد المقالات الموجودة في تقارير أخرى)
-                $relatedPostsQuery = Post::where('category_id', $post->category_id)
-                    ->where('id', '!=', $post->id)
-                    ->whereNotIn('id', $otherReportsIds)
-                    ->published();
-                
-                // Ensure English locale only shows posts with English translation
-                if (app()->getLocale() === 'en') {
-                    $relatedPostsQuery->whereNotNull('title_en')->where('title_en', '!=', '')
-                                     ->whereNotNull('content_en')->where('content_en', '!=', '');
-                }
-                
-                $relatedPosts = $relatedPostsQuery->orderBy('published_at', 'desc')
-                    ->limit(6)
-                    ->get();
+                // مقالات ذات صلة (كلمات من العنوان ثم عشوائي من نفس القسم)
+                $relatedPosts = $this->findRelatedPosts($post, $otherReportsIds, 6);
 
                 // جميع الفئات للملاحة
                 $categories = Category::where('is_active', true)
@@ -996,7 +1023,7 @@ class DocumentController extends Controller
 
         // إذا كان القسم قسم وثائق، ابحث في الوثائق
         if ($documentSection) {
-            $doc = Document::with(['section', 'user', 'fieldValues.field'])
+            $doc = Document::with(['section', 'user', 'fieldValues.field', 'keywords'])
                 ->published()
                 ->where('id', $id)
                 ->where('section_id', $documentSection->id)
@@ -1053,12 +1080,7 @@ class DocumentController extends Controller
                 ->orderBy('id', 'asc')
                 ->first();
 
-            $relatedDocuments = Document::published()
-                ->where('section_id', $doc->section_id)
-                ->where('id', '!=', $doc->id)
-                ->latest('published_at')
-                ->take(6)
-                ->get();
+            $relatedDocuments = $this->searchService->findRelatedDocuments($doc, 6);
 
             $sectionStats = [
                 'total_documents' => Document::published()->where('section_id', $doc->section_id)->count(),
@@ -1079,5 +1101,78 @@ class DocumentController extends Controller
 
         // إذا لم يُعثر على وثيقة ولا مقال بهذا المعرّف
         abort(404);
+    }
+
+    /**
+     * مقالات ذات صلة: تطابق كلمات العنوان داخل نفس القسم، ثم إكمال عشوائي.
+     *
+     * @param array<int, int> $excludeIds
+     * @return \Illuminate\Support\Collection<int, Post>
+     */
+    protected function findRelatedPosts(Post $post, array $excludeIds = [], int $limit = 6)
+    {
+        $excludeIds = array_values(array_unique(array_filter(array_merge($excludeIds, [(int) $post->id]))));
+        $title = app()->getLocale() === 'en' && filled($post->title_en)
+            ? (string) $post->title_en
+            : (string) ($post->title_ar ?: $post->title);
+        $normalized = trim(mb_strtolower($title, 'UTF-8'));
+        $tokens = array_values(array_filter(
+            preg_split('/[^\p{L}\p{N}]+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            fn (string $token) => mb_strlen($token) >= 4
+        ));
+        $tokens = array_slice(array_values(array_unique($tokens)), 0, 5);
+
+        $baseQuery = Post::query()
+            ->published()
+            ->where('category_id', $post->category_id)
+            ->whereNotIn('id', $excludeIds);
+
+        if (app()->getLocale() === 'en') {
+            $baseQuery->whereNotNull('title_en')->where('title_en', '!=', '')
+                ->whereNotNull('content_en')->where('content_en', '!=', '');
+        }
+
+        $related = collect();
+        if ($tokens !== []) {
+            $candidates = (clone $baseQuery)
+                ->where(function ($q) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $q->orWhere('title_ar', 'like', '%' . $token . '%')
+                            ->orWhere('title_en', 'like', '%' . $token . '%');
+                    }
+                })
+                ->orderByDesc('published_at')
+                ->limit(30)
+                ->get();
+
+            $related = $candidates
+                ->map(function (Post $candidate) use ($tokens) {
+                    $haystack = mb_strtolower(($candidate->title_ar ?? '') . ' ' . ($candidate->title_en ?? ''), 'UTF-8');
+                    $score = 0;
+                    foreach ($tokens as $token) {
+                        if (str_contains($haystack, $token)) {
+                            $score++;
+                        }
+                    }
+
+                    return ['post' => $candidate, 'score' => $score];
+                })
+                ->filter(fn (array $row) => $row['score'] > 0)
+                ->sortByDesc(fn (array $row) => [$row['score'], optional($row['post']->published_at)->timestamp ?? 0])
+                ->take($limit)
+                ->map(fn (array $row) => $row['post'])
+                ->values();
+        }
+
+        if ($related->count() < $limit) {
+            $filler = (clone $baseQuery)
+                ->when($related->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $related->pluck('id')))
+                ->inRandomOrder()
+                ->limit($limit - $related->count())
+                ->get();
+            $related = $related->concat($filler)->values();
+        }
+
+        return $related->take($limit)->values();
     }
 }

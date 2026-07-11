@@ -10,17 +10,31 @@ use Illuminate\Validation\Rule;
 
 class DocumentCustomFieldController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $sections = DocumentSection::with(['customFields' => function($query) {
+        $sections = DocumentSection::with(['customFields' => function ($query) {
             $query->orderBy('sort_order');
         }])->orderBy('sort_order')->get();
-        
-        $fields = DocumentCustomField::with('section')
+
+        $fieldsQuery = DocumentCustomField::with('section')
+            ->when($request->filled('section'), fn ($q) => $q->where('section_id', $request->section))
+            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->type))
+            ->when($request->filled('status') && $request->status !== '', function ($q) use ($request) {
+                $q->where('is_active', (int) $request->status === 1);
+            })
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = trim((string) $request->search);
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('label', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
+                        ->orWhere('help_text', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('section_id')
-            ->orderBy('sort_order')
-            ->paginate(15);
-            
+            ->orderBy('sort_order');
+
+        $fields = $fieldsQuery->paginate(15)->withQueryString();
+
         return view('admin.document-custom-fields.index', compact('sections', 'fields'));
     }
 

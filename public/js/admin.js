@@ -85,19 +85,33 @@ function initializeDataTables() {
 function validateForm(formId) {
     const form = document.getElementById(formId);
     if (!form) return true;
-    
+    // النماذج التي تعتمد على تحقق المتصفح/الخادم فقط
+    if (form.hasAttribute('novalidate')) return true;
+
     const requiredFields = form.querySelectorAll('[required]');
     let isValid = true;
-    
+
     requiredFields.forEach(field => {
-        if (!field.value.trim()) {
+        if (field.disabled) return;
+
+        let empty = false;
+        if (field.type === 'file') {
+            empty = !field.files || field.files.length === 0;
+        } else if (field.type === 'checkbox' || field.type === 'radio') {
+            const group = form.querySelectorAll(`[name="${field.name}"]`);
+            empty = ![...group].some(el => el.checked);
+        } else {
+            empty = !String(field.value || '').trim();
+        }
+
+        if (empty) {
             field.classList.add('is-invalid');
             isValid = false;
         } else {
             field.classList.remove('is-invalid');
         }
     });
-    
+
     return isValid;
 }
 

@@ -63,15 +63,15 @@ class PostController extends Controller
             'title_en' => 'nullable|string|max:255',
             'content_ar' => 'required|string',
             'content_en' => 'nullable|string',
-            'background_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'background_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'background_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'featured_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'featured_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'files_ar.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:10240',
+            'background_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'background_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'background_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'files_ar.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:51200',
             'files_ar.*.display_name' => 'nullable|string|max:255',
-            'files_en.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:10240',
+            'files_en.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:51200',
             'files_en.*.display_name' => 'nullable|string|max:255',
             'status' => 'required|in:draft,under_review,published',
             'published_at' => 'nullable|date',
@@ -203,6 +203,8 @@ class PostController extends Controller
             }
         }
 
+        $post->syncKeywordNames($request->input('keywords'));
+
         return redirect()->route('admin.posts.index')
             ->with('success', 'تم إنشاء الموضوع بنجاح');
     }
@@ -221,6 +223,7 @@ class PostController extends Controller
     public function edit(Post $post)
     {
         $categories = Category::where('is_active', true)->orderBy('sort_order')->get();
+        $post->load('keywords');
         return view('admin.posts.edit', compact('post', 'categories'));
     }
 
@@ -235,15 +238,15 @@ class PostController extends Controller
             'title_en' => 'nullable|string|max:255',
             'content_ar' => 'required|string',
             'content_en' => 'nullable|string',
-            'background_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'background_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'background_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'featured_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'featured_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'files_ar.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:10240',
+            'background_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'background_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'background_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image_ar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'files_ar.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:51200',
             'files_ar.*.display_name' => 'nullable|string|max:255',
-            'files_en.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:10240',
+            'files_en.*.file' => 'nullable|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar|max:51200',
             'files_en.*.display_name' => 'nullable|string|max:255',
             'status' => 'required|in:draft,under_review,published',
             'published_at' => 'nullable|date',
@@ -360,6 +363,14 @@ class PostController extends Controller
 
         $post->save();
 
+        if ($request->has('existing_file_names')) {
+            foreach ($request->input('existing_file_names', []) as $fileId => $displayName) {
+                $post->files()->where('id', (int) $fileId)->update([
+                    'display_name' => trim((string) $displayName),
+                ]);
+            }
+        }
+
         // Handle Arabic file uploads
         if ($request->has('files_ar')) {
             $filesData = $request->input('files_ar', []);
@@ -424,6 +435,8 @@ class PostController extends Controller
                 }
             }
         }
+
+        $post->syncKeywordNames($request->input('keywords'));
 
         return redirect()->route('admin.posts.edit', $post->id)
             ->with('success', 'تم تحديث الموضوع بنجاح');

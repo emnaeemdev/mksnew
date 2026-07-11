@@ -31,28 +31,10 @@
             </nav>
             <br>
             <div class="text-center">
-                <div class="mb-1">
-                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" 
-                         style="width: 30px; height: 30px;">
-                        <i class="fas fa-folder-open text-primary" style="font-size: 1rem;"></i>
-                    </div>
-                </div>
                 <h5 class="fw-bold text-primary mb-3">{{ app()->getLocale() === 'ar' ? $section->name : $section->name_en }}</h5>
                 @if($section->description)
                     <p class="lead text-muted mb-4">{{ $section->description }}</p>
                 @endif
-                
-                <div class="d-flex justify-content-center align-items-center gap-3 mb-4">
-                    @php
-                        $docsCountBadge = isset($documents)
-                            ? $documents->total()
-                            : ((isset($categorizedResults) && $categorizedResults && isset($categorizedResults['phrase'], $categorizedResults['all']))
-                                ? ($categorizedResults['phrase']->total() + $categorizedResults['all']->total())
-                                : 0);
-                    @endphp
-                    <span class="badge bg-primary fs-6">{{ $docsCountBadge }} وثيقة</span>
-                   
-                </div>
             </div>
         </div>
     </div>
@@ -138,16 +120,48 @@
                                 </div>
                             </div> -->
                         </div>
+
+                        @if(request()->filled('match_group'))
+                            <input type="hidden" name="match_group" id="match_group_field" value="{{ request('match_group') }}">
+                        @endif
                         
                         <!-- فلترة الحقول المخصصة -->
                         @if($customFields->count() > 0)
+                            @php
+                                $hasAnyFieldFilter = collect(request('fields', []))->flatten()->filter(function ($value) {
+                                    return $value !== null && $value !== '';
+                                })->isNotEmpty();
+                            @endphp
                             <div class="mt-4">
                                 <div class="border-top pt-4">
                                     <h6 class="mb-3">فلترة متقدمة</h6>
                                     <div class="row g-3">
                                         @foreach($customFields as $field)
-                                            <div class="col-lg-4 col-md-6">
-                                                <label for="field_{{ $field->id }}" class="form-label">{{ $field->label }}</label>
+                                            @php
+                                                $fieldFilterActive = match ($field->type) {
+                                                    'date', 'datetime' => false,
+                                                    'number' => filled(request("fields.{$field->id}.min"))
+                                                        || filled(request("fields.{$field->id}.max")),
+                                                    'multiselect' => collect((array) request("fields.{$field->id}", []))->filter()->isNotEmpty(),
+                                                    default => filled(request("fields.{$field->id}")),
+                                                };
+                                                $dateDayActive = in_array($field->type, ['date', 'datetime'], true) && filled(request("fields.{$field->id}.day"));
+                                                $dateMonthActive = in_array($field->type, ['date', 'datetime'], true) && filled(request("fields.{$field->id}.month"));
+                                                $dateYearActive = in_array($field->type, ['date', 'datetime'], true) && filled(request("fields.{$field->id}.year"));
+                                            @endphp
+                                            <div class="col-lg-4 col-md-6" data-filter-field="{{ $field->id }}">
+                                                <div class="d-flex justify-content-between align-items-center gap-2">
+                                                    <label for="field_{{ $field->id }}" class="form-label mb-1">{{ $field->label }}</label>
+                                                    @if($fieldFilterActive)
+                                                        <button type="button"
+                                                                class="btn btn-link btn-sm text-danger p-0 section-filter-clear flex-shrink-0"
+                                                                data-clear-filter="{{ $field->id }}"
+                                                                title="مسح {{ $field->label }}"
+                                                                aria-label="مسح {{ $field->label }}">
+                                                            <i class="fas fa-times-circle"></i> مسح
+                                                        </button>
+                                                    @endif
+                                                </div>
                                                 
                                                 @switch($field->type)
                                                     @case('select')
@@ -181,8 +195,23 @@
                                                         @break
                                                         
                                                     @case('date')
+                                                    @case('datetime')
                                                         <div class="row g-2">
                                                             <div class="col-4">
+                                                                <div class="d-flex justify-content-between align-items-center gap-1 mb-1">
+                                                                    <span class="small text-muted">اليوم</span>
+                                                                    @if($dateDayActive)
+                                                                        <button type="button"
+                                                                                class="btn btn-link btn-sm text-danger p-0 section-filter-clear"
+                                                                                data-clear-date-part
+                                                                                data-field-id="{{ $field->id }}"
+                                                                                data-date-part="day"
+                                                                                title="مسح اليوم"
+                                                                                aria-label="مسح اليوم">
+                                                                            <i class="fas fa-times-circle"></i> مسح
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
                                                                 <select class="form-select form-select-sm" name="fields[{{ $field->id }}][day]" onchange="document.getElementById('filterForm').submit()">
                                                                     <option value="">اليوم</option>
                                                                     @if(isset($fieldCounts[$field->id]['day']))
@@ -196,6 +225,20 @@
                                                                 </select>
                                                             </div>
                                                             <div class="col-4">
+                                                                <div class="d-flex justify-content-between align-items-center gap-1 mb-1">
+                                                                    <span class="small text-muted">الشهر</span>
+                                                                    @if($dateMonthActive)
+                                                                        <button type="button"
+                                                                                class="btn btn-link btn-sm text-danger p-0 section-filter-clear"
+                                                                                data-clear-date-part
+                                                                                data-field-id="{{ $field->id }}"
+                                                                                data-date-part="month"
+                                                                                title="مسح الشهر"
+                                                                                aria-label="مسح الشهر">
+                                                                            <i class="fas fa-times-circle"></i> مسح
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
                                                                 <select class="form-select form-select-sm" name="fields[{{ $field->id }}][month]" onchange="document.getElementById('filterForm').submit()">
                                                                     <option value="">الشهر</option>
                                                                     @php
@@ -216,6 +259,20 @@
                                                                 </select>
                                                             </div>
                                                             <div class="col-4">
+                                                                <div class="d-flex justify-content-between align-items-center gap-1 mb-1">
+                                                                    <span class="small text-muted">السنة</span>
+                                                                    @if($dateYearActive)
+                                                                        <button type="button"
+                                                                                class="btn btn-link btn-sm text-danger p-0 section-filter-clear"
+                                                                                data-clear-date-part
+                                                                                data-field-id="{{ $field->id }}"
+                                                                                data-date-part="year"
+                                                                                title="مسح السنة"
+                                                                                aria-label="مسح السنة">
+                                                                            <i class="fas fa-times-circle"></i> مسح
+                                                                        </button>
+                                                                    @endif
+                                                                </div>
                                                                 <select class="form-select form-select-sm" name="fields[{{ $field->id }}][year]" onchange="document.getElementById('filterForm').submit()">
                                                                     <option value="">السنة</option>
                                                                     @if(isset($fieldCounts[$field->id]['year']))
@@ -262,20 +319,14 @@
                                         @endforeach
                                     </div>
                                     
-                                    <div class="mt-3 d-flex gap-2">
+                                    <div class="mt-3 d-flex gap-2 flex-wrap">
                                         <button type="submit" class="btn btn-primary">
                                             <i class="fas fa-filter"></i> تطبيق الفلاتر
                                         </button>
-                                        @if($section && $section->slug)
-                                            <a href="{{ route('frontend.documents.section', [app()->getLocale(), $section->slug]) }}" 
-                                               class="btn btn-outline-secondary">
-                                                <i class="fas fa-times"></i> مسح الفلاتر
-                                            </a>
-                                        @else
-                                            <a href="{{ route('frontend.documents.index') }}" 
-                                               class="btn btn-outline-secondary">
-                                                <i class="fas fa-times"></i> مسح الفلاتر
-                                            </a>
+                                        @if($hasAnyFieldFilter)
+                                            <button type="button" class="btn btn-outline-secondary" data-clear-all-filters>
+                                                <i class="fas fa-times"></i> مسح جميع الفلاتر
+                                            </button>
                                         @endif
                                     </div>
                                 </div>
@@ -284,6 +335,30 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- أيقونة القسم وعدد الوثائق (تحت الفلتر) -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <div class="mb-2">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                     style="width: 36px; height: 36px;">
+                    <i class="fas fa-folder-open text-primary"></i>
+                </div>
+            </div>
+            @php
+                $docsCountBadge = isset($documents)
+                    ? $documents->total()
+                    : ((isset($categorizedResults['ranked']) && $categorizedResults['ranked'])
+                        ? (int) $categorizedResults['ranked']->total()
+                        : ((isset($categorizedResults) && !empty($categorizedResults['unique_total']))
+                            ? (int) $categorizedResults['unique_total']
+                            : ($totalDocuments ?? 0)));
+            @endphp
+            @if(trim((string) request('search', '')) === '')
+                <span class="badge bg-primary fs-6" data-section-docs-count>{{ $docsCountBadge }} وثيقة</span>
+            @endif
         </div>
     </div>
     
@@ -911,5 +986,17 @@ document.addEventListener('DOMContentLoaded', function() {
 #search-tab-content-wrapper {
     transition: opacity 0.15s ease;
 }
+.section-filter-clear {
+    font-size: 0.8rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.section-filter-clear:hover {
+    text-decoration: underline;
+}
 </style>
+@endpush
+
+@push('scripts')
+    <script src="{{ asset('js/section-filters.js') }}?v=3"></script>
 @endpush

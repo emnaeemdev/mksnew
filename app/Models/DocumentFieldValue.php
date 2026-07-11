@@ -150,4 +150,18 @@ class DocumentFieldValue extends Model
     {
         return empty($this->value) || $this->value === '' || $this->value === null;
     }
+
+    /**
+     * @return array<int, string>
+     */
+    public function getFilePaths(): array
+    {
+        if (!$this->value) {
+            return [];
+        }
+
+        $decoded = json_decode($this->value, true);
+
+        return is_array($decoded) ? $decoded : [$this->value];
+    }
 }

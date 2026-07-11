@@ -75,38 +75,27 @@
 
             <!-- نشرات ذات صلة -->
             @if($relatedNashras->count() > 0)
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-newspaper"></i> نشرات ذات صلة
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @foreach($relatedNashras as $related)
-                            <div class="d-flex mb-3 {{ !$loop->last ? 'border-bottom pb-3' : '' }}">
-                                @if($related->featured_image)
-                                    <img src="{{ $related->featured_image_url }}" 
-                                         alt="{{ $related->title_ar }}" 
-                                         class="rounded me-3" 
-                                         style="width: 60px; height: 60px; object-fit: cover;">
-                                @else
-                                    <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
-                                         style="width: 60px; height: 60px;">
-                                        <i class="fas fa-file-alt text-muted"></i>
-                                    </div>
-                                @endif
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <a href="{{ route('frontend.nashras.show', ['locale' => app()->getLocale(), 'nashra' => $related->id]) }}" 
-                                           class="text-decoration-none">
-                                            {{ Str::limit($related->title_ar, 50) }}
-                                        </a>
-                                    </h6>
-                                    <small class="text-muted">{{ $related->formatted_published_date }}</small>
+                <div class="related-posts mt-4">
+                    <h4 class="mb-4">
+                        <i class="fas fa-newspaper me-2"></i>
+                        نشرات ذات صلة
+                    </h4>
+
+                    @foreach($relatedNashras as $related)
+                        <a href="{{ route('frontend.nashras.show', ['locale' => app()->getLocale(), 'nashra' => $related->id]) }}"
+                           class="related-post-card">
+                            <img class="related-thumb"
+                                 src="{{ $related->featured_image ? $related->featured_image_url : 'https://via.placeholder.com/120x80?text=No+Image' }}"
+                                 alt="{{ $related->title_ar }}">
+                            <div class="related-post-body">
+                                <div class="related-post-title">{{ Str::limit($related->title_ar, 60) }}</div>
+                                <div class="related-post-meta">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    {{ $related->formatted_published_date }}
                                 </div>
                             </div>
-                        @endforeach
-                    </div>
+                        </a>
+                    @endforeach
                 </div>
             @endif
         </div>
@@ -129,8 +118,8 @@
                 <h3 class="h5 text-primary mb-3">
                     <i class="fas fa-align-left"></i> المحتوى
                 </h3>
-                <div class="content-text">
-                    {!! nl2br(e($nashra->content_ar)) !!}
+                <div class="content-text rich-content">
+                    {!! $nashra->content_ar !!}
                 </div>
             </div>
         </div>

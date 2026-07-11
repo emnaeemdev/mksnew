@@ -114,6 +114,17 @@
                             {!! $post->content !!}
                         </div>
 
+                    @if($post->relationLoaded('keywords') ? $post->keywords->isNotEmpty() : $post->keywords()->exists())
+                        <div class="mt-4 pt-3 border-top">
+                            <div class="mb-2 fw-bold text-muted"><i class="fas fa-tags me-1"></i>{{ app()->isLocale('ar') ? 'كلمات مفتاحية' : 'Keywords' }}</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach($post->keywords as $kw)
+                                    <a href="{{ route('posts.keywords.show', [app()->getLocale(), $kw->slug]) }}" class="btn btn-sm btn-outline-primary rounded-pill">{{ $kw->name }}</a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
                     
                     <!-- Download Section -->
                     @php

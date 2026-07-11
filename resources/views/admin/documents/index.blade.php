@@ -159,31 +159,31 @@
                         <div class="col-md-3">
                             <div class="card bg-primary text-white">
                                 <div class="card-body text-center">
-                                    <h3>{{ $stats['total'] }}</h3>
-                                    <small>إجمالي الوثائق</small>
+                                    <h3>{{ $stats['total_all'] }}</h3>
+                                    <small>إجمالي الوثائق (كل الأقسام)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-secondary text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ $stats['section_total'] ?? '—' }}</h3>
+                                    <small>وثائق القسم الحالي</small>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="card bg-success text-white">
                                 <div class="card-body text-center">
-                                    <h3>{{ $stats['published'] }}</h3>
+                                    <h3>{{ $stats['section_published'] ?? '—' }}</h3>
                                     <small>منشور</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="card bg-warning text-white">
-                                <div class="card-body text-center">
-                                    <h3>{{ $stats['featured'] }}</h3>
-                                    <small>مميز</small>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="card bg-info text-white">
                                 <div class="card-body text-center">
-                                    <h3>{{ $stats['draft'] }}</h3>
+                                    <h3>{{ $stats['section_draft'] ?? '—' }}</h3>
                                     <small>مسودة</small>
                                 </div>
                             </div>
@@ -222,7 +222,7 @@
                                                     
                                                     <div class="flex-grow-1">
                                                         <h6 class="mb-1">
-                                                            <a href="{{ route('admin.documents.show', $document) }}" 
+                                                            <a href="{{ route('admin.documents.edit', $document) }}" 
                                                                class="text-decoration-none">
                                                                 {{ $document->title }}
                                                             </a>

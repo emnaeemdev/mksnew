@@ -19,6 +19,7 @@
     <link href="{{ asset('css/admin-posts.css') }}" rel="stylesheet">
     
     @yield('styles')
+    @stack('styles')
 </head>
 <body>
     <div class="d-flex flex-column min-vh-100">
@@ -65,5 +66,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
     @yield('scripts')
+    @stack('scripts')
 </body>
 </html>

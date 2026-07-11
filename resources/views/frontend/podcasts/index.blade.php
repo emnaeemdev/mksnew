@@ -45,6 +45,9 @@
                                 <div class="podcast-meta">
                                     <i class="fa-solid fa-calendar"></i>
                                     {{ optional($item->published_at)->format('Y-m-d') ?? '' }}
+                                    @if(($item->tracks_count ?? 0) > 1)
+                                        <span class="ms-2"><i class="fa-solid fa-layer-group"></i> {{ $item->tracks_count }} {{ app()->isLocale('ar') ? 'حلقات' : 'tracks' }}</span>
+                                    @endif
                                 </div>
                             </div>
                         </div>

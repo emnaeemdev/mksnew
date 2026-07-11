@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Models\Concerns\HasKeywords;
 
 class Nashra extends Model
 {
+    use HasKeywords;
     protected $fillable = [
         'title_ar',
         'subtitle_ar',

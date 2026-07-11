@@ -5,12 +5,13 @@ namespace App\Console\Commands;
 use App\Models\Document;
 use App\Services\DocumentSearchService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 
 class RebuildDocumentSearchText extends Command
 {
     protected $signature = 'documents:rebuild-search-text {--chunk=100 : Number of documents per batch}';
 
-    protected $description = 'Rebuild pre-normalized search_text and search_words for all documents';
+    protected $description = 'Rebuild search_text, search_words, and document_search_tokens for all documents';
 
     public function handle(DocumentSearchService $searchService): int
     {
@@ -24,17 +25,16 @@ class RebuildDocumentSearchText extends Command
             ->orderBy('id')
             ->chunkById($chunk, function ($documents) use ($searchService, $bar) {
                 foreach ($documents as $document) {
-                    $index = $searchService->buildSearchIndex($document);
-                    $document->search_text = $index['search_text'];
-                    $document->search_words = $index['search_words'];
-                    $document->saveQuietly();
+                    $searchService->rebuildDocumentIndex($document);
                     $bar->advance();
                 }
             });
 
         $bar->finish();
         $this->newLine();
-        $this->info('Document search index rebuild completed.');
+
+        Cache::flush();
+        $this->info('Document search index rebuild completed (search_text + search_words + tokens).');
 
         return self::SUCCESS;
     }

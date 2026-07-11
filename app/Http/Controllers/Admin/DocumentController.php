@@ -13,13 +13,19 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use App\Services\DocumentSearchService;
 
 class DocumentController extends Controller
 {
+    public function __construct(protected DocumentSearchService $searchService)
+    {
+    }
+
     public function index(Request $request)
     {
         $query = Document::with(['section', 'user', 'fieldValues.field'])
-            ->latest();
+            ->orderBy('sort_order')
+            ->orderByDesc('published_at');
 
         // تصفية حسب القسم
         $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
@@ -93,11 +99,12 @@ class DocumentController extends Controller
         }
         
         // إحصائيات الوثائق
+        $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
         $stats = [
-            'total' => Document::count(),
-            'published' => Document::where('is_published', true)->count(),
-            'draft' => Document::where('is_published', false)->count(),
-            'featured' => Document::where('is_featured', true)->count()
+            'total_all' => Document::count(),
+            'section_total' => $sectionId ? Document::where('section_id', $sectionId)->count() : null,
+            'section_published' => $sectionId ? Document::where('section_id', $sectionId)->where('is_published', true)->count() : null,
+            'section_draft' => $sectionId ? Document::where('section_id', $sectionId)->where('is_published', false)->count() : null,
         ];
 
         return view('admin.documents.index', compact('documents', 'sections', 'stats', 'customFields'));
@@ -129,10 +136,11 @@ class DocumentController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'excerpt' => 'nullable|string|max:500',
-            'featured_image' => 'nullable|file|max:10240',
+            'featured_image' => 'nullable|file|max:51200',
             'is_published' => 'boolean',
             'is_featured' => 'boolean',
             'published_at' => 'nullable|date',
+            'sort_order' => 'nullable|integer|min:0',
             'document_files.*' => 'nullable|file|max:51200', // 50MB max per file
             'file_display_names.*' => 'nullable|string|max:255'
         ];
@@ -167,8 +175,9 @@ class DocumentController extends Controller
                     $fieldRules[] = 'url';
                     break;
                 case 'file':
-                    $fieldRules[] = 'file';
-                    break;
+                    $rules["custom_fields.{$field->id}"] = 'nullable|array';
+                    $rules["custom_fields.{$field->id}.*"] = 'file|max:51200';
+                    continue 2;
                 case 'select':
                 case 'radio':
                     if ($field->options) {
@@ -209,6 +218,7 @@ class DocumentController extends Controller
             'is_published' => $request->boolean('is_published'),
             'is_featured' => $request->boolean('is_featured'),
             'published_at' => $request->boolean('is_published') ? ($request->published_at ?? now()) : null,
+            'sort_order' => (int) ($request->sort_order ?? 0),
             'user_id' => Auth::id()
         ]);
 
@@ -216,22 +226,35 @@ class DocumentController extends Controller
         if ($request->has('custom_fields')) {
             foreach ($request->custom_fields as $fieldId => $value) {
                 $field = $customFields->find($fieldId);
-                if ($field && $value !== null) {
-                    // معالجة خاصة للملفات
-                    if ($field->type === 'file' && $request->hasFile("custom_fields.{$fieldId}")) {
-                        $value = $request->file("custom_fields.{$fieldId}")->store('documents/custom-fields', 'public');
-                    }
-                    // معالجة خاصة للاختيارات المتعددة
-                    elseif ($field->type === 'multiselect' && is_array($value)) {
-                        $value = json_encode($value);
-                    }
-
-                    DocumentFieldValue::create([
-                        'document_id' => $document->id,
-                        'field_id' => $fieldId,
-                        'value' => $value
-                    ]);
+                if (!$field) {
+                    continue;
                 }
+
+                if ($field->type === 'file') {
+                    $stored = $this->storeCustomFieldFiles($request, $fieldId);
+                    if (!empty($stored)) {
+                        DocumentFieldValue::create([
+                            'document_id' => $document->id,
+                            'field_id' => $fieldId,
+                            'value' => json_encode($stored),
+                        ]);
+                    }
+                    continue;
+                }
+
+                if ($value === null || $value === '') {
+                    continue;
+                }
+
+                if ($field->type === 'multiselect' && is_array($value)) {
+                    $value = json_encode($value);
+                }
+
+                DocumentFieldValue::create([
+                    'document_id' => $document->id,
+                    'field_id' => $fieldId,
+                    'value' => $value,
+                ]);
             }
         }
 
@@ -259,6 +282,8 @@ class DocumentController extends Controller
             }
         }
 
+        $document->syncKeywordNames($request->input('keywords'));
+
         return redirect()->route('admin.documents.index')
             ->with('success', 'تم إنشاء الوثيقة بنجاح');
     }
@@ -267,12 +292,8 @@ class DocumentController extends Controller
     {
         $document->load(['section', 'user', 'fieldValues.field']);
         
-        // الوثائق ذات الصلة من نفس القسم
-        $relatedDocuments = $document->section->documents()
-            ->where('id', '!=', $document->id)
-            ->latest('published_at')
-            ->take(6)
-            ->get();
+        // الوثائق ذات الصلة (كلمات مشتركة ثم عشوائي من نفس القسم)
+        $relatedDocuments = $this->searchService->findRelatedDocuments($document, 6);
         
         return view('admin.documents.show', compact('document', 'relatedDocuments'));
     }
@@ -282,6 +303,7 @@ class DocumentController extends Controller
         $sections = DocumentSection::active()->orderBy('sort_order')->get();
         $customFields = $document->section->customFields()->active()->orderBy('sort_order')->get();
         $fieldValues = $document->fieldValues()->with('field')->get()->keyBy('field_id');
+        $document->load('keywords');
 
         return view('admin.documents.edit', compact('document', 'sections', 'customFields', 'fieldValues'));
     }
@@ -295,10 +317,11 @@ class DocumentController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'excerpt' => 'nullable|string|max:500',
-            'featured_image' => 'nullable|file|max:10240',
+            'featured_image' => 'nullable|file|max:51200',
             'is_published' => 'boolean',
             'is_featured' => 'boolean',
             'published_at' => 'nullable|date',
+            'sort_order' => 'nullable|integer|min:0',
             'document_files.*' => 'nullable|file|max:51200', // 50MB per file
             'file_display_names.*' => 'nullable|string|max:255'
         ];
@@ -333,8 +356,9 @@ class DocumentController extends Controller
                     $fieldRules[] = 'url';
                     break;
                 case 'file':
-                    $fieldRules[] = 'file';
-                    break;
+                    $rules["custom_fields.{$field->id}"] = 'nullable|array';
+                    $rules["custom_fields.{$field->id}.*"] = 'file|max:51200';
+                    continue 2;
                 case 'select':
                 case 'radio':
                     if ($field->options) {
@@ -378,7 +402,8 @@ class DocumentController extends Controller
             'featured_image' => $featuredImagePath,
             'is_published' => $request->boolean('is_published'),
             'is_featured' => $request->boolean('is_featured'),
-            'published_at' => $request->boolean('is_published') ? ($request->published_at ?? $document->published_at ?? now()) : null
+            'published_at' => $request->boolean('is_published') ? ($request->published_at ?? $document->published_at ?? now()) : null,
+            'sort_order' => (int) ($request->sort_order ?? $document->sort_order ?? 0),
         ]);
 
         // معالجة الملفات الجديدة المرفوعة
@@ -387,6 +412,9 @@ class DocumentController extends Controller
             $displayNames = $request->input('file_display_names', []);
             
             foreach ($files as $index => $file) {
+                if (!$file || !$file->isValid()) {
+                    continue;
+                }
                 $originalName = $file->getClientOriginalName();
                 $displayName = $displayNames[$index] ?? pathinfo($originalName, PATHINFO_FILENAME);
                 $filePath = $file->store('documents/files', 'public');
@@ -404,34 +432,55 @@ class DocumentController extends Controller
         }
         
         // تحديث قيم الحقول المخصصة
+        $oldFieldValues = $document->fieldValues()->get()->keyBy('field_id');
+
         if ($request->has('custom_fields')) {
-            // حذف القيم القديمة للحقول المخصصة
             $document->fieldValues()->delete();
-            
+
             foreach ($request->custom_fields as $fieldId => $value) {
                 $field = $customFields->find($fieldId);
-                if ($field && $value !== null) {
-                    // معالجة خاصة للملفات
-                    if ($field->type === 'file' && $request->hasFile("custom_fields.{$fieldId}")) {
-                        $value = $request->file("custom_fields.{$fieldId}")->store('documents/custom-fields', 'public');
-                    }
-                    // معالجة خاصة للاختيارات المتعددة
-                    elseif ($field->type === 'multiselect' && is_array($value)) {
-                        $value = json_encode($value);
-                    }
-
-                    DocumentFieldValue::create([
-                        'document_id' => $document->id,
-                        'field_id' => $fieldId,
-                        'value' => $value
-                    ]);
+                if (!$field) {
+                    continue;
                 }
+
+                if ($field->type === 'file') {
+                    $stored = $this->storeCustomFieldFiles($request, $fieldId);
+                    if (empty($stored)) {
+                        $old = $oldFieldValues->get($fieldId);
+                        if ($old && $old->value) {
+                            $stored = json_decode($old->value, true) ?: [$old->value];
+                        }
+                    }
+                    if (!empty($stored)) {
+                        DocumentFieldValue::create([
+                            'document_id' => $document->id,
+                            'field_id' => $fieldId,
+                            'value' => json_encode(array_values($stored)),
+                        ]);
+                    }
+                    continue;
+                }
+
+                if ($value === null || $value === '') {
+                    continue;
+                }
+
+                if ($field->type === 'multiselect' && is_array($value)) {
+                    $value = json_encode($value);
+                }
+
+                DocumentFieldValue::create([
+                    'document_id' => $document->id,
+                    'field_id' => $fieldId,
+                    'value' => $value,
+                ]);
             }
         }
 
-        // return redirect()->route('admin.documents.index')
-        //     ->with('success', 'تم تحديث الوثيقة بنجاح');
-    return back()->with('success', 'تم تحديث الوثيقة بنجاح');
+        $document->syncKeywordNames($request->input('keywords'));
+
+        return redirect()->route('admin.documents.edit', $document)
+            ->with('success', 'تم تحديث الوثيقة بنجاح');
     }
 
     public function destroy(Document $document)
@@ -444,7 +493,13 @@ class DocumentController extends Controller
         // حذف ملفات الحقول المخصصة
         foreach ($document->fieldValues as $fieldValue) {
             if ($fieldValue->field->type === 'file' && $fieldValue->value) {
-                Storage::disk('public')->delete($fieldValue->value);
+                $paths = json_decode($fieldValue->value, true);
+                $paths = is_array($paths) ? $paths : [$fieldValue->value];
+                foreach ($paths as $path) {
+                    if ($path) {
+                        Storage::disk('public')->delete($path);
+                    }
+                }
             }
         }
         
@@ -620,5 +675,21 @@ class DocumentController extends Controller
                 ];
             })
         ]);
+    }
+
+    protected function storeCustomFieldFiles(Request $request, int|string $fieldId): array
+    {
+        $paths = [];
+        if (!$request->hasFile("custom_fields.{$fieldId}")) {
+            return $paths;
+        }
+
+        foreach ($request->file("custom_fields.{$fieldId}") as $file) {
+            if ($file && $file->isValid()) {
+                $paths[] = $file->store('documents/custom-fields', 'public');
+            }
+        }
+
+        return $paths;
     }
 }

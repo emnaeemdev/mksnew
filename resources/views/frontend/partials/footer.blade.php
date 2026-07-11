@@ -11,8 +11,7 @@
             <!-- العمود 1 -->
             <div class="col-md-3 d-flex flex-column text-center">
                 <h5 class="fw-bold mb-3">
-                    
-                    
+                    <a href="{{ route('home', [app()->getLocale()]) }}" class="text-decoration-none">
                                          @if(app()->getLocale() == 'ar')
                     <img alt="Logo" src="{{ asset('images/logo-arabic-header_mks.png') }}" class="footer_logo" style="width: 60%;" />
                         {{-- <h6 class="fw-bold mb-3">الذاكرة والمعرفة للدراسات</h6> --}}
@@ -20,6 +19,7 @@
                     <img alt="Logo" src="{{ asset('images/logo_header_en_mks.png') }}" class="footer_logo" style="width: 60%;" />
                         {{-- <h6 class="fw-bold mb-3">Memory and Knowledge Studies</h6> --}}
                     @endif
+                    </a>
                 </h5>
 
             </div>

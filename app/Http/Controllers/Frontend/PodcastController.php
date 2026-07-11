@@ -4,17 +4,17 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Podcast;
+use App\Models\PodcastTrack;
+use App\Support\StreamsPodcastAudio;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class PodcastController extends Controller
 {
-    /**
-     * Display a listing of the podcasts.
-     */
+    use StreamsPodcastAudio;
+
     public function index(Request $request)
     {
-        $query = Podcast::query()->where('is_published', true);
+        $query = Podcast::query()->where('is_published', true)->withCount('tracks');
 
         if ($search = $request->get('q')) {
             $query->where(function ($q) use ($search) {
@@ -34,96 +34,41 @@ class PodcastController extends Controller
         return view('frontend.podcasts.index', compact('podcasts', 'title', 'description'));
     }
 
-    /**
-     * Display the specified podcast by ID or slug.
-     */
     public function show($locale, Podcast $podcast)
     {
         if (!$podcast->is_published) {
             abort(404);
         }
 
+        $podcast->load('tracks');
+        $activeTrack = $podcast->primaryTrack();
+
         $title = $podcast->title;
         $description = strip_tags(mb_substr($podcast->content ?? '', 0, 160));
 
-        return view('frontend.podcasts.show', compact('podcast', 'title', 'description'));
+        return view('frontend.podcasts.show', compact('podcast', 'activeTrack', 'title', 'description'));
     }
 
-    /**
-     * Stream the podcast audio with HTTP Range support for seeking.
-     */
     public function stream($locale, Podcast $podcast, Request $request)
     {
-        if (!$podcast->is_published || !$podcast->audio_path) {
+        if (!$podcast->is_published) {
             abort(404);
         }
 
-        $path = Storage::disk('public')->path($podcast->audio_path);
-        if (!is_file($path)) {
+        $track = $podcast->primaryTrack();
+        if (!$track || !$track->audio_path) {
             abort(404);
         }
 
-        $size = filesize($path);
-        $mime = function_exists('mime_content_type') ? (mime_content_type($path) ?: 'audio/mpeg') : 'audio/mpeg';
+        return $this->streamAudioFile($track->audio_path, $request);
+    }
 
-        $rangeHeader = $request->header('Range');
-        $start = 0;
-        $end = $size - 1;
-        $status = 200;
-        $headers = [
-            'Content-Type' => $mime,
-            'Accept-Ranges' => 'bytes',
-        ];
-
-        if ($rangeHeader && preg_match('/bytes=(\d*)-(\d*)/i', $rangeHeader, $matches)) {
-            if ($matches[1] !== '') {
-                $start = (int) $matches[1];
-            }
-            if ($matches[2] !== '') {
-                $end = (int) $matches[2];
-            }
-            $start = max(0, $start);
-            $end = min($end, $size - 1);
-
-            if ($start > $end || $start >= $size) {
-                return response('', 416, [
-                    'Content-Range' => "bytes */{$size}",
-                    'Accept-Ranges' => 'bytes',
-                ]);
-            }
-
-            $status = 206; // Partial Content
-            $headers['Content-Range'] = "bytes {$start}-{$end}/{$size}";
+    public function streamTrack($locale, Podcast $podcast, PodcastTrack $track, Request $request)
+    {
+        if (!$podcast->is_published || (int) $track->podcast_id !== (int) $podcast->id || !$track->audio_path) {
+            abort(404);
         }
 
-        $length = $end - $start + 1;
-        $headers['Content-Length'] = $length;
-        $headers['Cache-Control'] = 'public, max-age=0';
-
-        return response()->stream(function () use ($path, $start, $end) {
-            $chunkSize = 8192;
-            $fh = fopen($path, 'rb');
-            if (!$fh) {
-                return;
-            }
-            try {
-                if ($start > 0) {
-                    fseek($fh, $start);
-                }
-                $bytesToOutput = $end - $start + 1;
-                while ($bytesToOutput > 0 && !feof($fh)) {
-                    $read = ($bytesToOutput > $chunkSize) ? $chunkSize : $bytesToOutput;
-                    $buffer = fread($fh, $read);
-                    if ($buffer === false) {
-                        break;
-                    }
-                    echo $buffer;
-                    flush();
-                    $bytesToOutput -= strlen($buffer);
-                }
-            } finally {
-                fclose($fh);
-            }
-        }, $status, $headers);
+        return $this->streamAudioFile($track->audio_path, $request);
     }
 }

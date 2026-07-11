@@ -18,6 +18,7 @@
     <link href="{{ asset('css/admin-posts.css') }}" rel="stylesheet">
     
     @yield('styles')
+    @stack('styles')
 </head>
 <body>
     <div class="d-flex flex-column min-vh-100">

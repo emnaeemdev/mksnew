@@ -92,23 +92,11 @@
                                                     <form action="{{ route('admin.document-sections.toggle-status', $section) }}" 
                                                           method="POST" class="d-inline">
                                                         @csrf
-                                                        @method('PATCH')
                                                         <button type="submit" class="btn btn-sm {{ $section->is_active ? 'btn-outline-danger' : 'btn-outline-success' }}" 
-                                                                title="{{ $section->is_active ? 'إلغاء التفعيل' : 'تفعيل' }}">
-                                                            <i class="fas {{ $section->is_active ? 'fa-times' : 'fa-check' }}"></i>
+                                                                title="{{ $section->is_active ? 'تعطيل القسم' : 'تفعيل القسم' }}">
+                                                            <i class="fas {{ $section->is_active ? 'fa-ban' : 'fa-check' }}"></i>
                                                         </button>
                                                     </form>
-                                                    @if($section->documents_count == 0)
-                                                        <form action="{{ route('admin.document-sections.destroy', $section) }}" 
-                                                              method="POST" class="d-inline" 
-                                                              onsubmit="return confirm('هل أنت متأكد من حذف هذا القسم؟')">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <button type="submit" class="btn btn-sm btn-danger" title="حذف">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>

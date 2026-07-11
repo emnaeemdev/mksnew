@@ -94,9 +94,15 @@
                                         }
                                     @endphp
                                     {!! $excerptMarked !!}
-                                @elseif($matchType === 'any' && !empty($word))
+                                @elseif($matchType === 'any' && (!empty($tokens) || !empty($word)))
                                     @php
-                                        $excerptMarked = $searchHelper->highlightTokenInText($excerptShort, $word, true);
+                                        $highlightWords = !empty($tokens) && is_array($tokens)
+                                            ? array_unique(array_filter($tokens))
+                                            : array_filter([$word ?? '']);
+                                        $excerptMarked = $excerptShort;
+                                        foreach ($highlightWords as $w) {
+                                            $excerptMarked = $searchHelper->highlightTokenInText($excerptMarked, $searchHelper->normalizeArabic($w), true);
+                                        }
                                     @endphp
                                     {!! $excerptMarked !!}
                                 @else
@@ -138,25 +144,35 @@
                             <div class="mt-2 border-top pt-2">
                                 <div class="small text-muted" style="min-height: 80px; max-height: 140px; overflow: hidden; direction: rtl;">
                                     @if($matchType === 'exact' && !empty($rawSearch))
-                                        @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($rawSearch), true); @endphp
-                                        @if($sn)
-                                            <div>{!! e($sn['before']) !!}<mark>{!! e($sn['match']) !!}</mark>{!! e($sn['after']) !!}</div>
-                                        @endif
+                                        @php
+                                            $snippets = $searchHelper->findDocumentSearchSnippets($document, (string) $rawSearch, $matchType, is_array($tokens) ? $tokens : []);
+                                        @endphp
+                                        @foreach($snippets as $sn)
+                                            <div>{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
+                                        @endforeach
                                     @elseif($matchType === 'all')
                                         @php
                                             $words = isset($tokens) && is_array($tokens) ? $tokens : preg_split('/\s+/u', trim(request('search', '')), -1, PREG_SPLIT_NO_EMPTY);
                                         @endphp
                                         @foreach(array_unique(array_filter($words)) as $w)
-                                            @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($w), true); @endphp
+                                            @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($w), true, 8, $words); @endphp
                                             @if($sn)
-                                                <div>{!! e($sn['before']) !!}<mark>{!! e($sn['match']) !!}</mark>{!! e($sn['after']) !!}</div>
+                                                <div>{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
                                             @endif
                                         @endforeach
-                                    @elseif($matchType === 'any' && !empty($word))
-                                        @php $sn = $searchHelper->findSnippetInDocument($document, $word, true); @endphp
-                                        @if($sn)
-                                            <div>{!! e($sn['before']) !!}<mark>{!! e($sn['match']) !!}</mark>{!! e($sn['after']) !!}</div>
-                                        @else
+                                    @elseif($matchType === 'any' && (!empty($tokens) || !empty($word)))
+                                        @php
+                                            $highlightWords = !empty($tokens) && is_array($tokens)
+                                                ? array_unique(array_filter($tokens))
+                                                : array_filter([$word ?? '']);
+                                        @endphp
+                                        @foreach($highlightWords as $w)
+                                            @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($w), true, 8, $highlightWords); @endphp
+                                            @if($sn)
+                                                <div>{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
+                                            @endif
+                                        @endforeach
+                                        @if(empty($highlightWords))
                                             <div class="text-muted">لم يُعثر على مقطع مطابق في النص المعروض.</div>
                                         @endif
                                     @endif

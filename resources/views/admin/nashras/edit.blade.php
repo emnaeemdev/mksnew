@@ -61,6 +61,13 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="mb-3">
+                            @include('admin.partials.keyword-picker', [
+                                'keywordScope' => 'nashra',
+                                'selectedKeywords' => $nashra->keywords,
+                            ])
+                        </div>
                         
                         <div class="row">
                             <!-- رابط Google Drive -->
@@ -161,7 +168,7 @@
                                 @error('featured_image')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <div class="form-text">الصيغ المدعومة: JPG, PNG, GIF (الحد الأقصى: 2MB) - اتركه فارغاً للاحتفاظ بالصورة الحالية</div>
+                                <div class="form-text">الصيغ المدعومة: JPG, PNG, GIF (الحد الأقصى: 50MB) - اتركه فارغاً للاحتفاظ بالصورة الحالية</div>
                             </div>
                             
                             <!-- ملف PDF -->
@@ -233,6 +240,8 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
+<script src="{{ asset('js/admin-tinymce.js') }}"></script>
 <script>
 $(document).ready(function() {
     // تفعيل زر جلب الأوراق عند إدخال رابط Google Drive
@@ -342,39 +351,9 @@ $(document).ready(function() {
         });
     });
 
-    // Initialize TinyMCE
-    if (typeof tinymce !== 'undefined') {
-        tinymce.init({
-            selector: '#content_ar',
-            height: 400,
-            directionality: 'rtl',
-            plugins: [
-                'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                'insertdatetime', 'media', 'table', 'help', 'wordcount', 'emoticons',
-                'codesample', 'nonbreaking', 'pagebreak', 'save', 'directionality'
-            ],
-            toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | ' +
-                    'alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | ' +
-                    'forecolor backcolor removeformat | pagebreak | charmap emoticons | ' +
-                    'fullscreen preview save print | insertfile image media template link anchor codesample | ' +
-                    'ltr rtl | help',
-            menubar: 'file edit view insert format tools table help',
-            content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; direction: rtl; }',
-            font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 36pt 48pt',
-            font_family_formats: 'Arial=arial,helvetica,sans-serif; Courier New=courier new,courier,monospace; Times New Roman=times new roman,times,serif; Tahoma=tahoma,arial,helvetica,sans-serif; Verdana=verdana,geneva,sans-serif',
-            image_advtab: true,
-            link_assume_external_targets: true,
-            file_picker_types: 'image',
-            automatic_uploads: true,
-            relative_urls: false,
-            remove_script_host: false,
-            convert_urls: true
-        });
+    if (typeof initAdminTinyMCE === 'function') {
+        initAdminTinyMCE('#content_ar', { directionality: 'rtl' });
     }
 });
 </script>
-
-<!-- TinyMCE -->
-<script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
 @endpush

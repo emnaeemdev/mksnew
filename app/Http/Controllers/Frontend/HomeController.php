@@ -87,11 +87,25 @@ class HomeController extends Controller
         $categories = Category::where('is_active', true)
                              ->orderBy('sort_order')
                              ->get();
-        
+
+        $didYouKnowCategory = Category::query()
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('name_ar', 'like', '%هل تعلم%')
+                    ->orWhere('name_en', 'like', '%did you know%')
+                    ->orWhere('slug', 'like', '%did-you-know%')
+                    ->orWhere('slug', 'like', '%hal-taalem%');
+            })
+            ->first();
+
+        $didYouKnowUrl = $didYouKnowCategory
+            ? route('posts.category', [$currentLocale, $didYouKnowCategory->slug ?: $didYouKnowCategory->name_en])
+            : route('posts.index', [$currentLocale]);
+
         // Use different template based on language
         $viewTemplate = $currentLocale === 'en' ? 'frontend.home-en' : 'frontend.home';
         
-        return view($viewTemplate, compact('sliderPosts', 'releasePosts', 'otherReportsPosts', 'latestPosts', 'categories'));
+        return view($viewTemplate, compact('sliderPosts', 'releasePosts', 'otherReportsPosts', 'latestPosts', 'categories', 'didYouKnowUrl'));
     }
     
     /**
@@ -153,7 +167,11 @@ class HomeController extends Controller
         try {
             // تحقق إن كان البريد مشترك مسبقاً
             if (NewsletterSubscription::where('email', $validated['email'])->exists()) {
-                return back()->with('success', __('messages.newsletter_already_subscribed'));
+                $message = __('messages.newsletter_already_subscribed');
+                if ($request->expectsJson()) {
+                    return response()->json(['success' => true, 'message' => $message]);
+                }
+                return back()->with('success', $message);
             }
 
             NewsletterSubscription::create([
@@ -161,9 +179,17 @@ class HomeController extends Controller
                 'email' => $validated['email'],
             ]);
 
-            return back()->with('success', __('messages.newsletter_success'));
+            $message = __('messages.newsletter_success');
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+            return back()->with('success', $message);
         } catch (\Throwable $e) {
-            return back()->with('error', __('messages.newsletter_error'));
+            $message = __('messages.newsletter_error');
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            return back()->with('error', $message);
         }
     }
 }

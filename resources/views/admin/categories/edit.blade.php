@@ -67,26 +67,7 @@
                         </div>
                     </div>
                     
-                    <!-- Slug -->
-                    <div class="mb-3">
-                        <label for="slug" class="form-label">
-                            <i class="fas fa-link me-1"></i>
-                            الرابط المختصر
-                        </label>
-                        <input type="text" 
-                               class="form-control @error('slug') is-invalid @enderror" 
-                               id="slug" 
-                               name="slug" 
-                               value="{{ old('slug', $category->slug) }}" 
-                               placeholder="category-slug">
-                        <div class="form-text">
-                            <i class="fas fa-info-circle me-1"></i>
-                            الرابط الحالي: <strong>{{ $category->slug }}</strong>
-                        </div>
-                        @error('slug')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
+                    {{-- Slug auto-generated --}}
                     
                     <div class="row">
                         <!-- Arabic Description -->

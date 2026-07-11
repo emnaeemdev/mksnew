@@ -458,7 +458,10 @@ $(document).ready(function() {
                 previewHtml += `<input type="number" class="form-control" placeholder="${placeholder}" disabled>`;
                 break;
             case 'date':
-                previewHtml += `<input type="date" class="form-control" disabled>`;
+                previewHtml += `<div class="input-group">
+                    <input type="text" class="form-control" placeholder="30-10-1990 أو 1990/10/30" disabled>
+                    <button type="button" class="btn btn-outline-secondary" disabled><i class="fas fa-calendar-alt"></i></button>
+                </div>`;
                 break;
             case 'select':
                 const selectOptions = $('input[name="options[]"]').map(function() {

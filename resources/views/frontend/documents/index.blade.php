@@ -72,7 +72,7 @@
                                     @if($section->slug)
                                         <a href="{{ route('frontend.documents.section', [app()->getLocale(), $section->slug]) }}" 
                                            class="btn btn-outline-primary">
-                                            استكشاف القسم
+                                            تصفح القسم
                                             <i class="fas fa-arrow-left ms-2"></i>
                                         </a>
                                     @else

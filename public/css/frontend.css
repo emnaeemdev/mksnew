@@ -532,3 +532,26 @@ body {
   color: #fff;
   box-shadow: none;
 }
+
+/* محتوى غني — تضمينات iframe (YouTube, Google Drive, ...) */
+.rich-content iframe,
+.content-text iframe,
+.post-content iframe,
+.document-content iframe {
+  max-width: 100%;
+  width: 100%;
+  min-height: 400px;
+  border: 0;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.rich-content .embed-responsive-wrapper,
+.content-text .embed-responsive-wrapper {
+  position: relative;
+  width: 100%;
+  margin: 1rem 0;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}

@@ -51,39 +51,49 @@
                     @endif
 
                     <!-- فلاتر البحث -->
-                    <div class="row mb-4">
+                    <form method="GET" action="{{ route('admin.document-custom-fields.index') }}" class="row mb-4 g-2" id="fieldsFilterForm">
                         <div class="col-md-3">
-                            <select class="form-select" id="sectionFilter">
+                            <select class="form-select" name="section" id="sectionFilter" onchange="this.form.submit()">
                                 <option value="">جميع الأقسام</option>
                                 @foreach($sections as $sec)
-                                    <option value="{{ $sec->id }}" {{ request('section') == $sec->id ? 'selected' : '' }}>
+                                    <option value="{{ $sec->id }}" {{ (string) request('section') === (string) $sec->id ? 'selected' : '' }}>
                                         {{ $sec->name }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <select class="form-select" id="typeFilter">
+                            <select class="form-select" name="type" id="typeFilter" onchange="this.form.submit()">
                                 <option value="">جميع الأنواع</option>
-                                <option value="text">نص</option>
-                                <option value="textarea">نص طويل</option>
-                                <option value="number">رقم</option>
-                                <option value="date">تاريخ</option>
-                                <option value="select">قائمة منسدلة</option>
-                                <option value="multiselect">اختيارات متعددة</option>
+                                <option value="text" {{ request('type') === 'text' ? 'selected' : '' }}>نص</option>
+                                <option value="textarea" {{ request('type') === 'textarea' ? 'selected' : '' }}>نص طويل</option>
+                                <option value="number" {{ request('type') === 'number' ? 'selected' : '' }}>رقم</option>
+                                <option value="date" {{ request('type') === 'date' ? 'selected' : '' }}>تاريخ</option>
+                                <option value="select" {{ request('type') === 'select' ? 'selected' : '' }}>قائمة منسدلة</option>
+                                <option value="multiselect" {{ request('type') === 'multiselect' ? 'selected' : '' }}>اختيارات متعددة</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="statusFilter">
+                        <div class="col-md-2">
+                            <select class="form-select" name="status" id="statusFilter" onchange="this.form.submit()">
                                 <option value="">جميع الحالات</option>
-                                <option value="1">مفعل</option>
-                                <option value="0">غير مفعل</option>
+                                <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>مفعل</option>
+                                <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>غير مفعل</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control" id="searchInput" placeholder="البحث في الحقول...">
+                            <input type="text" class="form-control" name="search" id="searchInput" value="{{ request('search') }}" placeholder="البحث في الحقول...">
                         </div>
-                    </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search"></i></button>
+                        </div>
+                        @if(request()->hasAny(['section', 'type', 'status', 'search']))
+                            <div class="col-12">
+                                <a href="{{ route('admin.document-custom-fields.index') }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-times"></i> مسح الفلاتر
+                                </a>
+                            </div>
+                        @endif
+                    </form>
 
                     @if($fields->count() > 0)
                         <div class="table-responsive">
@@ -335,47 +345,6 @@ $(document).ready(function() {
                 showToast('حدث خطأ أثناء تحديث الحالة', 'error');
             }.bind(this)
         });
-    });
-    
-    // فلترة الجدول
-    function filterTable() {
-        const sectionFilter = $('#sectionFilter').val();
-        const typeFilter = $('#typeFilter').val();
-        const statusFilter = $('#statusFilter').val();
-        const searchText = $('#searchInput').val().toLowerCase();
-        
-        $('#fieldsTable tbody tr').each(function() {
-            const row = $(this);
-            const section = row.data('section').toString();
-            const type = row.data('type');
-            const status = row.data('status').toString();
-            const text = row.text().toLowerCase();
-            
-            let show = true;
-            
-            if (sectionFilter && section !== sectionFilter) show = false;
-            if (typeFilter && type !== typeFilter) show = false;
-            if (statusFilter && status !== statusFilter) show = false;
-            if (searchText && !text.includes(searchText)) show = false;
-            
-            row.toggle(show);
-        });
-    }
-    
-    // ربط أحداث الفلترة
-    $('#sectionFilter, #typeFilter, #statusFilter').on('change', filterTable);
-    $('#searchInput').on('input', filterTable);
-    
-    // تحديث URL عند تغيير فلتر القسم (بدون إعادة تحميل الصفحة)
-    $('#sectionFilter').on('change', function() {
-        const sectionId = $(this).val();
-        const url = new URL(window.location);
-        if (sectionId) {
-            url.searchParams.set('section', sectionId);
-        } else {
-            url.searchParams.delete('section');
-        }
-        window.history.pushState({}, '', url);
     });
 });
 

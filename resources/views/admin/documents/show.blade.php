@@ -334,7 +334,7 @@
                                             <small class="text-muted">
                                                 <i class="fas fa-eye"></i> {{ number_format($related->views_count) }}
                                                 <span class="mx-1">•</span>
-                                                {{ $related->updated_at->diffForHumans() }}
+                                                {{ optional($related->updated_at ?? $related->published_at)->diffForHumans() }}
                                             </small>
                                         </div>
                                     </div>

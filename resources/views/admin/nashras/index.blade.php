@@ -49,16 +49,22 @@
                                         <td>{{ $loop->iteration }}</td>
                                         <td>
                                             @if($nashra->featured_image)
-                                                <img src="{{ $nashra->featured_image_url }}" 
-                                                     alt="{{ $nashra->title_ar }}" 
-                                                     class="img-thumbnail" 
-                                                     style="width: 80px; height: 60px; object-fit: cover;">
+                                                <a href="{{ route('admin.nashras.edit', $nashra->id) }}">
+                                                    <img src="{{ $nashra->featured_image_url }}" 
+                                                         alt="{{ $nashra->title_ar }}" 
+                                                         class="img-thumbnail" 
+                                                         style="width: 80px; height: 60px; object-fit: cover;">
+                                                </a>
                                             @else
                                                 <span class="text-muted">لا توجد صورة</span>
                                             @endif
                                         </td>
                                         <td>
-                                            <strong>{{ $nashra->title_ar }}</strong>
+                                            <strong>
+                                                <a href="{{ route('admin.nashras.edit', $nashra->id) }}" class="text-decoration-none text-dark">
+                                                    {{ $nashra->title_ar }}
+                                                </a>
+                                            </strong>
                                         </td>
                                         <td>{{ Str::limit($nashra->subtitle_ar, 50) }}</td>
                                         <td>

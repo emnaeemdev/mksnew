@@ -26,7 +26,7 @@ class DocumentFieldValueObserver
     {
         $document = Document::with('plainFieldValues')->find($fieldValue->document_id);
         if ($document) {
-            $this->searchService->rebuildSearchText($document);
+            $this->searchService->rebuildDocumentIndex($document);
         }
     }
 }

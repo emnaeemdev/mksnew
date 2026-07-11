@@ -1,14 +1,42 @@
 (function () {
-    const PAGE_PARAMS = ['page', 'page_p', 'page_a', 'page_any', 'page_phrase', 'page_all', 'page_w0', 'page_w1', 'page_w2', 'page_w3'];
-
     function getApp() {
         return document.getElementById('categorized-search-app');
     }
 
     function clearPageParams(url) {
-        PAGE_PARAMS.forEach(function (key) {
+        const toDelete = [];
+        url.searchParams.forEach(function (_, key) {
+            if (key === 'page' || key.indexOf('page_') === 0) {
+                toDelete.push(key);
+            }
+        });
+        toDelete.forEach(function (key) {
             url.searchParams.delete(key);
         });
+    }
+
+    function updateScatteredPicker(tab) {
+        const app = getApp();
+        if (!app) return;
+
+        const select = app.querySelector('[data-search-tab-select]');
+        const hint = app.querySelector('.search-scattered-picker .form-text');
+        if (!select) return;
+
+        const isScattered = tab && tab !== 'phrase' && tab !== 'all';
+        select.value = isScattered ? tab : '';
+
+        if (!hint) return;
+
+        if (isScattered) {
+            const option = select.querySelector('option[value="' + CSS.escape(tab) + '"]');
+            const label = option
+                ? option.textContent.replace(/\s*\(\d+\)\s*$/, '').trim()
+                : '';
+            hint.innerHTML = 'تعرض الآن نتائج: <strong style="color: rgb(124, 190, 86);">"' + label + '"</strong>';
+        } else {
+            hint.textContent = 'اختر من القائمة لعرض الوثائق التي تحتوي مجموعة كلمات محددة من بحثك.';
+        }
     }
 
     function setActiveTab(tab) {
@@ -20,6 +48,8 @@
             btn.classList.toggle('active', isActive);
             btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
+
+        updateScatteredPicker(tab);
     }
 
     function showLoading() {
@@ -108,6 +138,17 @@
         loadSearchFragment(url.toString());
     }
 
+    function onScatteredSelectChange(event) {
+        const select = event.target.closest('[data-search-tab-select]');
+        if (!select || !select.value) return;
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', select.value);
+        clearPageParams(url);
+
+        loadSearchFragment(url.toString());
+    }
+
     function onPaginationClick(event) {
         const link = event.target.closest('#categorized-search-app .pagination a');
         if (!link || !link.href) return;
@@ -125,6 +166,7 @@
         if (!app) return;
 
         app.addEventListener('click', onTabClick);
+        app.addEventListener('change', onScatteredSelectChange);
         app.addEventListener('click', onPaginationClick);
         window.addEventListener('popstate', onPopState);
     }

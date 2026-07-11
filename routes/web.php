@@ -31,6 +31,8 @@ Route::group([
     // Posts Routes
     Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
     Route::get('/posts/search', [PostController::class, 'search'])->name('posts.search');
+    Route::get('/posts/keywords', [\App\Http\Controllers\Frontend\KeywordController::class, 'postsIndex'])->name('posts.keywords.index');
+    Route::get('/posts/keywords/{keyword}', [\App\Http\Controllers\Frontend\KeywordController::class, 'postsShow'])->name('posts.keywords.show');
     Route::get('/posts/{category}', [PostController::class, 'category'])->name('posts.category');
     // Redirect old slug-based URLs to new ID-based URLs
     Route::get('/posts/{category}/{slug}', function($locale, $category, $slug) {
@@ -51,6 +53,8 @@ Route::group([
         Route::get('/', [DocumentController::class, 'index'])->name('index');
         Route::get('/search', [DocumentController::class, 'search'])->name('search');
         Route::post('/search', [DocumentController::class, 'search'])->name('search.post');
+        Route::get('/keywords', [\App\Http\Controllers\Frontend\KeywordController::class, 'documentsIndex'])->name('keywords.index');
+        Route::get('/keywords/{keyword}', [\App\Http\Controllers\Frontend\KeywordController::class, 'documentsShow'])->name('keywords.show');
     
         Route::get('/custom-fields', [DocumentController::class, 'getCustomFields'])->name('custom-fields');
         Route::get('/section/{section}', [DocumentController::class, 'section'])->name('section');
@@ -75,6 +79,7 @@ Route::group([
     Route::prefix('podcasts')->name('frontend.podcasts.')->group(function () {
         Route::get('/', [\App\Http\Controllers\Frontend\PodcastController::class, 'index'])->name('index');
         Route::get('/{podcast}/stream', [\App\Http\Controllers\Frontend\PodcastController::class, 'stream'])->name('stream');
+        Route::get('/{podcast}/tracks/{track}/stream', [\App\Http\Controllers\Frontend\PodcastController::class, 'streamTrack'])->name('tracks.stream');
         Route::get('/{podcast}', [\App\Http\Controllers\Frontend\PodcastController::class, 'show'])->name('show');
     });
 
@@ -186,7 +191,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::post('nashras/{nashra}/toggle-status', [\App\Http\Controllers\Admin\NashraController::class, 'toggleStatus'])->name('nashras.toggle-status');
 
     // Podcasts Management
+    Route::get('podcasts/{podcast}/stream', [\App\Http\Controllers\Admin\PodcastController::class, 'stream'])->name('podcasts.stream');
+    Route::get('podcasts/{podcast}/tracks/{track}/stream', [\App\Http\Controllers\Admin\PodcastController::class, 'streamTrack'])->name('podcasts.tracks.stream');
     Route::resource('podcasts', \App\Http\Controllers\Admin\PodcastController::class);
+
+    // Keywords autocomplete
+    Route::get('keywords/suggest', [\App\Http\Controllers\Admin\KeywordController::class, 'suggest'])->name('keywords.suggest');
     
     // Inquiries (Contact) Management
     Route::prefix('inquiries')->name('inquiries.')->group(function () {

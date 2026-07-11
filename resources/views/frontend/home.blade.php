@@ -69,7 +69,7 @@
                 </div>
             </a>
 
-            <a href="#" class="text-white text-decoration-none">
+            <a href="{{ $didYouKnowUrl ?? '#' }}" class="text-white text-decoration-none">
                 <div class="sidebar-item">
                     <i class="fas fa-lightbulb fa-4x mb-4"></i>
                     <h6 class="law-title">هل تعلم</h6>

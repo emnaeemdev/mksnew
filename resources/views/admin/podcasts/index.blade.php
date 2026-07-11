@@ -39,7 +39,12 @@
                 @forelse($podcasts as $podcast)
                     <tr>
                         <td>{{ $podcast->id }}</td>
-                        <td>{{ $podcast->title }}</td>
+                        <td>
+                            <a href="{{ route('admin.podcasts.edit', $podcast) }}" class="text-decoration-none text-dark">
+                                {{ $podcast->title }}
+                            </a>
+                            <div class="small text-muted">{{ $podcast->tracks_count ?? $podcast->tracks()->count() }} حلقة</div>
+                        </td>
                         <td>{{ $podcast->sort_order }}</td>
                         <td>{{ optional($podcast->published_at)->format('Y-m-d') }}</td>
                         <td>

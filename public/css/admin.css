@@ -55,3 +55,9 @@ body {
     border: none;
     font-weight: 600;
 }
+
+/* فصل أقسام نماذج الإضافة/التعديل */
+.main-content .card > .card-body {
+    border: 1px solid #0e69c5;
+    border-radius: 4px;
+}

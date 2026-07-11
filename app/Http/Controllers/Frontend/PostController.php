@@ -128,20 +128,7 @@ class PostController extends Controller
         $otherReportsIds = array_unique(array_merge($otherReportsIds, $allOtherReportsIds));
         
         // Get related posts from the same category, excluding other reports posts
-        $relatedPostsQuery = Post::where('category_id', $post->category_id)
-                                ->where('id', '!=', $post->id)
-                                ->whereNotIn('id', $otherReportsIds)
-                                ->published();
-        
-        // Ensure English locale only shows posts with English translation
-        if (app()->getLocale() === 'en') {
-            $relatedPostsQuery->whereNotNull('title_en')->where('title_en', '!=', '')
-                             ->whereNotNull('content_en')->where('content_en', '!=', '');
-        }
-        
-        $relatedPosts = $relatedPostsQuery->orderBy('published_at', 'desc')
-                                         ->limit(6)
-                                         ->get();
+        $relatedPosts = $this->findRelatedPosts($post, $otherReportsIds, 6);
         
         // Get all categories for navigation
         $categories = Category::where('is_active', true)
@@ -278,5 +265,78 @@ if ($file->display_name && pathinfo($downloadName, PATHINFO_EXTENSION) === '') {
 }
 
 return response()->download($fullPath, $downloadName);
+    }
+
+    /**
+     * مقالات ذات صلة: تطابق كلمات العنوان داخل نفس القسم، ثم إكمال عشوائي.
+     *
+     * @param array<int, int> $excludeIds
+     * @return \Illuminate\Support\Collection<int, Post>
+     */
+    protected function findRelatedPosts(Post $post, array $excludeIds = [], int $limit = 6)
+    {
+        $excludeIds = array_values(array_unique(array_filter(array_merge($excludeIds, [(int) $post->id]))));
+        $title = app()->getLocale() === 'en' && filled($post->title_en)
+            ? (string) $post->title_en
+            : (string) ($post->title_ar ?: $post->title);
+        $normalized = trim(mb_strtolower($title, 'UTF-8'));
+        $tokens = array_values(array_filter(
+            preg_split('/[^\p{L}\p{N}]+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            fn (string $token) => mb_strlen($token) >= 4
+        ));
+        $tokens = array_slice(array_values(array_unique($tokens)), 0, 5);
+
+        $baseQuery = Post::query()
+            ->published()
+            ->where('category_id', $post->category_id)
+            ->whereNotIn('id', $excludeIds);
+
+        if (app()->getLocale() === 'en') {
+            $baseQuery->whereNotNull('title_en')->where('title_en', '!=', '')
+                ->whereNotNull('content_en')->where('content_en', '!=', '');
+        }
+
+        $related = collect();
+        if ($tokens !== []) {
+            $candidates = (clone $baseQuery)
+                ->where(function ($q) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $q->orWhere('title_ar', 'like', '%' . $token . '%')
+                            ->orWhere('title_en', 'like', '%' . $token . '%');
+                    }
+                })
+                ->orderByDesc('published_at')
+                ->limit(30)
+                ->get();
+
+            $related = $candidates
+                ->map(function (Post $candidate) use ($tokens) {
+                    $haystack = mb_strtolower(($candidate->title_ar ?? '') . ' ' . ($candidate->title_en ?? ''), 'UTF-8');
+                    $score = 0;
+                    foreach ($tokens as $token) {
+                        if (str_contains($haystack, $token)) {
+                            $score++;
+                        }
+                    }
+
+                    return ['post' => $candidate, 'score' => $score];
+                })
+                ->filter(fn (array $row) => $row['score'] > 0)
+                ->sortByDesc(fn (array $row) => [$row['score'], optional($row['post']->published_at)->timestamp ?? 0])
+                ->take($limit)
+                ->map(fn (array $row) => $row['post'])
+                ->values();
+        }
+
+        if ($related->count() < $limit) {
+            $filler = (clone $baseQuery)
+                ->when($related->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $related->pluck('id')))
+                ->inRandomOrder()
+                ->limit($limit - $related->count())
+                ->get();
+            $related = $related->concat($filler)->values();
+        }
+
+        return $related->take($limit)->values();
     }
 }

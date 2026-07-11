@@ -130,6 +130,18 @@
                             </div>
                         @endif
                     </div>
+
+                    @if(($document->relationLoaded('keywords') && $document->keywords->isNotEmpty()) || (!$document->relationLoaded('keywords') && $document->keywords()->exists()))
+                        @php $document->loadMissing('keywords'); @endphp
+                        <div class="mb-4">
+                            <div class="mb-2 fw-bold text-muted"><i class="fas fa-tags me-1"></i>{{ app()->isLocale('ar') ? 'كلمات مفتاحية' : 'Keywords' }}</div>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach($document->keywords as $kw)
+                                    <a href="{{ route('frontend.documents.keywords.show', [app()->getLocale(), $kw->slug]) }}" class="btn btn-sm btn-outline-primary rounded-pill">{{ $kw->name }}</a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                     
                     <!-- أزرار المشاركة -->
                     <div class="d-flex flex-wrap gap-2 mb-4">
@@ -192,7 +204,7 @@
                         @if($document->section && $document->section->slug)
                             <a href="{{ route('frontend.documents.section', [app()->getLocale(), $document->section->slug]) }}" 
                                class="btn btn-sm btn-outline-primary">
-                                استكشاف القسم
+                                تصفح القسم
                             </a>
                         @else
                             <span class="btn btn-sm btn-outline-secondary disabled">
@@ -265,10 +277,12 @@
                                                         </div>
                                                         @break
                                                     @case('file')
-                                                        <a href="{{ asset('storage/' . $fieldValue->value) }}" target="_blank" class="btn btn-outline-primary btn-sm">
-                                                            <i class="fas fa-download me-2"></i>
-                                                            تحميل الملف
-                                                        </a>
+                                                        @foreach($fieldValue->getFilePaths() as $filePath)
+                                                            <a href="{{ asset('storage/' . $filePath) }}" target="_blank" class="btn btn-outline-primary btn-sm me-1 mb-1">
+                                                                <i class="fas fa-download me-1"></i>
+                                                                {{ basename($filePath) }}
+                                                            </a>
+                                                        @endforeach
                                                         @break
                                                     @case('textarea')
                                                         <div class="text-break" style="white-space: pre-wrap; line-height: 1.6;">{{ $fieldValue->value }}</div>
@@ -323,7 +337,7 @@
                                                     <i class="fas fa-eye me-1"></i>
                                                     {{ number_format($related->views_count) }}
                                                 </span>
-                                                <span>{{ $related->created_at->diffForHumans() }}</span>
+                                                <span>{{ optional($related->published_at ?? $related->created_at)->diffForHumans() }}</span>
                                             </div>
                                         </div>
                                     </div>

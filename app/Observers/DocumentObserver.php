@@ -13,11 +13,25 @@ class DocumentObserver
 
     public function saved(Document $document): void
     {
+        $document->loadMissing('plainFieldValues');
         $index = $this->searchService->buildSearchIndex($document);
-        if ($document->search_text !== $index['search_text'] || $document->search_words !== $index['search_words']) {
-            $document->search_text = $index['search_text'];
-            $document->search_words = $index['search_words'];
-            $document->saveQuietly();
+
+        if ($document->search_text === $index['search_text'] && $document->search_words === $index['search_words']) {
+            return;
+        }
+
+        $document->search_text = $index['search_text'];
+        $document->search_words = $index['search_words'];
+        $document->saveQuietly();
+        $this->searchService->syncSearchTokensForDocument((int) $document->id, $index['search_words']);
+    }
+
+    public function deleted(Document $document): void
+    {
+        if (\Illuminate\Support\Facades\Schema::hasTable('document_search_tokens')) {
+            \Illuminate\Support\Facades\DB::table('document_search_tokens')
+                ->where('document_id', $document->id)
+                ->delete();
         }
     }
 }

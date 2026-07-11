@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use App\Models\Concerns\HasKeywords;
 
 class Document extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasKeywords;
 
     protected $fillable = [
         'section_id',
@@ -22,6 +23,7 @@ class Document extends Model
         'is_featured',
         'published_at',
         'views_count',
+        'sort_order',
         'user_id',
         'search_text',
         'search_words',
@@ -31,7 +33,8 @@ class Document extends Model
         'is_published' => 'boolean',
         'is_featured' => 'boolean',
         'published_at' => 'datetime',
-        'views_count' => 'integer'
+        'views_count' => 'integer',
+        'sort_order' => 'integer',
     ];
 
     protected $dates = [

@@ -41,8 +41,8 @@ class NashraController extends Controller
             'google_drive_url' => 'required|url',
             'published_at' => 'nullable|date',
             'content_ar' => 'nullable|string',
-            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'pdf_file' => 'nullable|mimes:pdf|max:10240',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'pdf_file' => 'nullable|mimes:pdf|max:51200',
             'status' => 'required|in:0,1',
             'sort_order' => 'integer|min:0'
         ]);
@@ -77,7 +77,8 @@ class NashraController extends Controller
             $data['google_sheet_id'] = isset($matches[1]) ? $matches[1] : null;
         }
         
-        Nashra::create($data);
+        $nashra = Nashra::create($data);
+        $nashra->syncKeywordNames($request->input('keywords'));
         
         return redirect()->route('admin.nashras.index')
                        ->with('success', 'تم إنشاء النشرة بنجاح');
@@ -96,6 +97,7 @@ class NashraController extends Controller
      */
     public function edit(Nashra $nashra)
     {
+        $nashra->load('keywords');
         return view('admin.nashras.edit', compact('nashra'));
     }
 
@@ -110,8 +112,8 @@ class NashraController extends Controller
             'google_drive_url' => 'required|url',
             'published_at' => 'nullable|date',
             'content_ar' => 'nullable|string',
-            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'pdf_file' => 'nullable|mimes:pdf|max:20240',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'pdf_file' => 'nullable|mimes:pdf|max:51200',
             'status' => 'boolean',
             'sort_order' => 'integer|min:0'
         ]);
@@ -150,9 +152,10 @@ class NashraController extends Controller
         
         
         $nashra->update($data);
+        $nashra->syncKeywordNames($request->input('keywords'));
         
-        return redirect()->route('admin.nashras.index')
-                       ->with('success', 'تم تحديث النشرة بنجاح');
+        return redirect()->route('admin.nashras.edit', $nashra)
+            ->with('success', 'تم تحديث النشرة بنجاح');
     }
 
     /**
