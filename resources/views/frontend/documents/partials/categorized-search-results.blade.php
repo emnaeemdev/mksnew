@@ -73,7 +73,19 @@
             .ranked-search-query{color:#6c757d;font-weight:600}
             .ranked-search-total{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;background:#2b4596;color:#fff;font-weight:700}
             .ranked-search-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
-            .ranked-summary-pill{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:#eef3f7;color:#2b4596;font-weight:600;text-decoration:none;border:1px solid transparent}
+            .ranked-summary-pill{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 996px;
+    background: #eef3f7;
+    color: #2b4596;
+    /* font-weight: 150; */
+    text-decoration: none;
+    border: 1px solid transparent;
+    font-size: 14px;
+}
             .ranked-summary-pill:hover{background:#e4ebf3;color:#1f3b87;text-decoration:none}
             .ranked-summary-pill.active{background:#dfe8fb;border-color:#c6d7f4}
             .ranked-summary-pill strong{font-size:.92rem}
