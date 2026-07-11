@@ -29,13 +29,13 @@
     
     <!-- رأس الصفحة -->
     <div class="row mb-5">
-        <div class="col-12 text-center">
+        <!-- <div class="col-12 text-center">
             <h1 class="display-5 fw-bold text-primary mb-3">
                 <i class="fas fa-folder-open me-3"></i>
                 تصفح الوثائق
             </h1>
             <p class="lead text-muted mb-4">اكتشف مجموعة شاملة من الوثائق مصنفة حسب الأقسام</p>
-        </div>
+        </div> -->
     </div>
     
     <!-- نموذج البحث العام -->
@@ -98,7 +98,7 @@
     </div>
 
     <!-- الأقسام المتاحة -->
-    @if(isset($sections) && $sections->count() > 0)
+    <!-- @if(isset($sections) && $sections->count() > 0)
         <div class="row">
             <div class="col-12">
                 <h3 class="text-center mb-4">الأقسام المتاحة</h3>
@@ -131,7 +131,7 @@
                 </div>
             </div>
         </div>
-    @endif
+    @endif -->
 </div>
 @endsection
 
