@@ -48,33 +48,36 @@ class GoogleSheetsService
     {
         $cacheKey = "google_sheet_{$spreadsheetId}_" . md5($range ?? 'all');
     
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($spreadsheetId, $range) {
+        return Cache::remember($cacheKey, now()->addMonth(), function () use ($spreadsheetId, $range) {
     
             try {
     
+                // إذا لم يتم تحديد النطاق، جلب جميع الأوراق
                 if (!$range) {
                     return $this->getAllSheetsData($spreadsheetId);
                 }
     
-                $response = $this->service->spreadsheets_values->get($spreadsheetId, $range);
+                $response = $this->service->spreadsheets_values->get(
+                    $spreadsheetId,
+                    $range
+                );
     
-                return $response->getValues() ?? [];
+                $values = $response->getValues();
+    
+                return $values ?? [];
     
             } catch (Exception $e) {
     
                 Log::error('خطأ في جلب بيانات Google Sheet: ' . $e->getMessage());
     
-                throw new Exception('فشل في جلب البيانات من Google Sheets');
+                throw new Exception(
+                    'فشل في جلب البيانات من Google Sheets: ' . $e->getMessage()
+                );
     
             }
     
         });
     }
-
-    public function clearSheetCache($spreadsheetId)
-{
-    Cache::forget("google_sheet_{$spreadsheetId}_" . md5('all'));
-}
     
     /**
      * جلب بيانات جميع الأوراق في الجدول
