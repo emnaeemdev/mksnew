@@ -5,6 +5,7 @@ namespace App\Services;
 use Google\Client;
 use Google\Service\Sheets;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use Exception;
 
 class GoogleSheetsService
@@ -45,21 +46,35 @@ class GoogleSheetsService
      */
     public function getSheetData($spreadsheetId, $range = null)
     {
-        try {
-            // إذا لم يتم تحديد النطاق، جلب جميع الأوراق
-            if (!$range) {
-                return $this->getAllSheetsData($spreadsheetId);
+        $cacheKey = "google_sheet_{$spreadsheetId}_" . md5($range ?? 'all');
+    
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($spreadsheetId, $range) {
+    
+            try {
+    
+                if (!$range) {
+                    return $this->getAllSheetsData($spreadsheetId);
+                }
+    
+                $response = $this->service->spreadsheets_values->get($spreadsheetId, $range);
+    
+                return $response->getValues() ?? [];
+    
+            } catch (Exception $e) {
+    
+                Log::error('خطأ في جلب بيانات Google Sheet: ' . $e->getMessage());
+    
+                throw new Exception('فشل في جلب البيانات من Google Sheets');
+    
             }
-            
-            $response = $this->service->spreadsheets_values->get($spreadsheetId, $range);
-            $values = $response->getValues();
-            
-            return $values ?? [];
-        } catch (Exception $e) {
-            Log::error('خطأ في جلب بيانات Google Sheet: ' . $e->getMessage());
-            throw new Exception('فشل في جلب البيانات من Google Sheets: ' . $e->getMessage());
-        }
+    
+        });
     }
+
+    public function clearSheetCache($spreadsheetId)
+{
+    Cache::forget("google_sheet_{$spreadsheetId}_" . md5('all'));
+}
     
     /**
      * جلب بيانات جميع الأوراق في الجدول

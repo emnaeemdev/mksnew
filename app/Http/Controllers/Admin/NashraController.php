@@ -78,6 +78,10 @@ class NashraController extends Controller
         }
         
         $nashra = Nashra::create($data);
+        if ($nashra->google_sheet_id) {
+    app(\App\Services\GoogleSheetsService::class)
+        ->clearSheetCache($nashra->google_sheet_id);
+}
         $nashra->syncKeywordNames($request->input('keywords'));
         
         return redirect()->route('admin.nashras.index')
@@ -152,6 +156,10 @@ class NashraController extends Controller
         
         
         $nashra->update($data);
+        if ($nashra->google_sheet_id) {
+    app(\App\Services\GoogleSheetsService::class)
+        ->clearSheetCache($nashra->google_sheet_id);
+}
         $nashra->syncKeywordNames($request->input('keywords'));
         
         return redirect()->route('admin.nashras.edit', $nashra)
