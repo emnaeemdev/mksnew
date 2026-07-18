@@ -132,6 +132,20 @@
             justify-content: center;
         }
 
+        .nashra-card-title {
+            font-size: 14px;
+            font-weight: bold;
+            line-height: 1.4;
+            margin: 0.5rem 0.5rem 0.25rem;
+        }
+
+        .nashra-card-subtitle {
+            color: #666;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            margin: 0;
+        }
+
         .page-title {
             font-size: 2.5rem;
             font-weight: 700;
