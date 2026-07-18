@@ -916,10 +916,9 @@ class DocumentController extends Controller
         }
 
         if ($keywordMode) {
-            // وثائق هذا القسم المنشورة المرتبطة بالكلمة المختارة
+            // كل الوثائق المنشورة المرتبطة بالكلمة — من كل الأقسام — مع اسم القسم على كل بطاقة
             $query = Document::with(['section', 'user'])
                 ->published()
-                ->where('section_id', $section->id)
                 ->whereHas('keywords', function ($q) use ($activeSectionKeyword) {
                     $q->where('keywords.id', $activeSectionKeyword->id)
                         ->where('keywords.scope', 'document');

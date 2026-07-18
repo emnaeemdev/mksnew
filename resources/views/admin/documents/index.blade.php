@@ -36,9 +36,9 @@
                                 <div>
                                     <h5 class="mb-1">اختصارات الكلمات المفتاحية للزائر</h5>
                                     <p class="text-muted small mb-0">
-                                        تظهر للزائر في صفحة قسم
-                                        <strong>{{ $pinnedSection->name }}</strong>
-                                        فقط. يمكنك اختيار كلمات مختلفة لكل قسم.
+                                        تظهر هذه الاختصارات للزائر في صفحة قسم
+                                        <strong>{{ $pinnedSection->name }}</strong>.
+                                        عند الضغط على كلمة، تُعرض كل الوثائق المرتبطة بها من كل الأقسام مع اسم القسم على كل وثيقة.
                                     </p>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-sm">

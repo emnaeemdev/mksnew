@@ -31,17 +31,18 @@ class DocumentPinnedKeyword extends Model
     }
 
     /**
-     * الكلمات المثبتة كاختصارات للزائر داخل قسم معيّن.
+     * الكلمات المثبتة كاختصارات ظاهرة في صفحة قسم معيّن.
+     * العدد المعروض = كل الوثائق المنشورة المرتبطة بالكلمة في كل الأقسام.
      */
     public static function orderedKeywordsForSection(int $sectionId, bool $withDocumentCounts = false): Collection
     {
         $pins = static::query()
             ->where('document_section_id', $sectionId)
-            ->with(['keyword' => function ($q) use ($withDocumentCounts, $sectionId) {
+            ->with(['keyword' => function ($q) use ($withDocumentCounts) {
                 $q->where('scope', 'document');
                 if ($withDocumentCounts) {
-                    $q->withCount(['documents as section_docs_count' => function ($docs) use ($sectionId) {
-                        $docs->published()->where('section_id', $sectionId);
+                    $q->withCount(['documents as docs_count' => function ($docs) {
+                        $docs->published();
                     }]);
                 }
             }])

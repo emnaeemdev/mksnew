@@ -457,7 +457,7 @@
                 @endif
             @else
                 <div class="alert alert-light border text-center py-4">
-                    لا توجد وثائق تحت هذه المجموعة في القسم الحالي.
+                    لا توجد وثائق منشورة مرتبطة بهذه الكلمة المفتاحية.
                 </div>
             @endif
         </div>

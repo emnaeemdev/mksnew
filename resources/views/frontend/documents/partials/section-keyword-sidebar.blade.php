@@ -31,7 +31,7 @@
                class="section-keyword-chip {{ $isActive ? 'is-active' : '' }}"
                title="{{ $kw->name }}">
                 {{ $label }}
-                <span class="section-keyword-chip__count">{{ (int) ($kw->section_docs_count ?? 0) }}</span>
+                <span class="section-keyword-chip__count">{{ (int) ($kw->docs_count ?? $kw->section_docs_count ?? 0) }}</span>
             </a>
         @endforeach
     </div>
