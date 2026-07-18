@@ -24,11 +24,33 @@
             ? array_values(array_unique(array_filter($tokens)))
             : array_filter([$word]));
 
-    $displaySource = $searchHelper->documentDisplaySource($document);
-    $excerptShort = $searchHelper->plainTextForPreview($displaySource, 220, $highlightWords);
-    $excerptMarked = $displaySource !== ''
-        ? $searchHelper->highlightSearchTokensInText(e($excerptShort), $highlightWords, true)
-        : '';
+    // المقتطف الأساسي: مقطع قبل/بعد كلمة البحث مع تظليل — وليس بداية الوثيقة
+    $snippets = $rawSearchText !== ''
+        ? $searchHelper->findDocumentSearchSnippets(
+            $document,
+            $rawSearchText,
+            $matchType,
+            is_array($tokens) ? $tokens : []
+        )
+        : [];
+
+    $snippetHtml = '';
+    foreach ($snippets as $sn) {
+        $line = trim($searchHelper->renderSnippetHtml($sn));
+        if ($line !== '') {
+            $snippetHtml .= '<div class="ranked-result-snippet-line">' . $line . '</div>';
+        }
+    }
+
+    if ($snippetHtml === '') {
+        $displaySource = $searchHelper->documentDisplaySource($document);
+        $excerptShort = $searchHelper->plainTextForPreview($displaySource, 220, $highlightWords);
+        if ($excerptShort !== '') {
+            $snippetHtml = '<div class="ranked-result-snippet-line">'
+                . $searchHelper->highlightSearchTokensInText(e($excerptShort), $highlightWords, true)
+                . '</div>';
+        }
+    }
 
     $footerFieldTargets = [
         'case_number' => ['رقم الحكم', 'رقم الطعن', 'رقم القضية'],
@@ -99,15 +121,11 @@
             @endif
         </div>
 
-        <div class="ranked-result-excerpt">{!! $excerptMarked !!}</div>
-
-        <div class="ranked-result-snippets">
-            @if($rawSearchText !== '')
-                @foreach($searchHelper->findDocumentSearchSnippets($document, $rawSearchText, $matchType, is_array($tokens) ? $tokens : []) as $sn)
-                    <div class="ranked-result-snippet-line">{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
-                @endforeach
-            @endif
-        </div>
+        @if($snippetHtml !== '')
+            <div class="ranked-result-snippets">
+                {!! $snippetHtml !!}
+            </div>
+        @endif
 
         <div class="ranked-result-footer">
             <span class="ranked-result-open">عرض الوثيقة</span>

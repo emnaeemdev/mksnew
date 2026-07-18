@@ -146,14 +146,45 @@ class DocumentSearchService
     }
 
     /**
-     * @return array{
-     *   normalizedPhrase: string,
-     *   tokens: array<int, string>,
-     *   tokensForAll: array<int, string>,
-     *   tokensPerWord: array<int, string>,
-     *   singleTokenExcluded: bool
-     * }
+     * يفصل واو العطف المتصلة قبل «ال» فقط: «والتعبير» → و + التعبير.
+     * لا يمس كلمات أصلها واو مثل «وثيقة» أو «وجود».
+     *
+     * @param array<int, string> $tokens
+     * @return array<int, string>
      */
+    public function splitAttachedConjunctionWaw(array $tokens): array
+    {
+        $out = [];
+
+        foreach ($tokens as $token) {
+            if (preg_match('/^و(ال.+)$/u', $token, $m) && mb_strlen($m[1], 'UTF-8') >= 3) {
+                $out[] = 'و';
+                $out[] = $m[1];
+                continue;
+            }
+
+            $out[] = $token;
+        }
+
+        return $out;
+    }
+
+    /**
+     * كلمات المحتوى فقط (بدون أدوات وقف) لاشتراطات المطابقة والفهرس.
+     *
+     * @param array<int, string> $tokens
+     * @return array<int, string>
+     */
+    public function contentTokens(array $tokens, int $minLength = 2): array
+    {
+        $stopWords = $this->arabicStopWords();
+
+        return array_values(array_filter(
+            $tokens,
+            fn ($t) => is_string($t) && $t !== '' && mb_strlen($t, 'UTF-8') >= $minLength && !in_array($t, $stopWords, true)
+        ));
+    }
+
     /**
      * @param array<int, string> $tokens
      * @return array<int, string>
@@ -173,17 +204,28 @@ class DocumentSearchService
         return $unique;
     }
 
+    /**
+     * @return array{
+     *   normalizedPhrase: string,
+     *   tokens: array<int, string>,
+     *   tokensForAll: array<int, string>,
+     *   tokensPerWord: array<int, string>,
+     *   singleTokenExcluded: bool
+     * }
+     */
     public function parseSearchQuery(string $searchTerm): array
     {
         $rawNormalized = $this->normalizeArabic($searchTerm);
         $rawTokens = $this->tokenizeArabic($rawNormalized);
+        $rawTokens = $this->splitAttachedConjunctionWaw($rawTokens);
         // إزالة التكرار المتتالي: "حرية الصحافة الصحافة" → "حرية الصحافة"
         $tokens = $this->collapseConsecutiveDuplicates($rawTokens);
         $normalizedPhrase = implode(' ', $tokens);
         $stopWords = $this->arabicStopWords();
         $isSingleToken = count($tokens) === 1;
         $singleTokenExcluded = $isSingleToken && (mb_strlen($tokens[0] ?? '') < 4 || in_array($tokens[0] ?? '', $stopWords, true));
-        $tokensForAll = $singleTokenExcluded ? [] : $this->uniqueTokensPreserveOrder($tokens);
+        // لا نشترط وجود أدوات الوقف (مثل «و») في الفهرس — طولها 1 وغير مفهرسة
+        $tokensForAll = $singleTokenExcluded ? [] : $this->uniqueTokensPreserveOrder($this->contentTokens($tokens, 2));
         $eligiblePerWord = array_values(array_filter($tokens, function ($t) use ($stopWords) {
             return mb_strlen($t) >= 4 && !in_array($t, $stopWords, true);
         }));
@@ -367,24 +409,107 @@ class DocumentSearchService
      */
     public function findTokenSnippet(string $text, string $normalizedToken, bool $withAlVariant = true, int $contextWords = 8, array $hintTokens = []): ?array
     {
-        $text = $this->normalizePreviewText($text, $hintTokens);
-        if ($text === '') {
+        if (trim($text) === '' || trim($normalizedToken) === '') {
+            return null;
+        }
+
+        // 1) بدون فصل بادئات أولاً — يحافظ على «الصحفيين» كاملة عند البحث بـ «صحفيين»
+        $plain = $this->normalizePreviewText($text, []);
+        $sn = $this->matchTokenInPlainText($plain, $normalizedToken, $withAlVariant, $contextWords);
+        if ($sn !== null) {
+            return $sn;
+        }
+
+        // 2) مع فصل البادئات الملتصقة (كصحفيين → ك صحفيين)
+        if ($hintTokens !== []) {
+            $glued = $this->normalizePreviewText($text, $hintTokens);
+            if ($glued !== $plain) {
+                $sn = $this->matchTokenInPlainText($glued, $normalizedToken, $withAlVariant, $contextWords);
+                if ($sn !== null) {
+                    return $sn;
+                }
+            }
+        }
+
+        // 3) مسار بسيط بمسافات — لا يعتمد على lookbehind يونيكود
+        return $this->matchTokenBySpacedScan($plain !== '' ? $plain : $this->normalizeArabic($this->htmlToPlainText($text)), $normalizedToken, $withAlVariant, $contextWords);
+    }
+
+    /**
+     * @return array{before:string,match:string,after:string}|null
+     */
+    protected function matchTokenInPlainText(string $plain, string $normalizedToken, bool $withAlVariant, int $contextWords): ?array
+    {
+        if ($plain === '') {
             return null;
         }
 
         $pattern = $this->buildArabicTokenPattern($normalizedToken, $withAlVariant, true);
-        if (!preg_match($pattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
+        if (@preg_match($pattern, $plain, $matches, PREG_OFFSET_CAPTURE) !== 1) {
+            return $this->matchTokenBySpacedScan($plain, $normalizedToken, $withAlVariant, $contextWords);
+        }
+
+        $matchStr = $matches[1][0] ?? $matches[0][0];
+        $bytePos = $matches[1][1] ?? $matches[0][1];
+
+        return $this->sliceSnippetAround($plain, $bytePos, $matchStr, $contextWords);
+    }
+
+    /**
+     * مطابقة كلمة كاملة عبر البحث عن « كلمة » في النص المطبّع (موثوق حتى لو فشل REGEXP).
+     *
+     * @return array{before:string,match:string,after:string}|null
+     */
+    protected function matchTokenBySpacedScan(string $plain, string $normalizedToken, bool $withAlVariant, int $contextWords): ?array
+    {
+        $plain = $this->collapsePreviewSpaces($plain);
+        if ($plain === '') {
             return null;
         }
 
-        $matchStr = $matches[1][0];
-        $bytePos = $matches[1][1];
-        $prefix = substr($text, 0, $bytePos);
+        $haystack = ' ' . $plain . ' ';
+        $variants = $withAlVariant ? $this->variantsFor($normalizedToken) : [$normalizedToken];
+
+        foreach ($variants as $variant) {
+            $variant = trim($variant);
+            if ($variant === '') {
+                continue;
+            }
+            $needle = ' ' . $variant . ' ';
+            $pos = mb_strpos($haystack, $needle, 0, 'UTF-8');
+            if ($pos === false) {
+                continue;
+            }
+
+            // pos في haystack يشمل مسافة بادئة
+            $matchStart = $pos; // بداية المسافة قبل الكلمة داخل haystack
+            $bytePrefix = mb_substr($haystack, 0, $matchStart + 1, 'UTF-8'); // حتى بداية الكلمة
+            // أبسط: اشتق before/after من كلمات haystack
+            $beforeFull = trim(mb_substr($haystack, 0, $matchStart, 'UTF-8'));
+            $afterFull = trim(mb_substr($haystack, $matchStart + mb_strlen($needle, 'UTF-8'), null, 'UTF-8'));
+            $beforeTokens = preg_split('/\s+/u', $beforeFull, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $afterTokens = preg_split('/\s+/u', $afterFull, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            return [
+                'before' => implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - $contextWords, 0))),
+                'match' => $variant,
+                'after' => implode(' ', array_slice($afterTokens, 0, $contextWords)),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{before:string,match:string,after:string}
+     */
+    protected function sliceSnippetAround(string $plain, int $bytePos, string $matchStr, int $contextWords): array
+    {
+        $prefix = substr($plain, 0, $bytePos);
         $pos = mb_strlen($prefix, 'UTF-8');
         $len = mb_strlen($matchStr, 'UTF-8');
-
-        $beforeText = mb_substr($text, 0, $pos);
-        $afterText = mb_substr($text, $pos + $len);
+        $beforeText = mb_substr($plain, 0, $pos, 'UTF-8');
+        $afterText = mb_substr($plain, $pos + $len, null, 'UTF-8');
         $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
         $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
@@ -402,8 +527,73 @@ class DocumentSearchService
         }
 
         $text = $this->normalizePreviewText($source, $hintTokens);
+        if ($text === '') {
+            return '';
+        }
+
+        $window = $this->previewWindowAroundHints($text, $hintTokens, $limit);
+        if ($window !== null) {
+            return $window;
+        }
 
         return \Illuminate\Support\Str::limit($text, $limit);
+    }
+
+    /**
+     * يقتطع مقطعًا حول أول ظهور لكلمات البحث حتى يظهر التظليل في الملخص.
+     *
+     * @param array<int, string> $hintTokens
+     */
+    protected function previewWindowAroundHints(string $text, array $hintTokens, int $limit): ?string
+    {
+        if ($hintTokens === [] || $limit < 20) {
+            return null;
+        }
+
+        foreach ($hintTokens as $token) {
+            if (!is_string($token) || trim($token) === '') {
+                continue;
+            }
+
+            $normalized = $this->normalizeArabic($token);
+            if ($normalized === '') {
+                continue;
+            }
+
+            $pattern = $this->buildArabicTokenPattern($normalized, true, true);
+            if (!preg_match($pattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            $bytePos = $matches[0][1];
+            $matchStr = $matches[0][0];
+            $pos = mb_strlen(substr($text, 0, $bytePos), 'UTF-8');
+            $matchLen = mb_strlen($matchStr, 'UTF-8');
+            $beforeBudget = (int) max(30, (int) floor(($limit - $matchLen) / 2));
+            $start = max(0, $pos - $beforeBudget);
+            $slice = mb_substr($text, $start, $limit, 'UTF-8');
+
+            if ($start > 0) {
+                // ابدأ من حدود كلمة حتى لا تُقطع كلمة في البداية
+                $slice = preg_replace('/^\S*\s+/u', '', $slice) ?? $slice;
+            }
+
+            $slice = trim($slice);
+            if ($slice === '') {
+                continue;
+            }
+
+            if ($start > 0) {
+                $slice = '…' . ltrim($slice);
+            }
+            if ($start + $limit < mb_strlen($text, 'UTF-8')) {
+                $slice = rtrim($slice) . '…';
+            }
+
+            return $slice;
+        }
+
+        return null;
     }
 
     protected function normalizePreviewText(string $source, array $hintTokens = []): string
@@ -418,6 +608,8 @@ class DocumentSearchService
 
     /**
      * يفصل كلمات عربية ملتصقة في النص المعروض (شائع في الوثائق القانونية الممسوحة).
+     * - صحيح: الحرية ↔ حرية | كصحفيين → ك صحفيين | والحرية → وال الحرية
+     * - ممنوع: تحريه → ت حريه (تطابق جزئي داخل كلمة أخرى)
      *
      * @param array<int, string> $hintTokens
      */
@@ -427,33 +619,46 @@ class DocumentSearchService
             return '';
         }
 
+        // الأطول أولاً حتى لا تُستهلك «و» قبل «وال» أو «ك» قبل «كال»
+        $gluePrefixes = ['وال', 'بال', 'كال', 'فال', 'لل', 'ال', 'و', 'ب', 'ك', 'ف', 'ل'];
+
         foreach ($hintTokens as $token) {
             if (!is_string($token) || trim($token) === '') {
                 continue;
             }
 
             $normalized = $this->normalizeArabic($token);
-            if ($normalized === '') {
+            if ($normalized === '' || mb_strlen($normalized, 'UTF-8') < 2) {
                 continue;
             }
 
-            $core = $this->buildArabicCorePattern($normalized);
-            $lookbehind = preg_match('/^ال/u', $normalized)
-                ? '(?<=[\p{Arabic}])'
-                : '(?<=[\p{Arabic}])(?<!ل)';
-            $text = preg_replace('/' . $lookbehind . '(' . $core . ')/u', ' $1', $text) ?? $text;
+            // جرّب الكلمة كما هي + بدون/مع «ال» حتى «كالصحفيين» و«الحرية» تنفصل صح
+            $tokenForms = $this->variantsFor($normalized);
+            foreach ($tokenForms as $form) {
+                $core = $this->buildArabicCorePattern($form);
+                foreach ($gluePrefixes as $prefix) {
+                    // لا تفصل إلا إذا كانت البادئة بداية مقطع (مش حرف من جذر الكلمة)
+                    $text = preg_replace(
+                        '/(?<![\p{L}\p{N}])(' . preg_quote($prefix, '/') . ')(' . $core . ')(?![\p{Arabic}])/u',
+                        '$1 $2',
+                        $text
+                    ) ?? $text;
+                }
+            }
         }
 
         $text = preg_replace('/(?<=[\p{Arabic}])(ال)(?=[\p{Arabic}]{3,})/u', ' $1', $text) ?? $text;
 
+        // بادئات مستقلة ملتصقة بما بعدها (فيالمحكمة → في المحكمة) —
+        // لا تستخدم lookbehind على أي حرف عربي حتى لا تُكسر كلمات مثل «صحفيين».
         $prefixes = [
             'مع', 'في', 'من', 'إلى', 'الى', 'على', 'عن', 'بعد', 'قبل', 'ضد', 'نحو', 'عند', 'حول', 'لدى',
             'حتى', 'منذ', 'خلال', 'ثم', 'بل', 'غير', 'كل', 'بعض', 'حيث', 'لئن', 'لان', 'لأن', 'اذا', 'إذا', 'كأن',
         ];
         foreach ($prefixes as $prefix) {
             $text = preg_replace(
-                '/(?:^|(?<=[\p{Arabic}])|(?<=[.،؛:!?\s"\(]))(' . preg_quote($prefix, '/') . ')(?=[\p{Arabic}])/u',
-                ' $1',
+                '/(?:^|(?<=[^\p{L}\p{N}]))(' . preg_quote($prefix, '/') . ')(?=[\p{Arabic}]{3,})/u',
+                '$1 ',
                 $text
             ) ?? $text;
         }
@@ -554,12 +759,21 @@ class DocumentSearchService
      */
     public function findSnippetInDocument($document, string $normalizedToken, bool $withAlVariant = true, int $contextWords = 8, array $hintTokens = []): ?array
     {
-        $source = $this->documentDisplaySource($document);
-        if ($source === '') {
-            return null;
+        $sources = array_values(array_filter([
+            $this->documentDisplaySource($document),
+            is_string($document->search_text ?? null) ? (string) $document->search_text : '',
+            is_string($document->excerpt ?? null) ? (string) $document->excerpt : '',
+            is_string($document->title ?? null) ? (string) $document->title : '',
+        ], fn ($s) => is_string($s) && trim(strip_tags($s)) !== ''));
+
+        foreach (array_unique($sources) as $source) {
+            $sn = $this->findTokenSnippet($source, $normalizedToken, $withAlVariant, $contextWords, $hintTokens);
+            if ($sn !== null) {
+                return $sn;
+            }
         }
 
-        return $this->findTokenSnippet($source, $normalizedToken, $withAlVariant, $contextWords, $hintTokens);
+        return null;
     }
 
     /**
@@ -644,16 +858,17 @@ class DocumentSearchService
         }
 
         $parsed = $this->parseSearchQuery($rawSearch);
-        $hints = array_values(array_unique(array_merge($parsed['tokens'], $parsed['tokensPerWord'], $entryTokens)));
+        // عند نتيجة لكلمة واحدة: لا تبحث/تفصل باقي كلمات الاستعلام (يمنع تظليل «حريه» داخل «تحريه»)
+        $focusTokens = $entryTokens !== []
+            ? array_values(array_unique(array_filter($entryTokens)))
+            : ($parsed['tokensPerWord'] !== [] ? $parsed['tokensPerWord'] : $parsed['tokens']);
+        $hints = $focusTokens;
 
         $phraseCandidates = [];
         if ($matchType === 'exact' && count($parsed['tokens']) > 1) {
             $phraseCandidates[] = $parsed['tokens'];
         }
-        if (count($parsed['tokens']) > 1) {
-            $phraseCandidates[] = $parsed['tokens'];
-        }
-        if (count($parsed['tokensPerWord']) > 1) {
+        if ($matchType === 'exact' && count($parsed['tokensPerWord']) > 1) {
             $phraseCandidates[] = $parsed['tokensPerWord'];
         }
         if (count($entryTokens) > 1) {
@@ -677,16 +892,33 @@ class DocumentSearchService
             }
         }
 
-        $words = $parsed['tokensPerWord'] !== [] ? $parsed['tokensPerWord'] : $parsed['tokens'];
-        if ($entryTokens !== []) {
-            $words = array_values(array_unique(array_merge($entryTokens, $words)));
-        }
-
         $snippets = [];
-        foreach (array_slice($words, 0, 3) as $word) {
+        foreach (array_slice($focusTokens, 0, 3) as $word) {
             $sn = $this->findSnippetInDocument($document, $this->normalizeArabic($word), true, 8, $hints);
             if ($sn !== null) {
                 $snippets[] = $sn;
+            }
+        }
+
+        // احتياطي أخير من search_text/search_words إن فشل مصدر العرض
+        if ($snippets === []) {
+            foreach (array_slice($focusTokens, 0, 3) as $word) {
+                $normalized = $this->normalizeArabic($word);
+                foreach ([$document->search_text ?? '', $document->search_words ?? ''] as $fallbackSource) {
+                    if (!is_string($fallbackSource) || trim($fallbackSource) === '') {
+                        continue;
+                    }
+                    $sn = $this->matchTokenBySpacedScan(
+                        $this->collapsePreviewSpaces($fallbackSource),
+                        $normalized,
+                        true,
+                        8
+                    );
+                    if ($sn !== null) {
+                        $snippets[] = $sn;
+                        break;
+                    }
+                }
             }
         }
 
@@ -853,15 +1085,25 @@ class DocumentSearchService
      */
     protected function applyMultiWordPhraseMatch(Builder $query, array $tokens, bool $withAlVariant): Builder
     {
+        $matchTokens = $this->contentTokens($tokens, 2);
+        if ($matchTokens === []) {
+            $matchTokens = $tokens;
+        }
+
+        // اشتراط وجود كلمات المحتوى فقط في الفهرس (تجاهل «و» وغيرها من أدوات الوقف)
         if ($this->useTokenIndex()) {
-            foreach ($tokens as $token) {
+            foreach ($matchTokens as $token) {
                 $query->where(function (Builder $inner) use ($token, $withAlVariant) {
                     $this->applyTokenOrVariants($inner, $token, $withAlVariant);
                 });
             }
         }
 
-        $phrases = $this->phraseVariants($tokens, $withAlVariant);
+        // صيغ الجملة بالمحتوى (± ال) وبالصيغة الأصلية (مع/بدون واو العطف)
+        $phrases = array_values(array_unique(array_merge(
+            $this->phraseVariants($matchTokens, $withAlVariant),
+            $this->phraseVariants($tokens, $withAlVariant)
+        )));
         if ($phrases === []) {
             return $query->whereRaw('1 = 0');
         }
@@ -882,7 +1124,15 @@ class DocumentSearchService
             return $this->sqlWordVariantsMatch($table, $tokens[0], $withAlVariant, $bindings);
         }
 
-        $phrases = $this->phraseVariants($tokens, $withAlVariant);
+        $matchTokens = $this->contentTokens($tokens, 2);
+        if ($matchTokens === []) {
+            $matchTokens = $tokens;
+        }
+
+        $phrases = array_values(array_unique(array_merge(
+            $this->phraseVariants($matchTokens, $withAlVariant),
+            $this->phraseVariants($tokens, $withAlVariant)
+        )));
         if ($phrases === []) {
             return '0';
         }
@@ -1064,31 +1314,46 @@ class DocumentSearchService
     protected function buildScatteredTabPlanViaTokenIndex(Builder $baseQuery, array $parsed, bool $withAlVariant = false): array
     {
         $tokens = $parsed['tokensPerWord'];
-        $allVariants = [];
-        $variantToIndices = [];
+        $table = $baseQuery->getModel()->getTable();
+        $scopeSub = (clone $baseQuery)->select($table . '.id as document_id');
+        $maxPerWord = max(1000, (int) config('document_search.scattered_plan_max_docs', 15000));
 
+        $wordDocIds = array_fill(0, count($tokens), []);
+        $docMatchedIndices = [];
+
+        // جلب معرّفات كل كلمة على حدة (مفهرس) ثم حساب التداخل في PHP —
+        // أصح من LIMIT عشوائي على صفوف (doc, token) كان يخفي التداخل ويرجّع ترتيب كلمة-كلمة.
         foreach ($tokens as $idx => $word) {
-            foreach (($withAlVariant ? $this->variantsFor($word) : [$word]) as $variant) {
-                $allVariants[$variant] = true;
-                $variantToIndices[$variant][] = $idx;
+            $variants = $withAlVariant ? $this->variantsFor($word) : [$word];
+
+            $ids = DB::table('document_search_tokens as dst')
+                ->joinSub($scopeSub, 'scoped', 'scoped.document_id', '=', 'dst.document_id')
+                ->whereIn('dst.token', $variants)
+                ->distinct()
+                ->orderBy('dst.document_id')
+                ->limit($maxPerWord)
+                ->pluck('dst.document_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $wordDocIds[$idx] = $ids;
+            foreach ($ids as $docId) {
+                $docMatchedIndices[$docId][$idx] = true;
             }
         }
 
-        $table = $baseQuery->getModel()->getTable();
-        $scopeSub = (clone $baseQuery)->select($table . '.id as document_id');
-
-        $rows = DB::table('document_search_tokens as dst')
-            ->joinSub($scopeSub, 'scoped', 'scoped.document_id', '=', 'dst.document_id')
-            ->whereIn('dst.token', array_keys($allVariants))
-            ->select('dst.document_id', 'dst.token')
-            ->limit((int) config('document_search.scattered_plan_max_docs', 15000))
-            ->get();
-
-        if ($rows->isEmpty()) {
+        if ($docMatchedIndices === []) {
             return ['mode' => 'per_word', 'tabs' => [], 'word_doc_ids' => []];
         }
 
-        return $this->assembleScatteredPlanFromMatches($tokens, $rows, $variantToIndices);
+        $setBuckets = [];
+        foreach ($docMatchedIndices as $docId => $indexSet) {
+            $matched = array_keys($indexSet);
+            sort($matched);
+            $setBuckets[implode('-', $matched)][] = $docId;
+        }
+
+        return $this->finalizeScatteredPlan($tokens, $setBuckets, $wordDocIds);
     }
 
     /**
@@ -1139,7 +1404,8 @@ class DocumentSearchService
             }
         }
 
-        if (count($tokens) === 2 || !$hasCoOccurrence) {
+        // بدون تداخل كلمات: اعرض كل كلمة على حدة
+        if (!$hasCoOccurrence) {
             return [
                 'mode' => 'per_word',
                 'tabs' => [],
@@ -1147,6 +1413,7 @@ class DocumentSearchService
             ];
         }
 
+        // مع تداخل: رتّب المجموعات بعدد الكلمات المتطابقة (3 ثم 2 ثم 1) — يشمل البحث بكلمتين
         $multiKeys = [];
         $soloKeys = [];
         foreach (array_keys($setBuckets) as $setKey) {
@@ -1174,6 +1441,7 @@ class DocumentSearchService
 
         usort($soloKeys, fn (string $a, string $b): int => (int) $a <=> (int) $b);
 
+        // أخفِ التبويبات المفردة عند 3+ كلمات لتقليل الضوضاء؛ لكلمتين أظهر المشترك ثم المفرد
         $hideSoloTabs = count($tokens) >= 3;
         $orderedKeys = array_merge($multiKeys, $hideSoloTabs ? [] : $soloKeys);
 
@@ -1599,6 +1867,7 @@ class DocumentSearchService
             'documents.published_at',
             'documents.user_id',
             'documents.search_text',
+            'documents.search_words',
         ]);
 
         if ($parsed['singleTokenExcluded']) {
@@ -1826,11 +2095,10 @@ class DocumentSearchService
         callable $applySort,
         bool $withAlVariant
     ): array {
-        $phraseQuery = $this->applyPhraseMatch(clone $baseQuery, $parsed['normalizedPhrase'], $withAlVariant, $parsed);
-
         $rankedBuckets = [];
 
         if ($counts['phrase'] > 0) {
+            $phraseQuery = $this->applyPhraseMatch(clone $baseQuery, $parsed['normalizedPhrase'], $withAlVariant, $parsed);
             $rankedBuckets[] = [
                 'key' => 'phrase',
                 'label' => 'مطابقة تامة',
@@ -1841,49 +2109,192 @@ class DocumentSearchService
             ];
         }
 
-        if ($scatteredPlan['mode'] === 'grouped') {
-            foreach ($scatteredPlan['tabs'] as $tab) {
-                if (($tab['count'] ?? 0) === 0 || empty($tab['doc_ids'])) {
-                    continue;
-                }
+        $tokens = $parsed['tokensPerWord'];
+        if ($tokens === []) {
+            return $rankedBuckets;
+        }
 
-                $rankedBuckets[] = [
-                    'key' => $tab['key'] ?? $tab['label'],
-                    'label' => $tab['label'],
-                    'match_type' => 'any',
-                    'tokens' => $tab['words'] ?? [],
-                    'word' => count($tab['words'] ?? []) === 1 ? ($tab['words'][0] ?? null) : null,
-                    'ids' => $this->orderIdsByPreferredList($baseQuery, $tab['doc_ids'], $applySort),
-                ];
+        if (count($tokens) === 1) {
+            $word = $tokens[0];
+            if (($counts['per_word'][0] ?? 0) === 0) {
+                return $rankedBuckets;
             }
-        } else {
-            foreach ($parsed['tokensPerWord'] as $idx => $word) {
-                if (($counts['per_word'][$idx] ?? 0) === 0) {
-                    continue;
-                }
 
-                $preloadedIds = $scatteredPlan['word_doc_ids'][$idx] ?? null;
-                if (is_array($preloadedIds)) {
-                    $ids = $this->orderIdsByPreferredList($baseQuery, $preloadedIds, $applySort);
-                } else {
-                    $wordQuery = tap(clone $baseQuery, function (Builder $q) use ($word, $withAlVariant) {
-                        $this->applyTokenOrVariants($q, $word, $withAlVariant);
-                    });
-                    $ids = $this->collectOrderedIds($wordQuery, $applySort);
-                }
+            $preloadedIds = $scatteredPlan['word_doc_ids'][0] ?? null;
+            if (is_array($preloadedIds) && $preloadedIds !== []) {
+                $ids = $this->orderIdsByPreferredList($baseQuery, $preloadedIds, $applySort);
+            } else {
+                $wordQuery = tap(clone $baseQuery, function (Builder $q) use ($word, $withAlVariant) {
+                    $this->applyTokenOrVariants($q, $word, $withAlVariant);
+                });
+                $ids = $this->collectOrderedIds($wordQuery, $applySort);
+            }
 
-                $rankedBuckets[] = [
-                    'key' => 'word-' . $idx,
-                    'label' => $word,
-                    'match_type' => 'any',
-                    'tokens' => [$word],
-                    'word' => $word,
-                    'ids' => $ids,
-                ];
+            $rankedBuckets[] = [
+                'key' => 'word-0',
+                'label' => $word,
+                'match_type' => 'any',
+                'tokens' => [$word],
+                'word' => $word,
+                'ids' => $ids,
+            ];
+
+            return $rankedBuckets;
+        }
+
+        // متعدد الكلمات: رتّب حسب عدد الكلمات المتطابقة ثم التاريخ — وليس كلمة1 كلها ثم كلمة2
+        $wordDocIds = $scatteredPlan['word_doc_ids'] ?? [];
+        foreach ($tokens as $idx => $word) {
+            if (!empty($wordDocIds[$idx]) && is_array($wordDocIds[$idx])) {
+                continue;
+            }
+            if (($counts['per_word'][$idx] ?? 0) === 0) {
+                $wordDocIds[$idx] = [];
+                continue;
+            }
+            $wordQuery = tap(clone $baseQuery, function (Builder $q) use ($word, $withAlVariant) {
+                $this->applyTokenOrVariants($q, $word, $withAlVariant);
+            });
+            $wordDocIds[$idx] = $this->collectOrderedIds($wordQuery, $applySort);
+        }
+
+        $docIndices = [];
+        foreach ($wordDocIds as $idx => $ids) {
+            foreach ($ids as $id) {
+                $docIndices[(int) $id][(int) $idx] = true;
             }
         }
 
+        if ($docIndices === []) {
+            return $rankedBuckets;
+        }
+
+        $setBuckets = [];
+        foreach ($docIndices as $docId => $indexSet) {
+            $matched = array_keys($indexSet);
+            sort($matched);
+            $setBuckets[implode('-', $matched)][] = $docId;
+        }
+
+        $setKeys = array_keys($setBuckets);
+        usort($setKeys, function (string $a, string $b) use ($setBuckets): int {
+            $aSize = substr_count($a, '-') + 1;
+            $bSize = substr_count($b, '-') + 1;
+            if ($aSize !== $bSize) {
+                return $bSize <=> $aSize;
+            }
+
+            // نفس عدد الكلمات: الأحدث أولاً يُطبَّق داخل كل مجموعة؛ هنا ثبات المفتاح فقط
+            $countCmp = count($setBuckets[$b]) <=> count($setBuckets[$a]);
+            if ($countCmp !== 0) {
+                return $countCmp;
+            }
+
+            return strcmp($a, $b);
+        });
+
+        // اجمع كل المعرّفات بترتيب التاريخ مرة واحدة لدمج المجموعات متساوية الحجم (مثلاً كلمتان منفردتان)
+        $allIds = array_map('intval', array_keys($docIndices));
+        $dateOrder = $this->orderIdsByPreferredList($baseQuery, $allIds, $applySort);
+        $datePos = array_flip($dateOrder);
+
+        // ادمج المجموعات حسب عدد الكلمات: كل مستوى تطابق = قائمة واحدة مرتبة بالتاريخ
+        $byMatchCount = [];
+        foreach ($setKeys as $setKey) {
+            $matchCount = substr_count($setKey, '-') + 1;
+            foreach ($setBuckets[$setKey] as $docId) {
+                $byMatchCount[$matchCount][$setKey][] = (int) $docId;
+            }
+        }
+        krsort($byMatchCount);
+
+        foreach ($byMatchCount as $matchCount => $setsAtLevel) {
+            // لجمل 3+ كلمات: اخفِ نتائج الكلمة الواحدة (نفس سلوك الواجهة السابق) — أظهر التداخل فقط
+            if ($matchCount < 2 && count($tokens) >= 3) {
+                continue;
+            }
+
+            if ($matchCount > 1) {
+                foreach ($setsAtLevel as $setKey => $ids) {
+                    $indices = array_map('intval', explode('-', (string) $setKey));
+                    $words = array_map(fn (int $index) => $tokens[$index], $indices);
+                    $rankedBuckets[] = [
+                        'key' => 'group-' . $setKey,
+                        'label' => implode(' + ', $words),
+                        'match_type' => 'any',
+                        'tokens' => $words,
+                        'word' => null,
+                        'ids' => $this->orderIdsByPreferredList($baseQuery, $ids, $applySort),
+                    ];
+                }
+                continue;
+            }
+
+            // كلمتان فقط وبدون تداخل: ادمج نتائج الكلمتين بالتاريخ بدل 7 صفحات لكلمة ثم الثانية
+            $merged = [];
+            foreach ($setsAtLevel as $setKey => $ids) {
+                $idx = (int) $setKey;
+                $word = $tokens[$idx] ?? (string) $setKey;
+                foreach ($ids as $id) {
+                    $merged[] = [
+                        'id' => (int) $id,
+                        'key' => 'solo-' . $idx,
+                        'label' => $word,
+                        'tokens' => [$word],
+                        'word' => $word,
+                        'date_pos' => $datePos[(int) $id] ?? PHP_INT_MAX,
+                    ];
+                }
+            }
+
+            usort($merged, fn (array $a, array $b): int => $a['date_pos'] <=> $b['date_pos']);
+
+            $ids = array_map(fn (array $row) => $row['id'], $merged);
+            $idMeta = [];
+            foreach ($merged as $row) {
+                $idMeta[$row['id']] = [
+                    'key' => $row['key'],
+                    'label' => $row['label'],
+                    'tokens' => $row['tokens'],
+                    'word' => $row['word'],
+                ];
+            }
+
+            $rankedBuckets[] = [
+                'key' => 'solo-merged',
+                'label' => 'كلمة واحدة',
+                'match_type' => 'any',
+                'tokens' => $tokens,
+                'word' => null,
+                'ids' => $ids,
+                'id_meta' => $idMeta,
+            ];
+        }
+
         return $rankedBuckets;
+    }
+
+    /**
+     * @param array<int, array<int, int>> $wordDocIds
+     * @return array<string, array<int, int>>
+     */
+    protected function setBucketsFromWordDocIds(array $wordDocIds): array
+    {
+        $docMatchedIndices = [];
+        foreach ($wordDocIds as $idx => $ids) {
+            foreach ($ids as $docId) {
+                $docMatchedIndices[(int) $docId][(int) $idx] = true;
+            }
+        }
+
+        $setBuckets = [];
+        foreach ($docMatchedIndices as $docId => $indexSet) {
+            $matched = array_keys($indexSet);
+            sort($matched);
+            $setBuckets[implode('-', $matched)][] = $docId;
+        }
+
+        return $setBuckets;
     }
 
     /**
@@ -1969,13 +2380,15 @@ class DocumentSearchService
                     continue;
                 }
 
+                $meta = $bucket['id_meta'][$id] ?? null;
+
                 $orderedEntries[$id] = [
                     'id' => $id,
-                    'group_key' => $bucket['key'] ?? '',
-                    'label' => $bucket['label'],
+                    'group_key' => is_array($meta) ? ($meta['key'] ?? ($bucket['key'] ?? '')) : ($bucket['key'] ?? ''),
+                    'label' => is_array($meta) ? ($meta['label'] ?? $bucket['label']) : $bucket['label'],
                     'match_type' => $bucket['match_type'],
-                    'tokens' => $bucket['tokens'] ?? [],
-                    'word' => $bucket['word'] ?? null,
+                    'tokens' => is_array($meta) ? ($meta['tokens'] ?? ($bucket['tokens'] ?? [])) : ($bucket['tokens'] ?? []),
+                    'word' => is_array($meta) ? ($meta['word'] ?? ($bucket['word'] ?? null)) : ($bucket['word'] ?? null),
                 ];
             }
         }
