@@ -678,19 +678,62 @@ class DocumentController extends Controller
     }
 
     /**
+     * مفتاح إصدار كاش أعداد الفلاتر — يزيد عند تغيّر الوثائق/الحقول ليبطل الكاش القديم.
+     */
+    public static function fieldCountsVersionKey(int $sectionId): string
+    {
+        return 'doc_field_counts_ver:' . $sectionId;
+    }
+
+    public static function bumpFieldCountsVersion(int $sectionId): void
+    {
+        $key = self::fieldCountsVersionKey($sectionId);
+        if (!Cache::has($key)) {
+            Cache::forever($key, 2);
+            return;
+        }
+
+        Cache::increment($key);
+    }
+
+    /**
      * حساب الأعداد لكل الخيارات في القوائم المنسدلة ومكونات التاريخ
      */
     protected function computeFieldCounts(DocumentSection $section, $customFields, Request $request, ?array $precomputedRankedIds = null)
     {
-        $cacheKey = 'doc_field_counts_v5:' . $section->id . ':' . md5(json_encode($request->except([
+        $fieldsFp = collect($customFields)
+            ->map(fn ($field) => $field->id . ':' . $field->type)
+            ->sort()
+            ->values()
+            ->implode('|');
+
+        $version = (int) Cache::get(self::fieldCountsVersionKey((int) $section->id), 1);
+
+        $requestFp = md5(json_encode($request->except([
             'page', 'page_ranked', 'page_phrase', 'page_all', 'page_p', 'page_a', 'page_any',
             'page_w0', 'page_w1', 'page_w2', 'page_w3', 'page_w4', 'tab', 'fragment',
         ])));
 
-        // تخزين مؤقت لأعداد الفلاتر (يشمل البحث) لتجنب عشرات الاستعلامات الثقيلة
-        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request, $precomputedRankedIds) {
+        // v6: يشمل بصمة الحقول النشطة + إصدار يبطل عند تعديل الوثائق/الحقول
+        $cacheKey = 'doc_field_counts_v6:' . $section->id . ':v' . $version . ':' . md5($fieldsFp . '|' . $requestFp);
+
+        $counts = Cache::remember($cacheKey, now()->addMinutes(10), function () use ($section, $customFields, $request, $precomputedRankedIds) {
             return $this->computeFieldCountsUncached($section, $customFields, $request, $precomputedRankedIds);
         });
+
+        // حماية: لو الكاش ناقص حقل select/date جديد أعد الحساب فوراً
+        $countableTypes = ['select', 'radio', 'multiselect', 'date', 'datetime'];
+        $missing = collect($customFields)->first(function ($field) use ($counts, $countableTypes) {
+            return in_array($field->type, $countableTypes, true)
+                && !array_key_exists($field->id, $counts);
+        });
+
+        if ($missing) {
+            $counts = $this->computeFieldCountsUncached($section, $customFields, $request, $precomputedRankedIds);
+            Cache::put($cacheKey, $counts, now()->addMinutes(10));
+        }
+
+        return $counts;
     }
 
     protected function requestHasActiveFieldFilters(Request $request): bool
@@ -765,7 +808,7 @@ class DocumentController extends Controller
                 $filteredQuery = $fieldBaseQuery;
             }
 
-            if (in_array($field->type, ['select', 'radio'])) {
+            if (in_array($field->type, ['select', 'radio', 'multiselect'])) {
                 $rows = (clone $filteredQuery)
                     ->join('document_field_values as dfv', 'documents.id', '=', 'dfv.document_id')
                     ->where('dfv.field_id', $field->id)

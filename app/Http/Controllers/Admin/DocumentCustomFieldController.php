@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Frontend\DocumentController as FrontendDocumentController;
 use App\Models\DocumentSection;
 use App\Models\DocumentCustomField;
 use Illuminate\Http\Request;
@@ -117,6 +118,8 @@ class DocumentCustomFieldController extends Controller
             'help_text' => $request->help_text
         ]);
 
+        FrontendDocumentController::bumpFieldCountsVersion((int) $section->id);
+
         return redirect()->route('admin.document-custom-fields.edit', $field)
             ->with('success', 'تم إنشاء الحقل بنجاح');
     }
@@ -208,6 +211,8 @@ class DocumentCustomFieldController extends Controller
             $options = array_filter($request->options); // إزالة القيم الفارغة
         }
 
+        $oldSectionId = (int) $documentCustomField->section_id;
+
         $documentCustomField->update([
             'section_id' => $request->section_id,
             'name' => $request->name,
@@ -222,6 +227,11 @@ class DocumentCustomFieldController extends Controller
             'help_text' => $request->help_text
         ]);
 
+        FrontendDocumentController::bumpFieldCountsVersion((int) $request->section_id);
+        if ($oldSectionId !== (int) $request->section_id) {
+            FrontendDocumentController::bumpFieldCountsVersion($oldSectionId);
+        }
+
         return redirect()->route('admin.document-custom-fields.edit', $documentCustomField)
             ->with('success', 'تم تحديث الحقل بنجاح');
     }
@@ -234,7 +244,10 @@ class DocumentCustomFieldController extends Controller
                 ->with('error', 'لا يمكن حذف الحقل لأنه يحتوي على بيانات');
         }
 
+        $sectionId = (int) $documentCustomField->section_id;
         $documentCustomField->delete();
+
+        FrontendDocumentController::bumpFieldCountsVersion($sectionId);
 
         return redirect()->route('admin.document-custom-fields.index')
             ->with('success', 'تم حذف الحقل بنجاح');
@@ -245,6 +258,8 @@ class DocumentCustomFieldController extends Controller
         $documentCustomField->update([
             'is_active' => !$documentCustomField->is_active
         ]);
+
+        FrontendDocumentController::bumpFieldCountsVersion((int) $documentCustomField->section_id);
 
         $status = $documentCustomField->is_active ? 'تم تفعيل' : 'تم إلغاء تفعيل';
         

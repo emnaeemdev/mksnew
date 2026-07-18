@@ -16,6 +16,7 @@ use Illuminate\Validation\Rule;
 use App\Services\DocumentSearchService;
 use App\Services\HtmlSanitizer;
 use App\Services\SecureUploadService;
+use App\Http\Controllers\Frontend\DocumentController as FrontendDocumentController;
 
 class DocumentController extends Controller
 {
@@ -302,6 +303,8 @@ class DocumentController extends Controller
 
         $document->syncKeywordNames($request->input('keywords'));
 
+        FrontendDocumentController::bumpFieldCountsVersion((int) $document->section_id);
+
         return redirect()->route('admin.documents.edit', $document)
             ->with('success', 'تم إنشاء الوثيقة بنجاح');
     }
@@ -497,12 +500,19 @@ class DocumentController extends Controller
 
         $document->syncKeywordNames($request->input('keywords'));
 
+        FrontendDocumentController::bumpFieldCountsVersion((int) $document->section_id);
+        if ((int) $document->section_id !== (int) $section->id) {
+            FrontendDocumentController::bumpFieldCountsVersion((int) $section->id);
+        }
+
         return redirect()->route('admin.documents.edit', $document)
             ->with('success', 'تم تحديث الوثيقة بنجاح');
     }
 
     public function destroy(Document $document)
     {
+        $sectionId = (int) $document->section_id;
+
         // حذف الصورة المميزة
         if ($document->featured_image) {
             Storage::disk('public')->delete($document->featured_image);
@@ -530,6 +540,8 @@ class DocumentController extends Controller
 
         $document->delete();
 
+        FrontendDocumentController::bumpFieldCountsVersion($sectionId);
+
         return redirect()->route('admin.documents.index')
             ->with('success', 'تم حذف الوثيقة بنجاح');
     }
@@ -540,6 +552,8 @@ class DocumentController extends Controller
             'is_published' => !$document->is_published,
             'published_at' => !$document->is_published ? now() : null
         ]);
+
+        FrontendDocumentController::bumpFieldCountsVersion((int) $document->section_id);
 
         $status = $document->is_published ? 'تم نشر' : 'تم إلغاء نشر';
         
@@ -575,6 +589,10 @@ class DocumentController extends Controller
             ]);
         }
 
+        $documents->pluck('section_id')->unique()->each(function ($sectionId) {
+            FrontendDocumentController::bumpFieldCountsVersion((int) $sectionId);
+        });
+
         return redirect()->route('admin.documents.index')
             ->with('success', 'تم نشر ' . count($documents) . ' وثيقة بنجاح');
     }
@@ -593,6 +611,10 @@ class DocumentController extends Controller
                 'is_published' => false
             ]);
         }
+
+        $documents->pluck('section_id')->unique()->each(function ($sectionId) {
+            FrontendDocumentController::bumpFieldCountsVersion((int) $sectionId);
+        });
 
         return redirect()->route('admin.documents.index')
             ->with('success', 'تم إلغاء نشر ' . count($documents) . ' وثيقة بنجاح');
@@ -625,6 +647,7 @@ class DocumentController extends Controller
         ]);
 
         $documents = Document::whereIn('id', $request->document_ids)->get();
+        $sectionIds = $documents->pluck('section_id')->unique();
         
         foreach ($documents as $document) {
             // حذف الصورة المميزة
@@ -641,6 +664,10 @@ class DocumentController extends Controller
 
             $document->delete();
         }
+
+        $sectionIds->each(function ($sectionId) {
+            FrontendDocumentController::bumpFieldCountsVersion((int) $sectionId);
+        });
 
         return redirect()->route('admin.documents.index')
             ->with('success', 'تم حذف ' . count($documents) . ' وثيقة بنجاح');

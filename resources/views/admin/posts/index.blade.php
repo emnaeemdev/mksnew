@@ -4,13 +4,22 @@
 @section('page-title', 'إدارة المواضيع')
 
 @section('content')
+@php
+    $currentCategoryId = request('category') ?: optional($selectedCategory ?? null)->id;
+    $createPostUrl = $currentCategoryId
+        ? route('admin.posts.create', ['category' => $currentCategoryId])
+        : route('admin.posts.create');
+@endphp
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <i class="fas fa-file-alt me-2"></i>
             قائمة المواضيع
+            @if($currentCategoryId && isset($selectedCategory) && $selectedCategory)
+                <small class="text-muted fw-normal">— {{ $selectedCategory->name_ar }}</small>
+            @endif
         </h5>
-        <a href="{{ route('admin.posts.create') }}" class="btn btn-primary">
+        <a href="{{ $createPostUrl }}" class="btn btn-primary">
             <i class="fas fa-plus me-2"></i>
             إضافة موضوع جديد
         </a>
@@ -241,7 +250,7 @@
                     <h4 class="text-muted">لا توجد مواضيع حتى الآن</h4>
                     <p class="text-muted mb-4">ابدأ بإضافة أول موضوع للموقع</p>
                 @endif
-                <a href="{{ route('admin.posts.create') }}" class="btn btn-primary">
+                <a href="{{ $createPostUrl }}" class="btn btn-primary">
                     <i class="fas fa-plus me-2"></i>
                     إضافة موضوع جديد
                 </a>
