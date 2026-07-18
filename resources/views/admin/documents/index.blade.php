@@ -16,6 +16,26 @@
                     </div>
                 </div>
                 
+                <div class="card-body border-bottom">
+                    <form method="POST" action="{{ route('admin.documents.pinned-keywords.update') }}" class="mb-0">
+                        @csrf
+                        @method('PUT')
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+                            <div>
+                                <h5 class="mb-1">اختصارات الكلمات المفتاحية للزائر</h5>
+                                <p class="text-muted small mb-0">تظهر في صفحات أقسام الوثائق وتعرض الوثائق المرتبطة عبر كل الأقسام الفرعية.</p>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="fas fa-save"></i> حفظ الاختصارات
+                            </button>
+                        </div>
+                        @include('admin.partials.section-keyword-picker', [
+                            'selectedKeywords' => $pinnedKeywords ?? collect(),
+                            'inputName' => 'document_keywords',
+                        ])
+                    </form>
+                </div>
+
                 <!-- فلاتر البحث -->
                 <div class="card-body border-bottom">
                     <form method="GET" action="{{ route('admin.documents.index') }}" id="filterForm">
@@ -262,52 +282,28 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group">
-                                                    <a href="{{ route('admin.documents.show', $document) }}" 
-                                                       class="btn btn-outline-info" title="عرض">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a href="{{ route('admin.documents.edit', $document) }}" 
-                                                       class="btn btn-outline-primary" title="تعديل">
+                                                    @if($document->is_published)
+                                                        <a href="{{ route('frontend.documents.show', [app()->getLocale(), $document->id]) }}"
+                                                           target="_blank"
+                                                           rel="noopener"
+                                                           class="btn btn-outline-info"
+                                                           title="عرض في الموقع">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    @endif
+
+                                                    <a href="{{ route('admin.documents.edit', $document) }}"
+                                                       class="btn btn-outline-warning"
+                                                       title="تعديل">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-                                                    
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <button type="button" class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
-                                                                data-bs-toggle="dropdown">
-                                                            <span class="visually-hidden">Toggle Dropdown</span>
-                                                        </button>
-                                                        <ul class="dropdown-menu">
-                                                            <li>
-                                                                <form action="{{ route('admin.documents.toggle-status', $document) }}" 
-                                                                      method="POST" class="d-inline">
-                                                                    @csrf
-                                                                    @method('PATCH')
-                                                                    <button type="submit" class="dropdown-item">
-                                                                        <i class="fas fa-{{ $document->is_published ? 'eye-slash' : 'eye' }}"></i>
-                                                                        {{ $document->is_published ? 'إلغاء النشر' : 'نشر' }}
-                                                                    </button>
-                                                                </form>
-                                                            </li>
-                                                            <li>
-                                                                <form action="{{ route('admin.documents.toggle-featured', $document) }}" 
-                                                                      method="POST" class="d-inline">
-                                                                    @csrf
-                                                                    @method('PATCH')
-                                                                    <button type="submit" class="dropdown-item">
-                                                                        <i class="fas fa-{{ $document->is_featured ? 'star-o' : 'star' }}"></i>
-                                                                        {{ $document->is_featured ? 'إلغاء التمييز' : 'تمييز' }}
-                                                                    </button>
-                                                                </form>
-                                                            </li>
-                                                            <li><hr class="dropdown-divider"></li>
-                                                            <li>
-                                                                <button type="button" class="dropdown-item text-danger" 
-                                                                        onclick="confirmDelete({{ $document->id }}, '{{ $document->title }}')">
-                                                                    <i class="fas fa-trash"></i> حذف
-                                                                </button>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
+
+                                                    <button type="button"
+                                                            class="btn btn-outline-danger"
+                                                            title="حذف"
+                                                            onclick="confirmDelete({{ $document->id }}, '{{ addslashes($document->title) }}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -452,7 +448,7 @@ $(document).ready(function() {
 // تأكيد حذف وثيقة واحدة
 function confirmDelete(documentId, documentTitle) {
     $('#documentTitle').text(documentTitle);
-    $('#deleteForm').attr('action', `/admin/documents/${documentId}`);
+    $('#deleteForm').attr('action', @json(route('admin.documents.destroy', ['document' => '__ID__'])).replace('__ID__', documentId));
     $('#deleteModal').modal('show');
 }
 

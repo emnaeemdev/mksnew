@@ -324,7 +324,7 @@ $(document).ready(function() {
         const isActive = $(this).is(':checked');
         
         $.ajax({
-            url: `/admin/document-custom-fields/${fieldId}/toggle-status`,
+            url: @json(route('admin.document-custom-fields.toggle-status', ['documentCustomField' => '__ID__'])).replace('__ID__', fieldId),
             method: 'POST',
             data: {
                 _token: '{{ csrf_token() }}',
@@ -351,7 +351,7 @@ $(document).ready(function() {
 // حذف الحقل
 function deleteField(fieldId, fieldName) {
     $('#fieldName').text(fieldName);
-    $('#deleteForm').attr('action', `/admin/document-custom-fields/${fieldId}`);
+    $('#deleteForm').attr('action', @json(route('admin.document-custom-fields.destroy', ['document_custom_field' => '__ID__'])).replace('__ID__', fieldId));
     $('#deleteModal').modal('show');
 }
 

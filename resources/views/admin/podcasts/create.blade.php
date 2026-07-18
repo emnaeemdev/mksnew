@@ -78,9 +78,15 @@
                     </div>
                 </div>
             </div>
-            <div class="card-footer d-flex flex-wrap gap-2">
-                <button type="submit" class="btn btn-primary">حفظ</button>
-                <a href="{{ route('admin.podcasts.index') }}" class="btn btn-secondary">إلغاء</a>
+            <div class="card-footer">
+                <div class="admin-form-actions">
+                    <div class="admin-form-actions__secondary">
+                        <a href="{{ route('admin.podcasts.index') }}" class="btn btn-secondary">إلغاء</a>
+                    </div>
+                    <div class="admin-form-actions__primary">
+                        <button type="submit" class="btn btn-primary">حفظ</button>
+                    </div>
+                </div>
             </div>
         </div>
     </form>

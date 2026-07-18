@@ -71,10 +71,10 @@
                                         </div>
 
                                         <div class="mb-3">
-                                            <label for="name" class="form-label">اسم الحقل التقني <span class="text-danger">*</span></label>
+                                            <label for="name" class="form-label">  اسم الحقل (بالإنجليزية) <span class="text-danger">*</span></label>
                                             <input type="text" class="form-control @error('name') is-invalid @enderror" 
                                                    id="name" name="name" value="{{ old('name', $documentCustomField->name) }}" 
-                                                   placeholder="decision_number" required>
+                                                   placeholder="decision_number مثل" required>
                                             @error('name')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
@@ -94,7 +94,7 @@
                                                     id="type" name="type" required>
                                                 <option value="text" {{ old('type', $documentCustomField->type) == 'text' ? 'selected' : '' }}>نص قصير</option>
                                                 <option value="textarea" {{ old('type', $documentCustomField->type) == 'textarea' ? 'selected' : '' }}>نص طويل</option>
-                                                <option value="number" {{ old('type', $documentCustomField->type) == 'number' ? 'selected' : '' }}>رقم</option>
+                                                <option value="number" {{ old('type', $documentCustomField->type) == 'number' ? 'selected' : '' }}>مدى رقم (من - إلى)</option>
                                                 <option value="date" {{ old('type', $documentCustomField->type) == 'date' ? 'selected' : '' }}>تاريخ</option>
                                                 <option value="select" {{ old('type', $documentCustomField->type) == 'select' ? 'selected' : '' }}>قائمة منسدلة</option>
                                                 <option value="multiselect" {{ old('type', $documentCustomField->type) == 'multiselect' ? 'selected' : '' }}>اختيارات متعددة</option>
@@ -301,7 +301,7 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <div>
                                 <a href="{{ route('admin.document-custom-fields.show', $documentCustomField) }}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> إلغاء

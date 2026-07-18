@@ -40,12 +40,18 @@
                     </div>
                     
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
-                            <i class="fas fa-upload"></i> رفع الملفات
-                        </button>
-                        <a href="{{ route('admin.media.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> العودة للمكتبة
-                        </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.media.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> العودة للمكتبة
+                                </a>
+                            </div>
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>
+                                    <i class="fas fa-upload"></i> رفع الملفات
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

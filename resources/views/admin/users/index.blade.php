@@ -34,6 +34,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>الاسم</th>
+                                    <th>اسم المستخدم</th>
                                     <th>البريد الإلكتروني</th>
                                     <th>تاريخ التسجيل</th>
                                     <th>الإجراءات</th>
@@ -43,7 +44,12 @@
                                 @forelse($users as $user)
                                     <tr>
                                         <td>{{ $user->id }}</td>
-                                        <td>{{ $user->name }}</td>
+                                        <td>
+                                            <a href="{{ route('admin.users.edit', $user) }}" class="text-decoration-none text-dark">
+                                                {{ $user->name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ $user->username }}</td>
                                         <td>{{ $user->email }}</td>
                                         <td>{{ $user->created_at->format('Y-m-d H:i') }}</td>
                                         <td>

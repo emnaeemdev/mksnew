@@ -268,15 +268,21 @@
                     </div>
                     
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> تحديث
-                        </button>
-                        <a href="{{ route('admin.section-data.show', [$section, $sectionData]) }}" class="btn btn-info">
-                            <i class="fas fa-eye"></i> عرض
-                        </a>
-                        <a href="{{ route('admin.section-data.index', $section) }}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> إلغاء
-                        </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.section-data.show', [$section, $sectionData]) }}" class="btn btn-info">
+                                    <i class="fas fa-eye"></i> عرض
+                                </a>
+                                <a href="{{ route('admin.section-data.index', $section) }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> إلغاء
+                                </a>
+                            </div>
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> تحديث
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

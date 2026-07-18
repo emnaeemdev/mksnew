@@ -1,4 +1,4 @@
-/* تحسين شكل Pagination */
+
 .pagination {
     justify-content: center;
     margin: 30px 0;
@@ -47,19 +47,16 @@
     opacity: 0.5;
 }
 
-/* تصغير الأسهم */
 .pagination .page-link i {
     font-size: 12px;
 }
 
-/* تحسين الأسهم السابق والتالي */
 .pagination .page-item:first-child .page-link,
 .pagination .page-item:last-child .page-link {
     font-size: 12px;
     padding: 8px 10px;
 }
 
-/* إخفاء النص وإظهار الأيقونات فقط للأسهم */
 .pagination .page-item:first-child .page-link::before {
     content: "‹";
     font-size: 16px;
@@ -72,7 +69,6 @@
     font-weight: bold;
 }
 
-/* إخفاء النص الأصلي للأسهم */
 .pagination .page-item:first-child .page-link,
 .pagination .page-item:last-child .page-link {
     font-size: 0;
@@ -85,21 +81,19 @@
     line-height: 1;
 }
 
-/* تحسين للشاشات الصغيرة */
 @media (max-width: 768px) {
     .pagination .page-link {
         padding: 6px 8px;
         font-size: 12px;
         min-width: 32px;
     }
-    
+
     .pagination .page-item:first-child .page-link::before,
     .pagination .page-item:last-child .page-link::before {
         font-size: 12px;
     }
 }
 
-/* تحسين للغة العربية */
 [dir="rtl"] .pagination .page-item:first-child .page-link::before {
     content: "›";
 }
@@ -108,7 +102,6 @@
     content: "‹";
 }
 
-/* تحسين المسافات */
 .pagination-wrapper {
     margin: 40px 0;
     text-align: center;

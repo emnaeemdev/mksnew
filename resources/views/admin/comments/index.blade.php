@@ -63,11 +63,17 @@
                                     @foreach($comments as $comment)
                                         <tr>
                                             <td>{{ $comment->id }}</td>
-                                            <td>{{ $comment->name }}</td>
+                                            <td>
+                                                <a href="{{ route('admin.comments.edit', $comment) }}" class="text-decoration-none text-dark">
+                                                    {{ $comment->name }}
+                                                </a>
+                                            </td>
                                             <td>{{ $comment->email }}</td>
                                             <td>
                                                 @if($comment->post)
-                                                    <a href="#" class="text-primary">{{ Str::limit($comment->post->title, 30) }}</a>
+                                                    <a href="{{ route('admin.posts.edit', $comment->post) }}" class="text-decoration-none">
+                                                        {{ Str::limit($comment->post->title, 30) }}
+                                                    </a>
                                                 @else
                                                     <span class="text-muted">مقال محذوف</span>
                                                 @endif

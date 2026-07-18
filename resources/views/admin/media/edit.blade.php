@@ -118,18 +118,24 @@
                     </div>
                     
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> حفظ التغييرات
-                        </button>
-                        <a href="{{ route('admin.media.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> العودة للمكتبة
-                        </a>
-                        <a href="{{ route('admin.media.show', $medium) }}" class="btn btn-info">
-                            <i class="fas fa-eye"></i> عرض التفاصيل
-                        </a>
-                        <a href="{{ $medium->url }}" target="_blank" class="btn btn-success">
-                            <i class="fas fa-download"></i> تحميل الملف
-                        </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.media.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> العودة للمكتبة
+                                </a>
+                                <a href="{{ route('admin.media.show', $medium) }}" class="btn btn-info">
+                                    <i class="fas fa-eye"></i> عرض التفاصيل
+                                </a>
+                                <a href="{{ $medium->url }}" target="_blank" class="btn btn-success">
+                                    <i class="fas fa-download"></i> تحميل الملف
+                                </a>
+                            </div>
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> حفظ التغييرات
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

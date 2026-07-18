@@ -141,8 +141,9 @@ class Document extends Model
      */
     public function getRouteKeyName()
     {
+        $adminPrefix = trim((string) config('admin.path', 'panel'), '/');
         // إذا كان الطلب من لوحة التحكم، استخدم ID
-        if (request()->is('admin/*')) {
+        if (request()->is($adminPrefix . '/*')) {
             return 'id';
         }
         // للواجهة الأمامية، استخدم slug

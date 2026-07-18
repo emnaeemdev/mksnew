@@ -31,6 +31,10 @@
                                     <td>{{ $user->name }}</td>
                                 </tr>
                                 <tr>
+                                    <th>اسم المستخدم</th>
+                                    <td>{{ $user->username }}</td>
+                                </tr>
+                                <tr>
                                     <th>البريد الإلكتروني</th>
                                     <td>{{ $user->email }}</td>
                                 </tr>
@@ -48,56 +52,11 @@
                                     <td>{{ $user->email_verified_at->format('Y-m-d H:i:s') }}</td>
                                 </tr>
                                 @else
-                                {{-- <tr>
-                                    <th>حالة البريد الإلكتروني</th>
-                                    <td><span class="badge bg-warning">غير مؤكد</span></td>
-                                </tr> --}}
+
                                 @endif
                             </table>
                         </div>
-                        {{-- <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="card-title">إحصائيات المستخدم</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row text-center">
-                                        <div class="col-6">
-                                            <div class="border-end">
-                                                <h4 class="text-primary">{{ $user->posts()->count() ?? 0 }}</h4>
-                                                <p class="text-muted mb-0">المقالات</p>
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <h4 class="text-success">{{ $user->created_at->diffInDays(now()) }}</h4>
-                                            <p class="text-muted mb-0">يوم منذ التسجيل</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="card mt-3">
-                                <div class="card-header">
-                                    <h5 class="card-title">الإجراءات</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-grid gap-2">
-                                        <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-warning">
-                                            <i class="fas fa-edit"></i> تعديل المستخدم
-                                        </a>
-                                        @if($user->id !== auth()->id())
-                                            <form action="{{ route('admin.users.destroy', $user) }}" method="POST" onsubmit="return confirm('هل أنت متأكد من حذف هذا المستخدم؟')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger">
-                                                    <i class="fas fa-trash"></i> حذف المستخدم
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div> --}}
+
                     </div>
                 </div>
             </div>

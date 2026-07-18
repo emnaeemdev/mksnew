@@ -19,7 +19,7 @@
     <div class="row g-4 mb-5">
         @foreach($documents as $document)
             <div class="col-lg-4 col-md-6">
-                <div class="card h-100 border-0 shadow-sm hover-card">
+                <div class="card h-100 doc-card">
                     <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
                          style="height: 200px;">
                         <i class="fas fa-file-alt text-muted" style="font-size: 3rem;"></i>

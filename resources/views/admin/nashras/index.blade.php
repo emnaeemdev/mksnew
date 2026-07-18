@@ -34,7 +34,6 @@
                             <thead>
                                 <tr>
                                     <th width="5%">#</th>
-                                    <th width="15%">الصورة المميزة</th>
                                     <th width="25%">العنوان</th>
                                     <th width="15%">العنوان الفرعي</th>
                                     <th width="10%">تاريخ النشر</th>
@@ -48,23 +47,24 @@
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>
-                                            @if($nashra->featured_image)
-                                                <a href="{{ route('admin.nashras.edit', $nashra->id) }}">
-                                                    <img src="{{ $nashra->featured_image_url }}" 
-                                                         alt="{{ $nashra->title_ar }}" 
-                                                         class="img-thumbnail" 
-                                                         style="width: 80px; height: 60px; object-fit: cover;">
-                                                </a>
-                                            @else
-                                                <span class="text-muted">لا توجد صورة</span>
-                                            @endif
-                                        </td>
-                                        <td>
+                                            <div class="admin-list-item">
+                                        @if($nashra->featured_image_url)
+                                            <a href="{{ route('admin.nashras.edit', $nashra->id) }}" class="admin-list-item__thumb-link">
+                                                <img src="{{ $nashra->featured_image_url }}"
+                                                     alt=""
+                                                     class="admin-list-item__thumb">
+                                            </a>
+                                        @else
+                                            <span class="admin-list-item__thumb-placeholder" aria-hidden="true">&mdash;</span>
+                                        @endif
+                                        <div class="admin-list-item__body">
                                             <strong>
                                                 <a href="{{ route('admin.nashras.edit', $nashra->id) }}" class="text-decoration-none text-dark">
                                                     {{ $nashra->title_ar }}
                                                 </a>
                                             </strong>
+                                        </div>
+                                    </div>
                                         </td>
                                         <td>{{ Str::limit($nashra->subtitle_ar, 50) }}</td>
                                         <td>
@@ -91,25 +91,30 @@
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
-  
-                                                <a href="{{ route('admin.nashras.edit', $nashra->id) }}" 
-                                                   class="btn btn-sm btn-warning" 
+                                                @if($nashra->status)
+                                                    <a href="{{ route('frontend.nashras.show', [app()->getLocale(), $nashra->id]) }}"
+                                                       target="_blank"
+                                                       rel="noopener"
+                                                       class="btn btn-sm btn-outline-info"
+                                                       title="عرض في الموقع">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                @endif
+
+                                                <a href="{{ route('admin.nashras.edit', $nashra->id) }}"
+                                                   class="btn btn-sm btn-outline-warning"
                                                    title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="{{ route('admin.nashras.show', $nashra->id) }}" 
-                                                   class="btn btn-sm btn-info" 
-                                                   title="عرض">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                                <form action="{{ route('admin.nashras.destroy', $nashra->id) }}" 
-                                                      method="POST" 
-                                                      style="display: inline;"
+
+                                                <form action="{{ route('admin.nashras.destroy', $nashra->id) }}"
+                                                      method="POST"
+                                                      class="d-inline"
                                                       onsubmit="return confirm('هل أنت متأكد من حذف هذه النشرة؟')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" 
-                                                            class="btn btn-sm btn-danger" 
+                                                    <button type="submit"
+                                                            class="btn btn-sm btn-outline-danger"
                                                             title="حذف">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
@@ -119,7 +124,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted py-4">
+                                        <td colspan="7" class="text-center text-muted py-4">
                                             <i class="fas fa-newspaper fa-3x mb-3"></i>
                                             <p>لا توجد نشرات حتى الآن</p>
                                             <a href="{{ route('admin.nashras.create') }}" class="btn btn-primary">

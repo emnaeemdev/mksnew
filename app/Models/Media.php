@@ -27,56 +27,41 @@ class Media extends Model
         'updated_at' => 'datetime',
     ];
 
-    /**
-     * Get the user who uploaded the media.
-     */
     public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    /**
-     * Get the full URL of the media file.
-     */
     public function getUrlAttribute()
     {
-        return Storage::url($this->file_path);
+        $path = ltrim(str_replace('\\', '/', (string) $this->file_path), '/');
+
+        // Full absolute URL including APP_URL (e.g. https://example.com/storage/media/file.pdf)
+        return asset('storage/' . $path);
     }
 
-    /**
-     * Get the formatted file size.
-     */
     public function getFormattedSizeAttribute()
     {
         $bytes = $this->file_size;
         $units = ['B', 'KB', 'MB', 'GB'];
-        
+
         for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
             $bytes /= 1024;
         }
-        
+
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
-    /**
-     * Check if the media is an image.
-     */
     public function getIsImageAttribute()
     {
         return str_starts_with($this->mime_type, 'image/');
     }
 
-    /**
-     * Check if the media is a video.
-     */
     public function getIsVideoAttribute()
     {
         return str_starts_with($this->mime_type, 'video/');
     }
 
-    /**
-     * Check if the media is a document.
-     */
     public function getIsDocumentAttribute()
     {
         return in_array($this->mime_type, [
@@ -89,9 +74,6 @@ class Media extends Model
         ]);
     }
 
-    /**
-     * Get the file type icon.
-     */
     public function getFileIconAttribute()
     {
         if ($this->is_image) {
@@ -105,9 +87,6 @@ class Media extends Model
         }
     }
 
-    /**
-     * Scope to filter by file type.
-     */
     public function scopeOfType($query, $type)
     {
         return match($type) {

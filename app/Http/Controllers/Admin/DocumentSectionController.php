@@ -29,6 +29,7 @@ class DocumentSectionController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:document_sections,name',
+            'slug' => 'nullable|string|max:255|unique:document_sections,slug',
             'description' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer|min:0'
@@ -36,13 +37,13 @@ class DocumentSectionController extends Controller
 
         $section = DocumentSection::create([
             'name' => $request->name,
-            'slug' => Str::slug($request->name),
+            'slug' => Str::slug($request->slug ?: $request->name),
             'description' => $request->description,
             'is_active' => $request->boolean('is_active', true),
             'sort_order' => $request->sort_order ?? DocumentSection::max('sort_order') + 1
         ]);
 
-        return redirect()->route('admin.document-sections.index')
+        return redirect()->route('admin.document-sections.edit', $section)
             ->with('success', 'تم إنشاء القسم بنجاح');
     }
 
@@ -60,7 +61,7 @@ class DocumentSectionController extends Controller
 
     public function edit(DocumentSection $documentSection)
     {
-        $section = $documentSection;
+        $section = $documentSection->loadCount(['documents', 'customFields']);
         return view('admin.document-sections.edit', compact('section'));
     }
 
@@ -68,6 +69,7 @@ class DocumentSectionController extends Controller
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255', Rule::unique('document_sections')->ignore($documentSection->id)],
+            'slug' => ['nullable', 'string', 'max:255', Rule::unique('document_sections')->ignore($documentSection->id)],
             'description' => 'nullable|string|max:1000',
             'is_active' => 'boolean',
             'show_in_menu' => 'boolean',
@@ -78,12 +80,16 @@ class DocumentSectionController extends Controller
             'sort_order' => 'nullable|integer|min:0',
             'menu_order' => 'nullable|integer|min:0',
             'menu_order_ar' => 'nullable|integer|min:0',
-            'menu_order_en' => 'nullable|integer|min:0'
+            'menu_order_en' => 'nullable|integer|min:0',
+            'show_on_homepage' => 'boolean',
+            'home_icon' => 'nullable|string|max:100',
+            'home_label' => 'nullable|string|max:255',
+            'home_sort_order' => 'nullable|integer|min:0',
         ]);
 
         $documentSection->update([
             'name' => $request->name,
-            'slug' => Str::slug($request->name),
+            'slug' => Str::slug($request->slug ?: $request->name),
             'description' => $request->description,
             'is_active' => $request->boolean('is_active'),
             'show_in_menu' => $request->boolean('show_in_menu'),
@@ -94,10 +100,14 @@ class DocumentSectionController extends Controller
             'sort_order' => $request->sort_order ?? $documentSection->sort_order,
             'menu_order' => $request->menu_order ?? $documentSection->menu_order,
             'menu_order_ar' => $request->menu_order_ar,
-            'menu_order_en' => $request->menu_order_en
+            'menu_order_en' => $request->menu_order_en,
+            'show_on_homepage' => $request->boolean('show_on_homepage'),
+            'home_icon' => $request->home_icon,
+            'home_label' => $request->home_label,
+            'home_sort_order' => $request->home_sort_order ?? 0,
         ]);
 
-        return redirect()->route('admin.document-sections.index')
+        return redirect()->route('admin.document-sections.edit', $documentSection)
             ->with('success', 'تم تحديث القسم بنجاح');
     }
 

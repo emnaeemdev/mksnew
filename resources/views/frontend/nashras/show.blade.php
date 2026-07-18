@@ -36,12 +36,14 @@
                 <div class="card shadow-sm mb-0">
                     <div class="card-body p-0">
                         <div id="sheets-data-container" class="w-100">
-                            <div class="text-center py-5">
-                                <div class="spinner-border text-success" role="status">
-                                    <span class="visually-hidden">جاري التحميل...</span>
+                            @if(empty($sheetPayload['data']))
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-success" role="status">
+                                        <span class="visually-hidden">جاري التحميل...</span>
+                                    </div>
+                                    <p class="mt-3 text-muted">جاري تحميل البيانات...</p>
                                 </div>
-                                <p class="mt-3 text-muted">جاري تحميل البيانات من Google Sheets...</p>
-                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -119,7 +121,7 @@
                     <i class="fas fa-align-left"></i> المحتوى
                 </h3>
                 <div class="content-text rich-content">
-                    {!! $nashra->content_ar !!}
+                    {!! safe_html($nashra->content_ar) !!}
                 </div>
             </div>
         </div>
@@ -210,27 +212,28 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // تحميل بيانات Google Sheets
+    const initialPayload = @json($sheetPayload ?? null);
+    const sheetsApiUrl = @json(route('frontend.nashras.api.sheets', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]));
+
     function loadSheetsData() {
         const container = $('#sheets-data-container');
-        const refreshBtn = $('#refresh-data-btn');
-        const loadBtn = $('#load-data-btn');
-        
-        // تعطيل الأزرار وإظهار التحميل
-        refreshBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري التحديث...');
-        loadBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> جاري التحميل...');
-        
+
+        if (initialPayload && initialPayload.data && Object.keys(initialPayload.data).length) {
+            displaySheetsData(initialPayload.data);
+            return;
+        }
+
         container.html(`
             <div class="text-center py-5">
                 <div class="spinner-border text-success" role="status">
                     <span class="visually-hidden">جاري التحميل...</span>
                 </div>
-                <p class="mt-3 text-muted">جاري جلب البيانات من Google Sheets...</p>
+                <p class="mt-3 text-muted">جاري تحميل البيانات...</p>
             </div>
         `);
-        
+
         $.ajax({
-            url: '{{ route("frontend.nashras.api.sheets", ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}',
+            url: sheetsApiUrl,
             method: 'GET',
             success: function(response) {
                 if (response.success && response.data) {
@@ -245,10 +248,6 @@ $(document).ready(function() {
                     message = xhr.responseJSON.message;
                 }
                 showError(message);
-            },
-            complete: function() {
-                refreshBtn.prop('disabled', false).html('<i class="fas fa-sync"></i> تحديث البيانات');
-                loadBtn.prop('disabled', false).html('<i class="fas fa-download"></i> تحميل البيانات');
             }
         });
     }
@@ -358,14 +357,9 @@ $(document).ready(function() {
         `);
     }
     
-    // تحميل البيانات تلقائياً عند فتح الصفحة
     @if($nashra->google_drive_url)
         loadSheetsData();
     @endif
-    
-    // ربط الأحداث
-    $(document).on('click', '#refresh-data-btn, #load-data-btn', loadSheetsData);
-    $(document).on('click', '#export-excel-btn', loadSheetsData);
 });
 
 // وظائف المشاركة

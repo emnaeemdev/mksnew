@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Category;
+use App\Services\HtmlSanitizer;
+use App\Services\SecureUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -39,17 +41,22 @@ class PostController extends Controller
         
         $posts = $query->orderBy('created_at', 'desc')->paginate(15);
         $categories = Category::where('is_active', true)->get();
-        
-        return view('admin.posts.index', compact('posts', 'categories'));
+        $selectedCategory = $request->filled('category')
+            ? Category::find($request->category)
+            : null;
+
+        return view('admin.posts.index', compact('posts', 'categories', 'selectedCategory'));
     }
 
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
         $categories = Category::where('is_active', true)->orderBy('sort_order')->get();
-        return view('admin.posts.create', compact('categories'));
+        $selectedCategoryId = $request->get('category');
+
+        return view('admin.posts.create', compact('categories', 'selectedCategoryId'));
     }
 
     /**
@@ -84,8 +91,9 @@ class PostController extends Controller
         // استخدم العنوان الإنجليزي إذا كان متوفراً، وإلا استخدم العربي
         $titleForSlug = $request->title_en ?: $request->title_ar;
         $post->slug = Str::slug($titleForSlug);
-        $post->content_ar = $request->content_ar;
-        $post->content_en = $request->content_en;
+        $sanitizer = app(HtmlSanitizer::class);
+        $post->content_ar = $sanitizer->clean($request->content_ar);
+        $post->content_en = $sanitizer->clean($request->content_en);
         $post->status = $request->status;
         $post->show_in_slider = $request->has('show_in_slider');
         $post->show_in_releases = $request->has('show_in_releases');
@@ -149,63 +157,12 @@ class PostController extends Controller
 
         $post->save();
 
-        // Handle Arabic file uploads
-        if ($request->has('files_ar')) {
-            $filesData = $request->input('files_ar', []);
-            foreach ($filesData as $index => $fileData) {
-                $fileKey = "files_ar.{$index}.file";
-                if ($request->hasFile($fileKey)) {
-                    $file = $request->file($fileKey);
-                    if ($file->isValid()) {
-                        $displayName = $fileData['display_name'] ?? $file->getClientOriginalName();
-                        
-                        $fileName = time() . '_ar_' . $index . '_' . $file->getClientOriginalName();
-                        $filePath = $file->storeAs('posts/files/ar', $fileName, 'public');
-                        
-                        $post->files()->create([
-                            'file_path' => $filePath,
-                            'original_name' => $file->getClientOriginalName(),
-                            'display_name' => $displayName,
-                            'file_size' => $file->getSize(),
-                            'mime_type' => $file->getMimeType(),
-                            'sort_order' => $index,
-                            'language' => 'ar'
-                        ]);
-                    }
-                }
-            }
-        }
-
-        // Handle English file uploads
-        if ($request->has('files_en')) {
-            $filesData = $request->input('files_en', []);
-            foreach ($filesData as $index => $fileData) {
-                $fileKey = "files_en.{$index}.file";
-                if ($request->hasFile($fileKey)) {
-                    $file = $request->file($fileKey);
-                    if ($file->isValid()) {
-                        $displayName = $fileData['display_name'] ?? $file->getClientOriginalName();
-                        
-                        $fileName = time() . '_en_' . $index . '_' . $file->getClientOriginalName();
-                        $filePath = $file->storeAs('posts/files/en', $fileName, 'public');
-                        
-                        $post->files()->create([
-                            'file_path' => $filePath,
-                            'original_name' => $file->getClientOriginalName(),
-                            'display_name' => $displayName,
-                            'file_size' => $file->getSize(),
-                            'mime_type' => $file->getMimeType(),
-                            'sort_order' => $index,
-                            'language' => 'en'
-                        ]);
-                    }
-                }
-            }
-        }
+        $this->storePostAttachmentFiles($request, $post, 'ar');
+        $this->storePostAttachmentFiles($request, $post, 'en');
 
         $post->syncKeywordNames($request->input('keywords'));
 
-        return redirect()->route('admin.posts.index')
+        return redirect()->route('admin.posts.edit', $post)
             ->with('success', 'تم إنشاء الموضوع بنجاح');
     }
 
@@ -258,8 +215,9 @@ class PostController extends Controller
         // استخدم العنوان الإنجليزي إذا كان متوفراً، وإلا استخدم العربي
         $titleForSlug = $request->title_en ?: $request->title_ar;
         $post->slug = Str::slug($titleForSlug);
-        $post->content_ar = $request->content_ar;
-        $post->content_en = $request->content_en;
+        $sanitizer = app(HtmlSanitizer::class);
+        $post->content_ar = $sanitizer->clean($request->content_ar);
+        $post->content_en = $sanitizer->clean($request->content_en);
         $post->status = $request->status;
         $post->show_in_slider = $request->has('show_in_slider');
         $post->show_in_releases = $request->has('show_in_releases');
@@ -275,90 +233,62 @@ class PostController extends Controller
 
         // Handle background image upload
         if ($request->hasFile('background_image')) {
-            // Delete old background image
-            if ($post->background_image) {
-                Storage::disk('public')->delete($post->background_image);
+            $legacyBackground = $post->getRawOriginal('background_image');
+            if ($legacyBackground) {
+                Storage::disk('public')->delete($legacyBackground);
             }
             $backgroundImage = $request->file('background_image');
             $backgroundImagePath = $backgroundImage->store('posts/backgrounds', 'public');
             $post->background_image = $backgroundImagePath;
-        } elseif ($request->has('remove_background_image')) {
-            // Remove background image if requested
-            if ($post->background_image) {
-                Storage::disk('public')->delete($post->background_image);
-                $post->background_image = null;
-            }
+        } elseif ($request->boolean('remove_background_image')) {
+            $this->removeLegacyImage($post, 'background_image');
         }
 
         // Handle Arabic background image upload
         if ($request->hasFile('background_image_ar')) {
-            if ($post->background_image_ar) {
-                Storage::disk('public')->delete($post->background_image_ar);
-            }
-            $backgroundImageAr = $request->file('background_image_ar');
-            $backgroundImageArPath = $backgroundImageAr->store('posts/backgrounds/ar', 'public');
+            $this->deleteStoredImage($post->getRawOriginal('background_image_ar'));
+            $backgroundImageArPath = $request->file('background_image_ar')->store('posts/backgrounds/ar', 'public');
             $post->background_image_ar = $backgroundImageArPath;
-        } elseif ($request->has('remove_background_image_ar')) {
-            if ($post->background_image_ar) {
-                Storage::disk('public')->delete($post->background_image_ar);
-                $post->background_image_ar = null;
-            }
+            $this->clearLegacyImageForLocale($post, 'background_image', 'backgrounds/ar');
+        } elseif ($request->boolean('remove_background_image_ar')) {
+            $this->removeLocaleImage($post, 'background_image_ar', 'background_image', 'backgrounds/ar');
         }
 
         // Handle English background image upload
         if ($request->hasFile('background_image_en')) {
-            if ($post->background_image_en) {
-                Storage::disk('public')->delete($post->background_image_en);
-            }
-            $backgroundImageEn = $request->file('background_image_en');
-            $backgroundImageEnPath = $backgroundImageEn->store('posts/backgrounds/en', 'public');
+            $this->deleteStoredImage($post->getRawOriginal('background_image_en'));
+            $backgroundImageEnPath = $request->file('background_image_en')->store('posts/backgrounds/en', 'public');
             $post->background_image_en = $backgroundImageEnPath;
-        } elseif ($request->has('remove_background_image_en')) {
-            if ($post->background_image_en) {
-                Storage::disk('public')->delete($post->background_image_en);
-                $post->background_image_en = null;
-            }
+            $this->clearLegacyImageForLocale($post, 'background_image', 'backgrounds/en');
+        } elseif ($request->boolean('remove_background_image_en')) {
+            $this->removeLocaleImage($post, 'background_image_en', 'background_image', 'backgrounds/en');
         }
 
         // Handle featured image upload
         if ($request->hasFile('featured_image')) {
-            // Delete old featured image
-            if ($post->featured_image) {
-                Storage::disk('public')->delete($post->featured_image);
-            }
-            $featuredImage = $request->file('featured_image');
-            $featuredImagePath = $featuredImage->store('posts/featured', 'public');
+            $this->deleteStoredImage($post->getRawOriginal('featured_image'));
+            $featuredImagePath = $request->file('featured_image')->store('posts/featured', 'public');
             $post->featured_image = $featuredImagePath;
         }
 
         // Handle Arabic featured image upload
         if ($request->hasFile('featured_image_ar')) {
-            if ($post->featured_image_ar) {
-                Storage::disk('public')->delete($post->featured_image_ar);
-            }
-            $featuredImageAr = $request->file('featured_image_ar');
-            $featuredImageArPath = $featuredImageAr->store('posts/featured/ar', 'public');
+            $this->deleteStoredImage($post->getRawOriginal('featured_image_ar'));
+            $featuredImageArPath = $request->file('featured_image_ar')->store('posts/featured/ar', 'public');
             $post->featured_image_ar = $featuredImageArPath;
-        } elseif ($request->has('remove_featured_image_ar')) {
-            if ($post->featured_image_ar) {
-                Storage::disk('public')->delete($post->featured_image_ar);
-                $post->featured_image_ar = null;
-            }
+            $this->clearLegacyImageForLocale($post, 'featured_image', 'featured/ar');
+        } elseif ($request->boolean('remove_featured_image_ar')) {
+            $this->removeLocaleImage($post, 'featured_image_ar', 'featured_image', 'featured/ar');
         }
 
         // Handle English featured image upload
         if ($request->hasFile('featured_image_en')) {
-            if ($post->featured_image_en) {
-                Storage::disk('public')->delete($post->featured_image_en);
-            }
-            $featuredImageEn = $request->file('featured_image_en');
-            $featuredImageEnPath = $featuredImageEn->store('posts/featured/en', 'public');
+            $this->deleteStoredImage($post->getRawOriginal('featured_image_en'));
+            $featuredImageEnPath = $request->file('featured_image_en')->store('posts/featured/en', 'public');
             $post->featured_image_en = $featuredImageEnPath;
-        } elseif ($request->has('remove_featured_image_en')) {
-            if ($post->featured_image_en) {
-                Storage::disk('public')->delete($post->featured_image_en);
-                $post->featured_image_en = null;
-            }
+            $this->clearLegacyImageForLocale($post, 'featured_image', 'featured/en');
+        } elseif ($request->boolean('remove_featured_image_en')) {
+            $this->removeLocaleImage($post, 'featured_image_en', 'featured_image', 'featured/en');
         }
 
         $post->save();
@@ -371,59 +301,8 @@ class PostController extends Controller
             }
         }
 
-        // Handle Arabic file uploads
-        if ($request->has('files_ar')) {
-            $filesData = $request->input('files_ar', []);
-            foreach ($filesData as $index => $fileData) {
-                $fileKey = "files_ar.{$index}.file";
-                if ($request->hasFile($fileKey)) {
-                    $file = $request->file($fileKey);
-                    if ($file->isValid()) {
-                        $displayName = $fileData['display_name'] ?? $file->getClientOriginalName();
-                        
-                        $fileName = time() . '_ar_' . $index . '_' . $file->getClientOriginalName();
-                        $filePath = $file->storeAs('posts/files/ar', $fileName, 'public');
-                        
-                        $post->files()->create([
-                            'file_path' => $filePath,
-                            'original_name' => $file->getClientOriginalName(),
-                            'display_name' => $displayName,
-                            'file_size' => $file->getSize(),
-                            'mime_type' => $file->getMimeType(),
-                            'sort_order' => $index,
-                            'language' => 'ar'
-                        ]);
-                    }
-                }
-            }
-        }
-
-        // Handle English file uploads
-        if ($request->has('files_en')) {
-            $filesData = $request->input('files_en', []);
-            foreach ($filesData as $index => $fileData) {
-                $fileKey = "files_en.{$index}.file";
-                if ($request->hasFile($fileKey)) {
-                    $file = $request->file($fileKey);
-                    if ($file->isValid()) {
-                        $displayName = $fileData['display_name'] ?? $file->getClientOriginalName();
-                        
-                        $fileName = time() . '_en_' . $index . '_' . $file->getClientOriginalName();
-                        $filePath = $file->storeAs('posts/files/en', $fileName, 'public');
-                        
-                        $post->files()->create([
-                            'file_path' => $filePath,
-                            'original_name' => $file->getClientOriginalName(),
-                            'display_name' => $displayName,
-                            'file_size' => $file->getSize(),
-                            'mime_type' => $file->getMimeType(),
-                            'sort_order' => $index,
-                            'language' => 'en'
-                        ]);
-                    }
-                }
-            }
-        }
+        $this->storePostAttachmentFiles($request, $post, 'ar');
+        $this->storePostAttachmentFiles($request, $post, 'en');
 
         // Handle file removal
         if ($request->has('remove_files')) {
@@ -447,28 +326,10 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        // Delete associated files
-        if ($post->background_image) {
-            Storage::disk('public')->delete($post->background_image);
+        foreach (['background_image', 'featured_image', 'background_image_ar', 'background_image_en', 'featured_image_ar', 'featured_image_en'] as $column) {
+            $this->deleteStoredImage($post->getRawOriginal($column));
         }
-        if ($post->featured_image) {
-            Storage::disk('public')->delete($post->featured_image);
-        }
-        
-        // Delete multilingual images
-        if ($post->background_image_ar) {
-            Storage::disk('public')->delete($post->background_image_ar);
-        }
-        if ($post->background_image_en) {
-            Storage::disk('public')->delete($post->background_image_en);
-        }
-        if ($post->featured_image_ar) {
-            Storage::disk('public')->delete($post->featured_image_ar);
-        }
-        if ($post->featured_image_en) {
-            Storage::disk('public')->delete($post->featured_image_en);
-        }
-        
+
         // Delete multiple files
         foreach ($post->files as $file) {
             Storage::disk('public')->delete($file->file_path);
@@ -478,5 +339,85 @@ class PostController extends Controller
 
         return redirect()->route('admin.posts.index')
             ->with('success', 'تم حذف الموضوع بنجاح');
+    }
+
+    private function storePostAttachmentFiles(Request $request, Post $post, string $language): void
+    {
+        $inputKey = $language === 'en' ? 'files_en' : 'files_ar';
+        if (!$request->has($inputKey)) {
+            return;
+        }
+
+        $uploader = app(SecureUploadService::class);
+        $filesData = $request->input($inputKey, []);
+
+        foreach ($filesData as $index => $fileData) {
+            $fileKey = "{$inputKey}.{$index}.file";
+            if (!$request->hasFile($fileKey)) {
+                continue;
+            }
+
+            $file = $request->file($fileKey);
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+
+            try {
+                $stored = $uploader->store($file, "posts/files/{$language}", 'public');
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+
+            $post->files()->create([
+                'file_path' => $stored['path'],
+                'original_name' => $stored['original_name'],
+                'display_name' => $uploader->sanitizeDisplayName($fileData['display_name'] ?? null, $stored['original_name']),
+                'file_size' => $stored['size'],
+                'mime_type' => $stored['mime_type'],
+                'sort_order' => $index,
+                'language' => $language,
+            ]);
+        }
+    }
+
+    private function deleteStoredImage(?string $path): void
+    {
+        if ($path) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+
+    private function removeLegacyImage(Post $post, string $column): void
+    {
+        $this->deleteStoredImage($post->getRawOriginal($column));
+        $post->{$column} = null;
+    }
+
+    private function removeLocaleImage(Post $post, string $localeColumn, string $legacyColumn, string $localeFolder): void
+    {
+        $localePath = $post->getRawOriginal($localeColumn);
+        $this->deleteStoredImage($localePath);
+        $post->{$localeColumn} = null;
+
+        $legacyPath = $post->getRawOriginal($legacyColumn);
+        if (!$legacyPath) {
+            return;
+        }
+
+        if ($legacyPath === $localePath || str_contains($legacyPath, $localeFolder)) {
+            if ($legacyPath !== $localePath) {
+                $this->deleteStoredImage($legacyPath);
+            }
+            $post->{$legacyColumn} = null;
+        }
+    }
+
+    private function clearLegacyImageForLocale(Post $post, string $legacyColumn, string $localeFolder): void
+    {
+        $legacyPath = $post->getRawOriginal($legacyColumn);
+        if ($legacyPath && str_contains($legacyPath, $localeFolder)) {
+            $this->deleteStoredImage($legacyPath);
+            $post->{$legacyColumn} = null;
+        }
     }
 }

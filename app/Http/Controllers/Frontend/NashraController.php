@@ -48,18 +48,17 @@ class NashraController extends Controller
     }
 
     /**
-     * عرض تفاصيل نشرة واحدة مع بيانات Google Sheets
+     * عرض تفاصيل نشرة واحدة مع بيانات Google Sheets من الكاش المشترك
      */
     public function show(Request $request, $locale, $nashra)
     {
-        Log::info('NashraController@show hit', ['nashra_param' => $nashra, 'locale' => $locale]);
-
         $nashra = Nashra::findOrFail($nashra);
 
-        $sheetData = null;
+        $sheetPayload = null;
         if ($nashra->google_sheet_id) {
             try {
-                $sheetData = app(GoogleSheetsService::class)->getSheetData($nashra->google_sheet_id);
+                $sheetPayload = app(GoogleSheetsService::class)
+                    ->getCachedSheetPayload($nashra->google_sheet_id);
             } catch (\Throwable $e) {
                 Log::error('Google Sheets fetch failed', [
                     'nashra_id' => $nashra->id,
@@ -76,7 +75,7 @@ class NashraController extends Controller
             ->limit(6)
             ->get();
 
-        return view('frontend.nashras.show', compact('nashra', 'sheetData', 'relatedNashras'));
+        return view('frontend.nashras.show', compact('nashra', 'sheetPayload', 'relatedNashras'));
     }
 
     /**
@@ -150,28 +149,39 @@ class NashraController extends Controller
     }
 
     /**
-     * API endpoint لجلب بيانات Google Sheets
+     * API endpoint لجلب بيانات Google Sheets (من الكاش أو تحديث يدوي)
      */
-    public function getSheetData($locale, $nashra)
+    public function getSheetData(Request $request, $locale, $nashra)
     {
         $nashra = Nashra::published()->findOrFail($nashra);
+
         try {
             if (!$nashra->google_sheet_id) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'معرف Google Sheet غير متوفر'
+                    'message' => 'معرف Google Sheet غير متوفر',
                 ], 400);
             }
-            $googleSheetsService = app('App\\Services\\GoogleSheetsService');
-            $sheetData = $googleSheetsService->getSheetData($nashra->google_sheet_id);
-            return response()->json([
+
+            $forceRefresh = $request->boolean('refresh') && auth()->check();
+            $googleSheetsService = app(GoogleSheetsService::class);
+            $payload = $googleSheetsService->getCachedSheetPayload($nashra->google_sheet_id, $forceRefresh);
+
+            $response = [
                 'success' => true,
-                'data' => $sheetData
-            ]);
+                'data' => $payload['data'],
+            ];
+
+            if (auth()->check()) {
+                $response['cached_at'] = $payload['cached_at'];
+                $response['from_cache'] = $payload['from_cache'];
+            }
+
+            return response()->json($response);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'خطأ في جلب البيانات: ' . $e->getMessage()
+                'message' => 'خطأ في جلب البيانات: ' . $e->getMessage(),
             ], 500);
         }
     }

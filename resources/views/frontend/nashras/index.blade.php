@@ -6,16 +6,16 @@
 <div class="container py-4">
     <div class="row">
         <div class="col-12">
-            <!-- عنوان الصفحة -->
+            
             <div class="text-center mb-5">
                 <h1 class="display-4 text-primary mb-3">نشرة الذاكرة القانونية</h1>            
             </div>
             
-            <!-- تم إزالة شريط البحث والفلاتر بناءً على طلبك -->
             
-            <!-- النتائج -->
+            
+            
             @if($nashras->count() > 0)
-                <!-- عرض الشبكة (كروت فقط) وكل كارت يعتبر رابط كامل -->
+                
                 <div class="row g-4 justify-content-center">
                     @foreach($nashras as $nashra)
                         <div class="col-12 col-sm-6 col-md-4 d-flex justify-content-center">
@@ -29,7 +29,7 @@
                                     <div class="nashra-image placeholder-bg"></div>
                                 @endif
                                 
-                                <!-- Overlay title on hover (same behavior as posts) -->
+                                
                                 <div class="post-title-overlay">{{ $nashra->title_ar }}</div>
 
                                 <div class="card-body">
@@ -43,12 +43,12 @@
                     @endforeach
                 </div>
 
-                <!-- الترقيم -->
+                
                 <div class="d-flex justify-content-center mt-4">
                     {{ $nashras->appends(request()->query())->links() }}
                 </div>
             @else
-                <!-- لا توجد نتائج -->
+                
                 <div class="text-center py-5">
                     <div class="card shadow-sm">
                         <div class="card-body py-5">
@@ -69,16 +69,16 @@
 
 @push('styles')
 <style>
-/* Hover shadow */
+
 .hover-shadow { transition: box-shadow 0.3s ease; }
 .hover-shadow:hover { box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important; }
 
-/* ثابت أبعاد الكروت والصور */
+
 .nashra-card { width: 100%; position: relative; overflow: hidden; }
 .nashra-card img.nashra-image, .nashra-card .nashra-image { width: 100% !important; height: 18rem !important; object-fit: cover; display: block; max-width: none !important; }
 .placeholder-bg { background-color: #f0f2f5; }
 
-/* نفس ستايل الـ overlay المستخدم في الأقسام الأخرى */
+
 .post-title-overlay {
     position: absolute;
     top: 50%;
@@ -103,4 +103,3 @@
 </style>
 @endpush
 
-{{-- تم إزالة سكريبتات الفلاتر لعدم الحاجة إليها --}}

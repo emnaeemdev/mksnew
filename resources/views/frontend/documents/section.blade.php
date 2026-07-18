@@ -43,7 +43,7 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-body">
+                <div class="card-body border border-primary   rounded-4">
                     @if($section && $section->slug)
                         <form action="{{ route('frontend.documents.section', [app()->getLocale(), $section->slug]) }}" method="GET" id="filterForm">
                     @else
@@ -102,27 +102,32 @@
                                 </select>
                             </div>
 
-                            <!-- أزرار الإجراءات -->
-                            <!-- <div class="col-lg-2">
-                                <div class="d-flex gap-2 justify-content-end">
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> بحث</button>
-                                    @if(request()->hasAny(['search', 'sort', 'per_page']) || request()->except(['page']))
-                                        @if($section && $section->slug)
-                                            <a href="{{ route('frontend.documents.section', [app()->getLocale(), $section->slug]) }}" class="btn btn-outline-danger">
-                                                <i class="fas "fa-times"></i> مسح الفلاتر
-                                            </a>
-                                        @else
-                                            <a href="{{ route('frontend.documents.index') }}" class="btn btn-outline-danger">
-                                                <i class="fas fa-times"></i> مسح الفلاتر
-                                            </a>
-                                        @endif
-                                    @endif
-                                </div>
-                            </div> -->
                         </div>
+
+                        @php
+                            $sectionClearUrl = ($section && $section->slug)
+                                ? route('frontend.documents.section', [app()->getLocale(), $section->slug])
+                                : route('frontend.documents.index');
+                        @endphp
+
+                        @if($customFields->count() == 0)
+                            <div class="mt-3 d-flex gap-2 flex-wrap">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter"></i> تطبيق الفلاتر
+                                </button>
+                                <a href="{{ $sectionClearUrl }}" class="btn btn-outline-danger" id="clearFiltersBtn">
+                                    <i class="fas fa-times"></i> مسح الفلاتر
+                                </a>
+                            </div>
+                        @endif
 
                         @if(request()->filled('match_group'))
                             <input type="hidden" name="match_group" id="match_group_field" value="{{ request('match_group') }}">
+                        @endif
+
+                        {{-- الإبقاء على kw مع الترتيب/عدد النتائج فقط؛ البحث وفلاتر الحقول تلغيه عبر JS --}}
+                        @if(!empty($activeSectionKeyword))
+                            <input type="hidden" name="kw" id="section_kw_field" value="{{ $activeSectionKeyword->slug }}">
                         @endif
                         
                         <!-- فلترة الحقول المخصصة -->
@@ -318,16 +323,14 @@
                                             </div>
                                         @endforeach
                                     </div>
-                                    
+
                                     <div class="mt-3 d-flex gap-2 flex-wrap">
                                         <button type="submit" class="btn btn-primary">
                                             <i class="fas fa-filter"></i> تطبيق الفلاتر
                                         </button>
-                                        @if($hasAnyFieldFilter)
-                                            <button type="button" class="btn btn-outline-secondary" data-clear-all-filters>
-                                                <i class="fas fa-times"></i> مسح جميع الفلاتر
-                                            </button>
-                                        @endif
+                                        <a href="{{ $sectionClearUrl }}" class="btn btn-outline-danger" id="clearFiltersBtn">
+                                            <i class="fas fa-times"></i> مسح الفلاتر
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -337,6 +340,14 @@
             </div>
         </div>
     </div>
+
+    @php
+        $showKeywordSidebar = isset($sectionKeywords) && $sectionKeywords->count() > 0;
+    @endphp
+
+    @if($showKeywordSidebar)
+        @include('frontend.documents.partials.section-keyword-sidebar')
+    @endif
 
     <!-- أيقونة القسم وعدد الوثائق (تحت الفلتر) -->
     <div class="row mb-4">
@@ -348,13 +359,15 @@
                 </div>
             </div>
             @php
-                $docsCountBadge = isset($documents)
+                $docsCountBadge = isset($keywordDocuments)
+                    ? $keywordDocuments->total()
+                    : (isset($documents)
                     ? $documents->total()
                     : ((isset($categorizedResults['ranked']) && $categorizedResults['ranked'])
                         ? (int) $categorizedResults['ranked']->total()
                         : ((isset($categorizedResults) && !empty($categorizedResults['unique_total']))
                             ? (int) $categorizedResults['unique_total']
-                            : ($totalDocuments ?? 0)));
+                            : ($totalDocuments ?? 0))));
             @endphp
             @if(trim((string) request('search', '')) === '')
                 <span class="badge bg-primary fs-6" data-section-docs-count>{{ $docsCountBadge }} وثيقة</span>
@@ -415,16 +428,51 @@
         @include('frontend.documents.partials.categorized-search-results', ['categorizedResults' => $categorizedResults])
     @endif
 
+    {{-- مجموعة كلمة مفتاحية مثبتة --}}
+    @if(isset($keywordDocuments))
+        <div class="section-keyword-results mb-5">
+            @if($activeSectionKeyword)
+                <div class="section-keyword-results__header mb-4">
+                    <h2 class="h5 text-primary fw-bold mb-1">
+                        <i class="fas fa-tags me-1"></i>
+                        {{ $activeSectionKeyword->pivot->label_override ?? $activeSectionKeyword->name }}
+                    </h2>
+                    <p class="text-muted mb-0 small">
+                        {{ $keywordDocuments->total() }} وثيقة في أقسام الوثائق
+                    </p>
+                </div>
+            @endif
+
+            @if($keywordDocuments->count() > 0)
+                <div class="section-keyword-results__list">
+                    @foreach($keywordDocuments as $document)
+                        @include('frontend.documents.partials.section-keyword-document-card', ['document' => $document, 'section' => $section])
+                    @endforeach
+                </div>
+
+                @if($keywordDocuments->hasPages())
+                    <div class="d-flex justify-content-center mt-4">
+                        {{ $keywordDocuments->appends(request()->query())->links() }}
+                    </div>
+                @endif
+            @else
+                <div class="alert alert-light border text-center py-4">
+                    لا توجد وثائق تحت هذه المجموعة في القسم الحالي.
+                </div>
+            @endif
+        </div>
+    @endif
+
     <!-- قائمة الوثائق -->
-    @if(isset($documents))
+    @if(isset($documents) && !isset($keywordDocuments))
     <div class="documents-container">
     @if($documents->count() > 0)
         <!-- العرض التقليدي -->
         <div class="row g-4 mb-5">
     @foreach($documents as $document)
         <div class="col-lg-4 col-md-6">
-            <a href="{{ route('content.show', [app()->getLocale(), $section->name_en ?: $section->slug, $document->id]) }}" class="text-decoration-none">
-                <div class="card h-100 border-0 shadow-sm hover-card">
+            <a href="{{ route('content.show', [app()->getLocale(), $section->slug, $document->id]) }}" class="text-decoration-none">
+                <div class="card h-100 doc-card">
                     <!-- <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
                          style="height: 200px;">
                         <i class="fas fa-file-alt text-muted" style="font-size: 3rem;"></i>
@@ -530,6 +578,7 @@
     @endif
     </div> <!-- إغلاق documents-container -->
     @endif
+
 </div>
 
 @push('scripts')
@@ -659,28 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // زر مسح الفلاتر
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', function() {
-            // مسح جميع قيم النموذج
-            Array.from(form.elements).forEach(element => {
-                if (element.name && element.name.startsWith('fields[')) {
-                    element.value = '';
-                }
-            });
-            
-            // مسح قيمة البحث أيضاً
-            const searchInput = document.getElementById('search');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // إعادة توجيه إلى الصفحة بدون فلاتر
-            window.location.href = window.location.pathname;
-        });
-    }
-    
+    // زر مسح الفلاتر — الرابط يعيد الصفحة نظيفة (بحث + فلاتر + kw)
     // دالة لتهيئة تأثيرات hover
     function initHoverEffects() {
         const hoverCards = document.querySelectorAll('.hover-card');
@@ -827,28 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // زر مسح الفلاتر
-    const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener('click', function() {
-            // مسح جميع قيم النموذج
-            Array.from(form.elements).forEach(element => {
-                if (element.name && element.name.startsWith('fields[')) {
-                    element.value = '';
-                }
-            });
-            
-            // مسح قيمة البحث أيضاً
-            const searchInput = document.getElementById('search');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // إعادة توجيه إلى الصفحة بدون فلاتر
-            window.location.href = window.location.pathname;
-        });
-    }
-    
+    // زر مسح الفلاتر — الرابط يعيد الصفحة نظيفة (بحث + فلاتر + kw)
     // دالة لتهيئة تأثيرات hover
     function initHoverEffects() {
         const hoverCards = document.querySelectorAll('.hover-card');
@@ -998,5 +1005,5 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 
 @push('scripts')
-    <script src="{{ asset('js/section-filters.js') }}?v=3"></script>
+    <script src="{{ asset('js/section-filters.js') }}?v=5"></script>
 @endpush

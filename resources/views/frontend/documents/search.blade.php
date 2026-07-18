@@ -105,7 +105,7 @@
                 <div class="row g-4">
                     @foreach($sections as $section)
                         <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm hover-card">
+                            <div class="card h-100 doc-card">
                                 <div class="card-body text-center">
                                     <div class="mb-3">
                                         <i class="fas fa-folder-open text-primary" style="font-size: 2.5rem;"></i>

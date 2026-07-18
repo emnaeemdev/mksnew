@@ -54,7 +54,7 @@ class DocumentCustomFieldController extends Controller
         $fieldTypes = [
             'text' => 'نص قصير',
             'textarea' => 'نص طويل',
-            'number' => 'رقم',
+            'number' => 'مدى رقم (من - إلى)',
             'date' => 'تاريخ',
             'datetime' => 'تاريخ ووقت',
             'select' => 'قائمة منسدلة',
@@ -117,7 +117,7 @@ class DocumentCustomFieldController extends Controller
             'help_text' => $request->help_text
         ]);
 
-        return redirect()->route('admin.document-custom-fields.index')
+        return redirect()->route('admin.document-custom-fields.edit', $field)
             ->with('success', 'تم إنشاء الحقل بنجاح');
     }
 
@@ -161,7 +161,7 @@ class DocumentCustomFieldController extends Controller
         $fieldTypes = [
             'text' => 'نص قصير',
             'textarea' => 'نص طويل',
-            'number' => 'رقم',
+            'number' => 'مدى رقم (من - إلى)',
             'date' => 'تاريخ',
             'datetime' => 'تاريخ ووقت',
             'select' => 'قائمة منسدلة',
@@ -222,7 +222,7 @@ class DocumentCustomFieldController extends Controller
             'help_text' => $request->help_text
         ]);
 
-        return redirect()->route('admin.document-custom-fields.index')
+        return redirect()->route('admin.document-custom-fields.edit', $documentCustomField)
             ->with('success', 'تم تحديث الحقل بنجاح');
     }
 

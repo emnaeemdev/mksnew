@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use App\Http\View\Composers\SidebarComposer;
+use App\Http\View\Composers\FrontendAdminShortcutComposer;
 use Illuminate\Pagination\Paginator; // added
 use App\Models\Setting; // added
 use App\Models\Document;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // تسجيل View Composer للقائمة الجانبية
         View::composer('admin.partials.sidebar', SidebarComposer::class);
+        View::composer('frontend.partials.header', FrontendAdminShortcutComposer::class);
 
         // استخدام قوالب Bootstrap 5 الافتراضية للترقيم في جميع الواجهات
         Paginator::useBootstrapFive();

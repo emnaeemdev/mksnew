@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -8,29 +10,38 @@ use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->route('locale');
-        
-        // If no locale in URL, use session or default to Arabic
-        if (!$locale) {
-            $locale = session('locale', 'ar');
-        }
-        
-        // Validate locale
-        if (!in_array($locale, ['ar', 'en'])) {
-            $locale = 'ar';
-        }
-        
-        // Set application locale
+        $locale = $this->resolveLocale($request);
+
         app()->setLocale($locale);
         session(['locale' => $locale]);
-        
+
         return $next($request);
+    }
+
+    public static function resolveFromRequest(Request $request): string
+    {
+        return (new self())->resolveLocale($request);
+    }
+
+    private function resolveLocale(Request $request): string
+    {
+        $routeLocale = $request->route()?->parameter('locale');
+        if (is_string($routeLocale) && in_array($routeLocale, ['ar', 'en'], true)) {
+            return $routeLocale;
+        }
+
+        $path = trim($request->path(), '/');
+        if (preg_match('/^(ar|en)(?:\/|$)/', $path, $matches)) {
+            return $matches[1];
+        }
+
+        $sessionLocale = session('locale');
+        if (is_string($sessionLocale) && in_array($sessionLocale, ['ar', 'en'], true)) {
+            return $sessionLocale;
+        }
+
+        return 'ar';
     }
 }

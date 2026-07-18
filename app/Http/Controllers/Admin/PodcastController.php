@@ -235,7 +235,7 @@ class PodcastController extends Controller
     protected function fillPodcast(Podcast $podcast, array $data): void
     {
         $podcast->title = $data['title'];
-        $podcast->content = $data['content'] ?? null;
+        $podcast->content = app(\App\Services\HtmlSanitizer::class)->clean($data['content'] ?? null);
         $podcast->series_label = trim((string) ($data['series_label'] ?? '')) ?: null;
         $podcast->spotify_url = $data['spotify_url'] ?? null;
         $podcast->apple_podcasts_url = $data['apple_podcasts_url'] ?? null;

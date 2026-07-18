@@ -66,12 +66,12 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>العنوان</th>
+                            <th>العنوان عربي</th>
+                            <th>العنوان انجليزي</th>
                             <th>القسم</th>
                             <th>الحالة</th>
                             <th>اللغات</th>
                             <th>المشاهدات</th>
-                            <th>الصور</th>
                             <th>الملفات</th>
                             <th>تاريخ النشر</th>
                             <th>الإجراءات</th>
@@ -82,56 +82,41 @@
                             <tr>
                                 <td>{{ $post->id }}</td>
                                 <td>
-                                    <div>
+                                    <div class="admin-list-item">
+                                        @if($post->admin_thumbnail_url)
+                                            <a href="{{ route('admin.posts.edit', $post) }}" class="admin-list-item__thumb-link">
+                                                <img src="{{ $post->admin_thumbnail_url }}"
+                                                     alt=""
+                                                     class="admin-list-item__thumb">
+                                            </a>
+                                        @else
+                                            <span class="admin-list-item__thumb-placeholder" aria-hidden="true">&mdash;</span>
+                                        @endif
+                                        <div class="admin-list-item__body">
                                         <strong>
                                             <a href="{{ route('admin.posts.edit', $post) }}" class="text-decoration-none text-dark">
                                                 {{ Str::limit($post->title_ar, 40) }}
                                             </a>
                                         </strong>
-                                        @if($post->show_in_slider_ar)
-                                            <span class="badge bg-info ms-1" title="يظهر في السلايدر - عربي">
-                                                <i class="fas fa-images"></i> ع
-                                            </span>
-                                        @endif
 
-                                        @if($post->show_in_releases_ar)
-                                            <span class="badge bg-success ms-1" title="يظهر في الإصدارات - عربي">
-                                                <i class="fas fa-rocket"></i> ع
-                                            </span>
-                                        @endif
-
-                                        @if($post->show_in_other_reports_ar)
-                                            <span class="badge bg-warning ms-1" title="يظهر في التقارير الأخرى - عربي">
-                                                <i class="fas fa-file-alt"></i> ع
-                                            </span>
-                                        @endif
   
                                     </div>
+  
+                                </td>
+
+
+                                <td>
+
                                     @if($post->title_en)
                                     <div>
-                                    <span class="badge bg-success"> English </span>
+                              
                                       <a href="{{ route('admin.posts.edit', $post) }}" class="text-decoration-none text-dark">
                                         {{ Str::limit($post->title_en, 40) }}
                                       </a>
                                       @endif
-                                      @if($post->show_in_slider_en)
-                                            <span class="badge bg-info ms-1" title="يظهر في السلايدر - إنجليزي">
-                                                <i class="fas fa-images"></i> E
-                                            </span>
-                                        @endif
-                                        @if($post->show_in_releases_en)
-                                            <span class="badge bg-success ms-1" title="يظهر في الإصدارات - إنجليزي">
-                                                <i class="fas fa-rocket"></i> E
-                                            </span>
-                                        @endif
-                                         @if($post->show_in_other_reports_en)
-                                            <span class="badge bg-warning ms-1" title="يظهر في التقارير الأخرى - إنجليزي">
-                                                <i class="fas fa-file-alt"></i> E
-                                            </span>
-                                        @endif
-                                                                                
-                                    <!-- <small class="text-muted">{{ Str::limit($post->content_ar, 60) }}</small> -->
-                                     <div>
+
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="badge bg-secondary">{{ $post->category->name_ar }}</span>
@@ -165,20 +150,7 @@
                                 <td>
                                     <span class="badge bg-info">{{ $post->views_count }}</span>
                                 </td>
-                                <td>
-                                    <div class="d-flex gap-1">
-                                        @if($post->background_image_ar || $post->background_image_en)
-                                            <span class="badge bg-primary" title="صورة خلفية">
-                                                <i class="fas fa-image"></i>
-                                            </span>
-                                        @endif
-                                        @if($post->featured_image_ar || $post->featured_image_en)
-                                            <span class="badge bg-success" title="صورة مميزة">
-                                                <i class="fas fa-star"></i>
-                                            </span>
-                                        @endif
-                                    </div>
-                                </td>
+
                                 <td>
                                     @if($post->files && $post->files->count() > 0)
                                         <span class="badge bg-info" title="{{ $post->files->count() }} ملفات مرفقة">
@@ -199,7 +171,8 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.posts.show', $post) }}" 
+                                    <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}" 
+                                    target="_blank"
                                            class="btn btn-outline-info btn-sm" 
                                            title="عرض">
                                             <i class="fas fa-eye"></i>
@@ -211,14 +184,14 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
                                         
-                                        @if($post->status == 'published')
+                                        <!-- @if($post->status == 'published')
                                             <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}" 
                                                target="_blank"
                                                class="btn btn-outline-success btn-sm" 
                                                title="عرض في الموقع">
                                                 <i class="fas fa-external-link-alt"></i>
                                             </a>
-                                        @endif
+                                        @endif -->
                                         
                                         <button type="button" 
                                                 class="btn btn-outline-danger btn-sm" 

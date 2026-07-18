@@ -25,7 +25,7 @@
             @foreach($posts as $post)
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="post-card">
-                        <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}" class="text-decoration-none">
+                        <a href="{{ route('content.show', [app()->getLocale(), $post->category->slug, $post->id]) }}" class="text-decoration-none">
                             @if($post->featured_image)
                                 <img src="{{ asset('storage/' . $post->featured_image) }}" class="post-image post-image-hover" alt="{{ $post->title }}">
                             @else
@@ -34,7 +34,7 @@
                         </a>
                         <div class="card-body">
                             <h6 class="post-title-arcive text-center">
-                                <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}" class="text-decoration-none text-dark">
+                                <a href="{{ route('content.show', [app()->getLocale(), $post->category->slug, $post->id]) }}" class="text-decoration-none text-dark">
                                     {{ $post->title }}
                                 </a>
                             </h6>

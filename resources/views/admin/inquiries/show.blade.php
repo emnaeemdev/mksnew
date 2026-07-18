@@ -80,15 +80,14 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('JavaScript loaded successfully');
-    
-    // Handle mark as read form
+
     const markReadForm = document.getElementById('mark-read-form');
     console.log('Mark read form:', markReadForm);
     if (markReadForm) {
         markReadForm.addEventListener('submit', function(e) {
             e.preventDefault();
             console.log('Mark read form submitted');
-            
+
             fetch(this.action, {
                 method: 'POST',
                 headers: {
@@ -116,15 +115,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-    
-    // Handle mark as unread form
+
     const markUnreadForm = document.getElementById('mark-unread-form');
     console.log('Mark unread form:', markUnreadForm);
     if (markUnreadForm) {
         markUnreadForm.addEventListener('submit', function(e) {
             e.preventDefault();
             console.log('Mark unread form submitted');
-            
+
             fetch(this.action, {
                 method: 'POST',
                 headers: {
@@ -141,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
              .then(data => {
                  console.log('Data received (unread):', data);
                  if (data.success) {
-                     // أعد التحميل مع إضافة skip_mark=1 لمنع التعليم التلقائي كمقروء في show()
+
                      const url = new URL(window.location.href);
                      url.searchParams.set('skip_mark', '1');
                      window.location.href = url.toString();

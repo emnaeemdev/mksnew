@@ -57,8 +57,8 @@
         <!-- المحتوى الرئيسي -->
         <div class="col-lg-8">
             <!-- رأس الوثيقة -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-4">
+            <div class="card border-1 shadow-lg mb-4">
+                <div class="card-body p-4 ">
                     <!-- العلامات والحالة -->
                     <div class="mb-3">
                         @if($document->section && $document->section->name)
@@ -131,7 +131,7 @@
                         @endif
                     </div>
 
-                    @if(($document->relationLoaded('keywords') && $document->keywords->isNotEmpty()) || (!$document->relationLoaded('keywords') && $document->keywords()->exists()))
+                    <!-- @if(($document->relationLoaded('keywords') && $document->keywords->isNotEmpty()) || (!$document->relationLoaded('keywords') && $document->keywords()->exists()))
                         @php $document->loadMissing('keywords'); @endphp
                         <div class="mb-4">
                             <div class="mb-2 fw-bold text-muted"><i class="fas fa-tags me-1"></i>{{ app()->isLocale('ar') ? 'كلمات مفتاحية' : 'Keywords' }}</div>
@@ -141,7 +141,7 @@
                                 @endforeach
                             </div>
                         </div>
-                    @endif
+                    @endif -->
                     
                     <!-- أزرار المشاركة -->
                     <div class="d-flex flex-wrap gap-2 mb-4">
@@ -164,8 +164,6 @@
                 </div>
             </div>
             
-            
-            
             <!-- محتوى الوثيقة -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body p-4">
@@ -173,11 +171,13 @@
                         @if($hasSearchHighlight)
                             {!! $searchHelper->highlightTokensInHtml($document->content, $searchHighlightTokens, true) !!}
                         @else
-                            {!! $document->content !!}
+                            {!! safe_html($document->content) !!}
                         @endif
                     </div>
                 </div>
             </div>
+
+            @include('frontend.documents.partials.attached-files', ['documentFiles' => $documentFiles ?? null])
 
             
             <!-- إحصائيات القسم -->
@@ -313,26 +313,17 @@
                                 وثائق ذات صلة
                             </h6>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body">
                             @foreach($relatedDocuments as $related)
-                                <div class="p-3 {{ !$loop->last ? 'border-bottom' : '' }}">
-                                    <div class="d-flex">
-                                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
-                                             style="width: 60px; height: 60px;">
+                                @if($related->section && $related->section->slug)
+                                    <a href="{{ route('content.show', [app()->getLocale(), $related->section->slug, $related->id]) }}"
+                                       class="related-post-card">
+                                        <div class="related-thumb d-flex align-items-center justify-content-center bg-light">
                                             <i class="fas fa-file-alt text-muted"></i>
                                         </div>
-                                        
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1">
-                                                @if($related->section && $related->section->slug)
-                                                    <a href="{{ route('content.show', [app()->getLocale(), $related->section->name_en ?: $related->section->slug, $related->id]) }}" class="text-dark text-decoration-none">
-                                                        {{ Str::limit($related->title, 50) }}
-                                                    </a>
-                                                @else
-                                                    <span class="text-muted">{{ Str::limit($related->title, 50) }}</span>
-                                                @endif
-                                            </h6>
-                                            <div class="d-flex align-items-center text-muted small">
+                                        <div class="related-post-body">
+                                            <div class="related-post-title">{{ Str::limit($related->title, 50) }}</div>
+                                            <div class="related-post-meta">
                                                 <span class="me-2">
                                                     <i class="fas fa-eye me-1"></i>
                                                     {{ number_format($related->views_count) }}
@@ -340,8 +331,17 @@
                                                 <span>{{ optional($related->published_at ?? $related->created_at)->diffForHumans() }}</span>
                                             </div>
                                         </div>
+                                    </a>
+                                @else
+                                    <div class="related-post-card pe-none opacity-75">
+                                        <div class="related-thumb d-flex align-items-center justify-content-center bg-light">
+                                            <i class="fas fa-file-alt text-muted"></i>
+                                        </div>
+                                        <div class="related-post-body">
+                                            <div class="related-post-title">{{ Str::limit($related->title, 50) }}</div>
+                                        </div>
                                     </div>
-                                </div>
+                                @endif
                             @endforeach
                         </div>
                     </div>

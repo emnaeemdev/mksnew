@@ -37,7 +37,25 @@
                                     @error('name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <div class="form-text">سيتم إنشاء الرابط تلقائياً من اسم القسم</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="slug" class="form-label">
+                                        <i class="fas fa-link me-1"></i>
+                                        الرابط المختصر (slug)
+                                    </label>
+                                    <input type="text"
+                                           class="form-control @error('slug') is-invalid @enderror"
+                                           id="slug"
+                                           name="slug"
+                                           value="{{ old('slug') }}"
+                                           placeholder="judgments-of-the-court-of-cassation">
+                                    <div class="form-text">
+                                        اتركه فارغًا ليُنشأ تلقائيًا من اسم القسم، أو اكتبه يدويًا.
+                                    </div>
+                                    @error('slug')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
 
                                 <div class="mb-3">
@@ -96,7 +114,7 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <a href="{{ route('admin.document-sections.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> إلغاء
                             </a>
@@ -115,23 +133,24 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // تحديث الرابط تلقائياً عند كتابة اسم القسم
+    function slugify(value) {
+        return (value || '')
+            .toLowerCase()
+            .replace(/[^\u0600-\u06FF\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    let slugTouched = $('#slug').val().trim() !== '';
+
+    $('#slug').on('input', function() {
+        slugTouched = $(this).val().trim() !== '';
+    });
+
     $('#name').on('input', function() {
-        const name = $(this).val();
-        const slug = name.toLowerCase()
-            .replace(/[^\u0600-\u06FF\w\s-]/g, '') // إزالة الرموز غير المرغوبة
-            .replace(/\s+/g, '-') // استبدال المسافات بشرطات
-            .replace(/-+/g, '-') // إزالة الشرطات المتكررة
-            .trim('-'); // إزالة الشرطات من البداية والنهاية
-        
-        // عرض معاينة الرابط
-        if (slug) {
-            if (!$('#slug-preview').length) {
-                $('#name').after('<div id="slug-preview" class="form-text text-primary mt-1"></div>');
-            }
-            $('#slug-preview').html('<i class="fas fa-link"></i> الرابط: <strong>' + slug + '</strong>');
-        } else {
-            $('#slug-preview').remove();
+        if (!slugTouched) {
+            $('#slug').val(slugify($(this).val()));
         }
     });
     

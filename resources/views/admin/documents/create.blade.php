@@ -356,17 +356,19 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
-                            <a href="{{ route('admin.documents.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> إلغاء
-                            </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.documents.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> إلغاء
+                                </a>
+                            </div>
                             
-                            <div>
-                                <button type="submit" name="action" value="draft" class="btn btn-outline-primary me-2">
-                                    <i class="fas fa-save"></i> حفظ كمسودة
-                                </button>
+                            <div class="admin-form-actions__primary">
                                 <button type="submit" name="action" value="publish" class="btn btn-success">
                                     <i class="fas fa-paper-plane"></i> حفظ ونشر
+                                </button>
+                                <button type="submit" name="action" value="draft" class="btn btn-outline-primary">
+                                    <i class="fas fa-save"></i> حفظ كمسودة
                                 </button>
                             </div>
                         </div>

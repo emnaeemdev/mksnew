@@ -140,7 +140,7 @@ body {
     max-width: 1300px; /* حدد العرض الذي تريده (مثلاً 900px) */
     margin: auto; /* يجعل الكونتينر في المنتصف */
     padding: 10px; /* لضبط المسافات الداخلية */
-    gap: 35px;
+    gap: 18px;
     padding: 10px;
     align-items: stretch; /* تضمن أن جميع الأعمدة بنفس الارتفاع */
     /* background-color: #e9630a71; */
@@ -191,44 +191,53 @@ body {
     flex: 1; /* يشغل المساحة المتبقية */
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0px;
+}
+
+/* ✅ إطار الصورة الرئيسية (ثابت حتى مع hover) */
+.main-image {
+    border: 3px solid #2b4596;
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    margin-top: 10px;
+    margin-bottom: 25px;
 }
 
 /* ✅ تنسيق الصورة الرئيسية */
 .main-img {
     width: 100%; /* ملء المساحة بالكامل */
     height: 320px; /* ارتفاع مخصص للصورة الرئيسية */
-     /* object-fit: cover; */
-    /* border-radius: 8px;  */
+    display: block;
     transition: transform 0.2s ease-in-out;
-    border: 3px solid #2b4596;
-    /* opacity: 80%; */
-    margin-bottom: 25px;
-    margin-top: 10px;
-    border-radius: var(--bs-border-radius);
+    border: none;
+    border-radius: 0;
 }
 
-.main-img:hover {
-    transform: scale(1.02); /* تكبير بنسبة 5% */
+.main-image:hover .main-img {
+    transform: scale(1.02);
+}
+
+/* ✅ إطار الصور الفرعية (ثابت حتى مع hover) */
+.small-image .main-blog-title {
+    border: 2px solid #FF5733;
+    border-radius: var(--bs-border-radius);
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* ✅ تنسيق الصور الفرعية */
 .small-img {
     width: 100%;
     height: 429px; /* ارتفاع أصغر للصور الفرعية */
-    /* object-fit: cover; */
-    /* border-radius: 8px; */
+    display: block;
     transition: transform 0.1s ease-in-out;
-    border: 2px solid #FF5733;
-     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-     border-radius: var(--bs-border-radius);
+    border: none;
+    border-radius: 0;
 }
 
-.small-img:hover {
-        transform: scale(1.05);  /* تأثير أصغر من قبل */
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+.small-image:hover .small-img {
+    transform: scale(1.05);
     cursor: pointer;
-    
 }
 
 /* ✅ جعل الصور الفرعية في خط واحد */
@@ -291,6 +300,91 @@ body {
     align-items: center;
     overflow: hidden;
 }
+
+/* Home page: soft section rhythm + creative breaks */
+.home-page {
+    --home-blue: #2b4596;
+    --home-orange: #e9640a;
+    padding-bottom: 2rem;
+}
+
+.home-block {
+    position: relative;
+    padding-block: 2.25rem;
+}
+
+.home-block--featured {
+    background: #ffffff;
+    padding-top: 1.25rem;
+    padding-bottom: 1.75rem;
+}
+
+.home-block--docs {
+    background:
+        linear-gradient(180deg, rgba(43, 69, 150, 0.045) 0%, rgba(43, 69, 150, 0.08) 100%);
+    border-block: 1px solid rgba(43, 69, 150, 0.08);
+    padding-block: 2.75rem;
+}
+
+.home-block--releases {
+    background: #ffffff;
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
+}
+
+.home-section-break {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    max-width: 420px;
+    margin: 0.35rem auto;
+    padding-inline: 16px;
+}
+
+.home-section-break__line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(43, 69, 150, 0.28) 50%,
+        transparent 100%
+    );
+}
+
+.home-section-break__mark {
+    width: 11px;
+    height: 11px;
+    border: 2px solid var(--home-orange);
+    border-radius: 2px;
+    transform: rotate(45deg);
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(233, 100, 10, 0.08);
+    flex-shrink: 0;
+}
+
+.home-section-break__mark--alt {
+    border-color: var(--home-blue);
+    box-shadow: 0 0 0 4px rgba(43, 69, 150, 0.08);
+}
+
+.home-block--releases h2 {
+    position: relative;
+    padding-bottom: 0.65rem;
+}
+
+.home-block--releases h2::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    bottom: 0;
+    width: 72px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--home-orange), rgba(43, 69, 150, 0.55));
+}
+
 
 
 

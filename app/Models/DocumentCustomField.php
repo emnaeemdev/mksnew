@@ -34,7 +34,7 @@ class DocumentCustomField extends Model
     const FIELD_TYPES = [
         'text' => 'نص قصير',
         'textarea' => 'نص طويل',
-        'number' => 'رقم',
+        'number' => 'مدى رقم (من - إلى)',
         'date' => 'تاريخ',
         'datetime' => 'تاريخ ووقت',
         'select' => 'قائمة منسدلة',

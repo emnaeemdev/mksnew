@@ -26,25 +26,19 @@ class PostFile extends Model
         'download_count' => 'integer'
     ];
 
-    /**
-     * Scope for specific language
-     */
+    
     public function scopeForLanguage($query, $language)
     {
         return $query->where('language', $language);
     }
 
-    /**
-     * Get the post that owns the file.
-     */
+    
     public function getFileUrlAttribute(): string
     {
         return Storage::url($this->file_path);
     }
 
-    /**
-     * Get formatted file size.
-     */
+    
     public function getFormattedSizeAttribute(): string
     {
         if (!$this->file_size) {
@@ -61,17 +55,13 @@ class PostFile extends Model
         return round($bytes, 2) . ' ' . $units[$i];
     }
 
-    /**
-     * Check if file is an image.
-     */
+    
     public function isImage(): bool
     {
         return str_starts_with($this->mime_type ?? '', 'image/');
     }
 
-    /**
-     * Check if file is a document.
-     */
+    
     public function isDocument(): bool
     {
         $documentTypes = [
@@ -86,7 +76,7 @@ class PostFile extends Model
         return in_array($this->mime_type, $documentTypes);
     }
 
-    // إضافة علاقة مع Post
+    
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);

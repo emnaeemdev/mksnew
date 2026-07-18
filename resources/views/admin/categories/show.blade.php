@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'عرض القسم: ' . $category->name . ' - MK Snow')
+@section('title', 'عرض القسم: ' . $category->name . ' - mksegypt')
 @section('page-title', 'عرض القسم: ' . $category->name)
 
 @section('content')
@@ -141,7 +141,9 @@
                                 @foreach($category->posts()->latest()->take(10)->get() as $post)
                                     <tr>
                                         <td>
-                                            <strong>{{ Str::limit($post->title, 60) }}</strong>
+                                            <a href="{{ route('admin.posts.edit', $post) }}" class="text-decoration-none text-dark">
+                                                <strong>{{ Str::limit($post->title, 60) }}</strong>
+                                            </a>
                                             <br>
                                             <small class="text-muted">{{ Str::limit($post->content, 80) }}</small>
                                         </td>

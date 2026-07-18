@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Models\Concerns\HasKeywords;
 
@@ -52,5 +53,14 @@ class Podcast extends Model
         $label = trim((string) $this->series_label);
 
         return $label !== '' ? $label : 'حلقات هذه السلسلة';
+    }
+
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        if (!$this->cover_image_path) {
+            return null;
+        }
+
+        return Storage::url($this->cover_image_path);
     }
 }

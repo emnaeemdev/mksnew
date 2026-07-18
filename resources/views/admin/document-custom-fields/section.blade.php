@@ -106,13 +106,13 @@
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('admin.document-custom-fields.show', [$section, $field]) }}" class="btn btn-sm btn-outline-info" title="عرض">
+                                                <a href="{{ route('admin.document-custom-fields.show', $field) }}" class="btn btn-sm btn-outline-info" title="عرض">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('admin.document-custom-fields.edit', [$section, $field]) }}" class="btn btn-sm btn-outline-primary" title="تعديل">
+                                                <a href="{{ route('admin.document-custom-fields.edit', $field) }}" class="btn btn-sm btn-outline-primary" title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <form action="{{ route('admin.document-custom-fields.destroy', [$section, $field]) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحقل؟')">
+                                                <form action="{{ route('admin.document-custom-fields.destroy', $field) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الحقل؟')">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف">

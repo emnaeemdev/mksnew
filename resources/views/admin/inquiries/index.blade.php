@@ -45,10 +45,18 @@
                 @forelse($inquiries as $inquiry)
                     <tr>
                         <td>{{ $inquiry->id }}</td>
-                        <td>{{ $inquiry->name }}</td>
+                        <td>
+                            <a href="{{ route('admin.inquiries.show', $inquiry) }}" class="text-decoration-none text-dark">
+                                {{ $inquiry->name }}
+                            </a>
+                        </td>
                         <td><a href="mailto:{{ $inquiry->email }}">{{ $inquiry->email }}</a></td>
                         <td>{{ $inquiry->phone }}</td>
-                        <td>{{ $inquiry->subject }}</td>
+                        <td>
+                            <a href="{{ route('admin.inquiries.show', $inquiry) }}" class="text-decoration-none">
+                                {{ $inquiry->subject }}
+                            </a>
+                        </td>
                         <td class="message-preview" title="{{ $inquiry->message }}">{{ $inquiry->message }}</td>
                         <td>
                             @if($inquiry->status === \App\Models\Inquiry::STATUS_NEW)

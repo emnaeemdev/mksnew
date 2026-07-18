@@ -11,7 +11,7 @@ class ContactController extends Controller
 {
     public function submit($locale = null, Request $request)
     {
-        // تحقق الكابتشا قبل التحقق العام
+        
         $request->validate([
             'captcha_answer' => 'required|numeric'
         ], [
@@ -42,10 +42,10 @@ class ContactController extends Controller
             'locale' => app()->getLocale(),
         ]);
 
-        // إرسال إشعار بالبريد إذا تم إعداد البريد
+        
         if (config('mail.default')) {
             try {
-                $to = setting('contact_email', 'info@mksnow.com');
+                $to = setting('contact_email', 'emad@emadnaeem.com');
                 if ($to) {
                     Mail::raw("New inquiry from: {$inquiry->name}\nEmail: {$inquiry->email}\nPhone: {$inquiry->phone}\nSubject: {$inquiry->subject}\nMessage:\n{$inquiry->message}", function ($m) use ($to) {
                         $m->to($to)->subject('New Contact Inquiry');
@@ -56,7 +56,7 @@ class ContactController extends Controller
             }
         }
 
-        // إعادة توليد الكابتشا بعد الإرسال الناجح لمنع إعادة استخدام نفس الإجابة
+        
         session()->forget('contact_captcha_answer');
 
         return back()->with('success', __('messages.contact_submitted'));

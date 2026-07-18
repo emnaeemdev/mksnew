@@ -78,7 +78,9 @@
                                     @foreach($data as $item)
                                         <tr>
                                             <td>
-                                                <strong>{{ $item->title }}</strong>
+                                                <a href="{{ route('admin.section-data.edit', [$section, $item]) }}" class="text-decoration-none text-dark">
+                                                    <strong>{{ $item->title }}</strong>
+                                                </a>
                                                 <br>
                                                 <small class="text-muted">{{ $item->slug }}</small>
                                             </td>

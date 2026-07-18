@@ -10,7 +10,15 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">تعديل النشرة: {{ $nashra->title_ar }}</h3>
                     <div>
-                        <a href="{{ route('admin.nashras.show', $nashra->id) }}" class="btn btn-info me-2">
+                        @if($nashra->google_sheet_id)
+                            <form action="{{ route('admin.nashras.refresh-sheet-cache', $nashra) }}" method="POST" class="d-inline me-2">
+                                @csrf
+                                <button type="submit" class="btn btn-outline-success">
+                                    <i class="fas fa-sync"></i> تحديث بيانات Google Sheets
+                                </button>
+                            </form>
+                        @endif
+                        <a href="{{ route('frontend.nashras.show', [app()->getLocale(), $nashra->id]) }}" target= '_blank' class="btn btn-info me-2">
                             <i class="fas fa-eye"></i> عرض
                         </a>
                         <a href="{{ route('admin.nashras.index') }}" class="btn btn-secondary">
@@ -86,6 +94,7 @@
                                     سيتم استخراج معرف Google Sheet تلقائياً من الرابط
                                     @if($nashra->google_sheet_id)
                                         <br><strong>المعرف الحالي:</strong> {{ $nashra->google_sheet_id }}
+                                        <br><span class="text-muted">لتحديث البيانات لكل الزوار استخدم زر «تحديث كاش Google Sheets» أعلى الصفحة.</span>
                                     @endif
                                 </div>
                             </div>
@@ -223,7 +232,7 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <a href="{{ route('admin.nashras.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> إلغاء
                             </a>

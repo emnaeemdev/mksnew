@@ -83,10 +83,10 @@
                                         </div>
 
                                         <div class="mb-3">
-                                            <label for="name" class="form-label">اسم الحقل التقني <span class="text-danger">*</span></label>
+                                            <label for="name" class="form-label"> اسم الحقل (بالإنجليزية)<span class="text-danger">*</span></label>
                                             <input type="text" class="form-control @error('name') is-invalid @enderror" 
                                                    id="name" name="name" value="{{ old('name') }}" 
-                                                   placeholder="decision_number" required>
+                                                   placeholder="decision_number مثل" required>
                                             @error('name')
                                                 <div class="invalid-feedback">{{ $message }}</div>
                                             @enderror
@@ -100,7 +100,7 @@
                                                 <option value="">اختر نوع الحقل</option>
                                                 <option value="text" {{ old('type') == 'text' ? 'selected' : '' }}>نص قصير</option>
                                                 <option value="textarea" {{ old('type') == 'textarea' ? 'selected' : '' }}>نص طويل</option>
-                                                <option value="number" {{ old('type') == 'number' ? 'selected' : '' }}>رقم</option>
+                                                <option value="number" {{ old('type') == 'number' ? 'selected' : '' }}>مدى رقم (من - إلى)</option>
                                                 <option value="date" {{ old('type') == 'date' ? 'selected' : '' }}>تاريخ</option>
                                                 <option value="select" {{ old('type') == 'select' ? 'selected' : '' }}>قائمة منسدلة</option>
                                                 <option value="multiselect" {{ old('type') == 'multiselect' ? 'selected' : '' }}>اختيارات متعددة</option>
@@ -252,7 +252,7 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <div>
                                 @if(request('section'))
                                     <a href="{{ route('admin.document-sections.show', request('section')) }}" class="btn btn-secondary">

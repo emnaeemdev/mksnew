@@ -16,7 +16,7 @@
                 {{ __('messages.contact') }}
             </a>
         </li>
-        {{-- Keep other links as they are --}}
+
     </ul>
 </div>
 @endsection

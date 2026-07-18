@@ -92,7 +92,7 @@
                             @endif
                             
                             <div class="document-content">
-                                {!! $document->content !!}
+                                {!! safe_html($document->content) !!}
                             </div>
                         </div>
                     </div>
@@ -267,7 +267,7 @@
                                 <small class="text-muted d-block">الرابط</small>
                                 <div class="input-group input-group-sm">
                                     <input type="text" class="form-control" 
-                                           value="{{ route('content.show', [app()->getLocale(), $document->section->name_en ?: $document->section->slug, $document->id]) }}" 
+                                           value="{{ route('content.show', [app()->getLocale(), $document->section->slug, $document->id]) }}" 
                                            readonly id="documentUrl">
                                     <button class="btn btn-outline-secondary" type="button" 
                                             onclick="copyToClipboard('#documentUrl')">
@@ -301,7 +301,7 @@
                                 </a>
                                 
                                 @if($document->is_published)
-                                    <a href="{{ route('content.show', [app()->getLocale(), $document->section->name_en ?: $document->section->slug, $document->id]) }}" 
+                                    <a href="{{ route('content.show', [app()->getLocale(), $document->section->slug, $document->id]) }}" 
                                        class="btn btn-outline-secondary btn-sm" target="_blank">
                                         <i class="fas fa-external-link-alt"></i> عرض في الموقع
                                     </a>

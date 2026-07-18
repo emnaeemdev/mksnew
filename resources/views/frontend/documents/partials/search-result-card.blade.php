@@ -13,7 +13,7 @@
     @endphp
     <a href="{{ $documentShowUrl }}" 
        class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100 document-card @if($matchType === 'exact') border-success @elseif($matchType === 'all') border-primary @elseif($matchType === 'any') border-info @endif">
+        <div class="card h-100 doc-card document-card">
             <div class="card-body p-3">
                 <div class="row">
                     <!-- أيقونة الملف -->

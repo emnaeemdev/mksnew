@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'إضافة قسم جديد - MK Snow')
+@section('title', 'إضافة قسم جديد - mksegypt')
 @section('page-title', 'إضافة قسم جديد')
 
 @section('content')
@@ -59,8 +59,26 @@
                             @enderror
                         </div>
                     </div>
-                    
-                    {{-- Slug auto-generated --}}
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="slug" class="form-label">
+                                <i class="fas fa-link me-1"></i>
+                                الرابط المختصر `slug`
+                            </label>
+                            <input type="text"
+                                   class="form-control @error('slug') is-invalid @enderror"
+                                   id="slug"
+                                   name="slug"
+                                   value="{{ old('slug') }}"
+                                   placeholder="did-you-know">
+                            <div class="form-text">
+                                سيظهر هذا الجزء في رابط القسم، ويمكن تعديله يدويًا.
+                            </div>
+                            @error('slug')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <!-- Arabic Description -->
@@ -140,7 +158,7 @@
                     </div>
                     
                     <!-- Submit Buttons -->
-                    <div class="d-flex justify-content-between">
+                    <div class="admin-form-actions">
                         <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
                             <i class="fas fa-times me-2"></i>
                             إلغاء
@@ -160,12 +178,12 @@
 
 @section('scripts')
 <script>
-// Auto-generate slug from English name
+// Auto-generate slug from English name unless edited manually
 document.getElementById('name_en').addEventListener('input', function() {
     const nameEn = this.value;
     const slugField = document.getElementById('slug');
     
-    if (nameEn && !slugField.value) {
+    if (nameEn && !slugField.dataset.touched && !slugField.value) {
         const slug = nameEn
             .toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
@@ -175,6 +193,10 @@ document.getElementById('name_en').addEventListener('input', function() {
         
         slugField.value = slug;
     }
+});
+
+document.getElementById('slug').addEventListener('input', function() {
+    this.dataset.touched = '1';
 });
 </script>
 @endsection

@@ -9,13 +9,13 @@
             <div class="card shadow-sm">
                 <div class="card-body p-5">
                     <h1 class="display-4 text-center mb-4">{{ __('messages.about') }}</h1>
-                    
+
                     <div class="text-center mb-4">
                         <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
                             <i class="fas fa-info-circle text-white fa-2x"></i>
                         </div>
                     </div>
-                    
+
                     @php
                         $locale = app()->getLocale();
                         $aboutKey = $locale === 'ar' ? 'about_html_ar' : 'about_html_en';
@@ -24,7 +24,7 @@
 
                     @if(!empty($aboutHtml))
                         <div class="content">
-                            {!! $aboutHtml !!}
+                            {!! safe_html($aboutHtml) !!}
                         </div>
                     @else
                         <div class="content">
@@ -41,7 +41,7 @@
                                         <p class="text-muted">{{ __('messages.mission_description') }}</p>
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-6 mb-4">
                                     <div class="feature-box text-center">
                                         <div class="feature-icon mb-3">
@@ -54,7 +54,6 @@
                             </div>
                         </div>
                     @endif
-                    
 
                 </div>
             </div>

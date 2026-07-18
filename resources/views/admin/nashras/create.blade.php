@@ -55,13 +55,13 @@
                                 @enderror
                             </div>
                         </div>
-
+<!-- 
                         <div class="mb-3">
                             @include('admin.partials.keyword-picker', [
                                 'keywordScope' => 'nashra',
                                 'selectedKeywords' => old('keywords', []),
                             ])
-                        </div>
+                        </div> -->
                         
                         <div class="row">
                             <!-- رابط Google Drive -->
@@ -186,7 +186,7 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <a href="{{ route('admin.nashras.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> إلغاء
                             </a>

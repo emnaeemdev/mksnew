@@ -43,7 +43,25 @@
                                     @error('name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
-                                    <div class="form-text">الرابط الحالي: <strong>{{ $section->slug }}</strong></div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="slug" class="form-label">
+                                        <i class="fas fa-link me-1"></i>
+                                        الرابط المختصر (slug)
+                                    </label>
+                                    <input type="text"
+                                           class="form-control @error('slug') is-invalid @enderror"
+                                           id="slug"
+                                           name="slug"
+                                           value="{{ old('slug', $section->slug) }}"
+                                           placeholder="ahkam-almhkm-aladary-alaalya">
+                                    <div class="form-text">
+                                        يظهر في الرابط: <code>/ar/documents/section/<span id="slug-preview-path">{{ old('slug', $section->slug) }}</span></code>
+                                    </div>
+                                    @error('slug')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
 
                                 <div class="mb-3">
@@ -96,6 +114,52 @@
                                                 </label>
                                             </div>
                                             <div class="form-text">سيظهر القسم في قائمة الوثائق الرئيسية</div>
+                                        </div>
+                                        <hr class="my-3">
+
+                                        <div class="mb-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox"
+                                                       id="show_on_homepage" name="show_on_homepage" value="1"
+                                                       {{ old('show_on_homepage', $section->show_on_homepage) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="show_on_homepage">
+                                                    إظهار في الصفحة الرئيسية
+                                                </label>
+                                            </div>
+                                            <div class="form-text">يظهر كأيقونة في قسم الوثائق بالصفحة الرئيسية</div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="home_label" class="form-label">عنوان الأيقونة في الرئيسية</label>
+                                            <input type="text" class="form-control @error('home_label') is-invalid @enderror"
+                                                   id="home_label" name="home_label"
+                                                   value="{{ old('home_label', $section->home_label) }}"
+                                                   placeholder="مثال: المحكمة الإدارية العليا">
+                                            @error('home_label')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="home_icon" class="form-label">أيقونة Font Awesome</label>
+                                            <input type="text" class="form-control @error('home_icon') is-invalid @enderror"
+                                                   id="home_icon" name="home_icon"
+                                                   value="{{ old('home_icon', $section->home_icon) }}"
+                                                   placeholder="fa-gavel">
+                                            @error('home_icon')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="home_sort_order" class="form-label">ترتيب الأيقونة في الرئيسية</label>
+                                            <input type="number" class="form-control @error('home_sort_order') is-invalid @enderror"
+                                                   id="home_sort_order" name="home_sort_order"
+                                                   value="{{ old('home_sort_order', $section->home_sort_order) }}"
+                                                   min="0">
+                                            @error('home_sort_order')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
                                         </div>
 
                                         <div class="mb-3">
@@ -228,7 +292,7 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <div>
                                 <a href="{{ route('admin.document-sections.index') }}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> إلغاء
@@ -293,23 +357,27 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    // تحديث معاينة الرابط عند تغيير الاسم
-    $('#name').on('input', function() {
-        const name = $(this).val();
-        const slug = name.toLowerCase()
+    function slugify(value) {
+        return (value || '')
+            .toLowerCase()
             .replace(/[^\u0600-\u06FF\w\s-]/g, '')
             .replace(/\s+/g, '-')
             .replace(/-+/g, '-')
-            .trim('-');
-        
-        if (slug && slug !== '{{ $section->slug }}') {
-            if (!$('#slug-preview').length) {
-                $('#name').siblings('.form-text').after('<div id="slug-preview" class="form-text text-warning mt-1"></div>');
-            }
-            $('#slug-preview').html('<i class="fas fa-link"></i> الرابط الجديد: <strong>' + slug + '</strong>');
-        } else {
-            $('#slug-preview').remove();
+            .replace(/^-+|-+$/g, '');
+    }
+
+    let slugTouched = $('#slug').val().trim() !== '';
+
+    $('#slug').on('input', function() {
+        slugTouched = $(this).val().trim() !== '';
+        $('#slug-preview-path').text(slugify($(this).val()) || '{{ $section->slug }}');
+    });
+
+    $('#name').on('input', function() {
+        if (!slugTouched) {
+            $('#slug').val(slugify($(this).val()));
         }
+        $('#slug-preview-path').text(slugify($('#slug').val()) || '{{ $section->slug }}');
     });
     
     // التحقق من صحة النموذج قبل الإرسال

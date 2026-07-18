@@ -239,7 +239,7 @@
                 </div>
                 
                 <div class="card-footer">
-                    <div class="d-flex justify-content-between">
+                    <div class="admin-form-actions">
                         <div>
                             <a href="{{ route('admin.section-data.edit', [$section, $sectionData]) }}" class="btn btn-warning">
                                 <i class="fas fa-edit"></i> تحرير

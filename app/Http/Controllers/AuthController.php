@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -17,20 +20,59 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'login' => 'required|string|max:255',
+            'password' => 'required|string',
+        ], [
+            'login.required' => 'أدخل اسم المستخدم أو البريد الإلكتروني.',
+            'password.required' => 'أدخل كلمة المرور.',
         ]);
 
-        $credentials = $request->only('email', 'password');
+        $login = trim((string) $request->input('login'));
+        $throttleKey = $this->throttleKey($request, $login);
 
-        if (Auth::attempt($credentials, $request->filled('remember'))) {
-            $request->session()->regenerate();
-            return redirect()->intended('/admin');
+        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = RateLimiter::availableIn($throttleKey);
+
+            throw ValidationException::withMessages([
+                'login' => "محاولات كثيرة. حاول مرة أخرى بعد {$seconds} ثانية.",
+            ]);
         }
 
-        return back()->withErrors([
-            'email' => 'البيانات المدخلة غير صحيحة.',
-        ])->onlyInput('email');
+        $user = $this->findUserByLogin($login);
+
+        if ($user && $user->isLocked()) {
+            $seconds = max(60, $user->locked_until->getTimestamp() - now()->getTimestamp());
+            $minutes = (int) ceil($seconds / 60);
+
+            throw ValidationException::withMessages([
+                'login' => "تم قفل الحساب مؤقتاً بسبب محاولات فاشلة. حاول بعد حوالي {$minutes} دقيقة.",
+            ]);
+        }
+
+        if ($user && Hash::check($request->input('password'), $user->password)) {
+            if (!$user->isStaff()) {
+                throw ValidationException::withMessages([
+                    'login' => 'ليس لديك صلاحية الدخول إلى لوحة التحكم.',
+                ]);
+            }
+
+            Auth::login($user, $request->boolean('remember'));
+            $user->clearLoginThrottle();
+            RateLimiter::clear($throttleKey);
+            $request->session()->regenerate();
+
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
+        RateLimiter::hit($throttleKey, 60);
+
+        if ($user) {
+            $user->registerFailedLogin();
+        }
+
+        throw ValidationException::withMessages([
+            'login' => 'بيانات الدخول غير صحيحة.',
+        ]);
     }
 
     public function logout(Request $request)
@@ -38,24 +80,22 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect('/admin/login');
+
+        return redirect()->route('admin.login');
     }
 
-    // Create default admin user if not exists
-    public function createDefaultAdmin()
+    protected function findUserByLogin(string $login): ?User
     {
-        $admin = User::where('email', 'admin@mksnow.com')->first();
-        
-        if (!$admin) {
-            User::create([
-                'name' => 'Admin',
-                'email' => 'admin@mksnow.com',
-                'password' => Hash::make('admin123'),
-            ]);
-            
-            return 'Default admin user created: admin@mksnow.com / admin123';
-        }
-        
-        return 'Admin user already exists';
+        return User::query()
+            ->where(function ($q) use ($login) {
+                $q->where('email', $login)
+                    ->orWhere('username', $login);
+            })
+            ->first();
+    }
+
+    protected function throttleKey(Request $request, string $login): string
+    {
+        return Str::transliterate(Str::lower($login) . '|' . $request->ip());
     }
 }

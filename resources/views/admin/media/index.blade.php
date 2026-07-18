@@ -85,7 +85,11 @@
                                                 </div>
                                             @endif
                                             
-                                            <h6 class="mt-2 mb-1">{{ Str::limit($item->name, 20) }}</h6>
+                                            <h6 class="mt-2 mb-1">
+                                                <a href="{{ route('admin.media.edit', $item) }}" class="text-decoration-none text-dark">
+                                                    {{ Str::limit($item->name, 20) }}
+                                                </a>
+                                            </h6>
                                             <small class="text-muted">{{ $item->created_at->format('Y-m-d') }}</small>
                                         </div>
                                         

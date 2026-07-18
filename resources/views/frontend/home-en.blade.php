@@ -3,29 +3,27 @@
 @section('title', ($siteName ?? config('app.name', 'MK Snow')) . ' - Home')
 
 @section('content')
-<!-- English Homepage Layout -->
 
-<!-- Slider Posts Section - 3 images side by side -->
+
+
  <br>
  <br>
 <div class="blog-section">
     <div class="container">
         @if(isset($sliderPosts) && $sliderPosts->count() > 0)
-            <div class="row g-3 mb-4">
+            <div class="row g-3 mb-4 home-en-slider">
                 @foreach($sliderPosts->take(3) as $post)
                     <div class="col-md-4">
-                        <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="position-relative overflow-hidden">
-                                    <img src="{{ $post->background_image ? asset('storage/' . $post->featured_image) : ($post->background_image ? asset('storage/' . $post->featured_image) : 'https://via.placeholder.com/400x250?text=No+Image') }}" 
-                                         class="card-img-top" 
-                                         style="height: 250px; object-fit: cover;" 
+                        <a href="{{ route('content.show', [app()->getLocale(), $post->category->slug, $post->id]) }}" class="text-decoration-none">
+                            <div class="card h-100 border-0 shadow-sm home-en-slider__card">
+                                <div class="position-relative overflow-hidden home-en-slider__media">
+                                    <img src="{{ $post->featured_image ? asset('storage/' . $post->featured_image) : ($post->background_image ? asset('storage/' . $post->background_image) : 'https://via.placeholder.com/400x600?text=No+Image') }}"
+                                         class="card-img-top home-en-slider__img"
                                          alt="{{ $post->title }}">
                                     <div class="top-badge">
                                         {{ optional($post->category)->name_en ?? 'Uncategorized' }}
                                     </div>
                                     <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-3">
-                                        
                                         <h6 class="mb-0 text-white">{{ $post->title_en ?: $post->title }}</h6>
                                     </div>
                                 </div>
@@ -40,7 +38,7 @@
 
 <br>
 
-<!-- Blog Section with Navigation Links -->
+
 <div class="blog-section">
     <div class="container">
         <div class="row g-4">
@@ -90,7 +88,7 @@
 
 <br>
 
-<!-- Other Reports Section - 4 smaller images -->
+
 <div class="blog-section">
     <div class="container">
         <h2 class="mb-4">
@@ -98,18 +96,15 @@
             <div></div>
         </h2>
         @if(isset($releasePosts) && $releasePosts->count() > 0)
-            <div class="row g-3">
+            <div class="row g-3 home-en-releases">
                 @foreach($releasePosts->take(4) as $post)
                     <div class="col-md-3 col-sm-6">
-                        <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}" class="text-decoration-none">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="position-relative overflow-hidden">
-                                    @if($post->featured_image)
-                                        <img src="{{ asset('storage/' . $post->featured_image) }}" 
-                                             class="card-img-top" 
-                                             style="height: 180px; object-fit: cover;" 
-                                             alt="{{ $post->title }}">
-                                    @endif
+                        <a href="{{ route('content.show', [app()->getLocale(), $post->category->slug, $post->id]) }}" class="text-decoration-none">
+                            <div class="card h-100 border-0 shadow-sm home-en-releases__card">
+                                <div class="position-relative overflow-hidden home-en-releases__media">
+                                    <img src="{{ $post->featured_image ? asset('storage/' . $post->featured_image) : ($post->background_image ? asset('storage/' . $post->background_image) : 'https://via.placeholder.com/300x400?text=No+Image') }}"
+                                         class="card-img-top home-en-releases__img"
+                                         alt="{{ $post->title }}">
                                     <div class="top-badge">
                                         {{ optional($post->category)->name_en ?? 'Uncategorized' }}
                                     </div>
@@ -130,6 +125,52 @@
 
 @push('styles')
 <style>
+.home-en-slider__card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.home-en-slider__media {
+    aspect-ratio: 3 / 4;
+    width: 100%;
+}
+
+.home-en-slider__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.home-en-slider__card:hover .home-en-slider__img {
+    transform: scale(1.03);
+}
+
+.home-en-releases__card {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.home-en-releases__media {
+    aspect-ratio: 3 / 4;
+    width: 100%;
+}
+
+.home-en-releases__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.home-en-releases__card:hover .home-en-releases__img {
+    transform: scale(1.03);
+}
+
 .position-relative { position: relative; }
 .top-badge {
     position: absolute;

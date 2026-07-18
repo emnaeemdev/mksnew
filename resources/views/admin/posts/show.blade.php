@@ -1,9 +1,7 @@
 @extends('admin.layout')
 
-@section('title', 'عرض الموضوع: ' . $post->title . ' - MK Snow')
+@section('title', 'عرض الموضوع: ' . $post->title . ' - mksegypt')
 @section('page-title', 'عرض الموضوع: ' . Str::limit($post->title, 50))
-
-
 
 @section('content')
 <div class="row">
@@ -25,9 +23,9 @@
                     </a>
                 </div>
             </div>
-            
+
             <div class="card-body">
-                <!-- Post Status and Info -->
+
                 <div class="row mb-4">
                     <div class="col-md-3">
                         <div class="text-center">
@@ -50,7 +48,7 @@
                             @endif
                         </div>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">القسم</h6>
@@ -60,7 +58,7 @@
                             </span>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">المشاهدات</h6>
@@ -70,7 +68,7 @@
                             </span>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">تاريخ النشر</h6>
@@ -81,15 +79,14 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Post Details -->
+
                 <div class="row">
                     <div class="col-md-6 mb-4">
                         <h6 class="text-primary mb-3">
                             <i class="fas fa-info-circle me-2"></i>
                             تفاصيل الموضوع
                         </h6>
-                        
+
                         <table class="table table-sm table-borderless">
                             <tr>
                                 <td class="text-muted" style="width: 40%;"><strong>الرابط المختصر:</strong></td>
@@ -109,13 +106,13 @@
                             </tr>
                         </table>
                     </div>
-                    
+
                     <div class="col-md-6 mb-4">
                         <h6 class="text-primary mb-3">
                             <i class="fas fa-cog me-2"></i>
                             خيارات العرض
                         </h6>
-                        
+
                         <div class="row">
                             <div class="col-md-6">
                                 <h6 class="text-muted mb-3">
@@ -186,8 +183,7 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Post Titles -->
+
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6 class="text-primary mb-3">
@@ -198,7 +194,7 @@
                             <h5 class="mb-0">{{ $post->title_ar }}</h5>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <h6 class="text-primary mb-3">
                             <i class="fas fa-heading me-2"></i>
@@ -209,8 +205,7 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Post Content -->
+
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6 class="text-primary mb-3">
@@ -218,22 +213,21 @@
                             المحتوى بالعربية
                         </h6>
                         <div class="post-content">
-                            {!! $post->content_ar !!}
+                            {!! safe_html($post->content_ar) !!}
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
                         <h6 class="text-primary mb-3">
                             <i class="fas fa-align-left me-2"></i>
                             المحتوى بالإنجليزية
                         </h6>
                         <div class="post-content">
-                             {!! $post->content_en !!}
+                             {!! safe_html($post->content_en) !!}
                         </div>
                     </div>
                 </div>
-                
-                <!-- Images -->
+
                 @if($post->background_image || $post->featured_image)
                 <div class="row mb-4" style="border: 2px solid #000000;">
                     <div class="col-md-12">
@@ -242,42 +236,42 @@
                             الصور
                         </h6>
                     </div>
-                    
+
                     @if($post->background_image_ar)
                     <div class="col-md-6 mb-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">صورة الخلفية</h6>
-                            <img src="{{ asset('storage/' . $post->background_image_ar) }}" 
-                                 alt="صورة الخلفية" 
+                            <img src="{{ asset('storage/' . $post->background_image_ar) }}"
+                                 alt="صورة الخلفية"
                                  class="post-image">
                             <div class="mt-2">
-                                <a href="{{ asset('storage/' . $post->background_image_ar) }}" 
-                                   target="_blank" 
+                                <a href="{{ asset('storage/' . $post->background_image_ar) }}"
+                                   target="_blank"
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-external-link-alt me-1"></i>
                                     عرض بالحجم الكامل
                                 </a>
-                                
+
                             </div>
-                            
+
                         </div>
-                        
+
                     </div>
                                                           @else
                     لا يوجد صورة خلفية
-  
+
                     @endif
-                    
+
                     @if($post->featured_image_ar)
                     <div class="col-md-6 mb-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">الصورة المميزة</h6>
-                            <img src="{{ asset('storage/' . $post->featured_image_ar) }}" 
-                                 alt="الصورة المميزة" 
+                            <img src="{{ asset('storage/' . $post->featured_image_ar) }}"
+                                 alt="الصورة المميزة"
                                  class="post-image">
                             <div class="mt-2">
-                                <a href="{{ asset('storage/' . $post->featured_image_ar) }}" 
-                                   target="_blank" 
+                                <a href="{{ asset('storage/' . $post->featured_image_ar) }}"
+                                   target="_blank"
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-external-link-alt me-1"></i>
                                     عرض بالحجم الكامل
@@ -288,10 +282,9 @@
                                                           @else
                     لا يوجد صورة مميزة
                     @endif
-                    
+
                 </div>
                 @endif
-
 
                 @if($post->background_image_en || $post->featured_image_en)
                 <div class="row mb-4" style="border: 2px solid #000000;">
@@ -301,17 +294,17 @@
                           بالانجليزية  الصور
                         </h6>
                     </div>
-                    
+
                     @if($post->background_image_en)
                     <div class="col-md-6 mb-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">صورة الخلفية</h6>
-                            <img src="{{ asset('storage/' . $post->background_image_en) }}" 
-                                 alt="صورة الخلفية" 
+                            <img src="{{ asset('storage/' . $post->background_image_en) }}"
+                                 alt="صورة الخلفية"
                                  class="post-image">
                             <div class="mt-2">
-                                <a href="{{ asset('storage/' . $post->background_image_en) }}" 
-                                   target="_blank" 
+                                <a href="{{ asset('storage/' . $post->background_image_en) }}"
+                                   target="_blank"
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-external-link-alt me-1"></i>
                                     عرض بالحجم الكامل
@@ -322,17 +315,17 @@
                     @else
                     لا يوجد صورة خلفية
                     @endif
-                    
+
                     @if($post->featured_image_en)
                     <div class="col-md-6 mb-3">
                         <div class="text-center">
                             <h6 class="text-muted mb-2">الصورة المميزة</h6>
-                            <img src="{{ asset('storage/' . $post->featured_image_en) }}" 
-                                 alt="الصورة المميزة" 
+                            <img src="{{ asset('storage/' . $post->featured_image_en) }}"
+                                 alt="الصورة المميزة"
                                  class="post-image">
                             <div class="mt-2">
-                                <a href="{{ asset('storage/' . $post->featured_image_en) }}" 
-                                   target="_blank" 
+                                <a href="{{ asset('storage/' . $post->featured_image_en) }}"
+                                   target="_blank"
                                    class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-external-link-alt me-1"></i>
                                     عرض بالحجم الكامل
@@ -343,11 +336,10 @@
                                                           @else
                     لا يوجد صورة مميزة
                     @endif
-                    
+
                 </div>
                 @endif
-                
-                <!-- File Attachments -->
+
                 @if($post->files->count() > 0)
                 <div class="row mb-4">
                     <div class="col-md-12">
@@ -355,7 +347,7 @@
                             <i class="fas fa-file me-2"></i>
                             الملفات المرفقة ({{ $post->files->count() }})
                         </h6>
-                        
+
                         <div class="row">
                             @foreach($post->files as $file)
                             <div class="col-md-6 mb-3">
@@ -381,7 +373,7 @@
                                                 </small>
                                             </div>
                                             <div class="ms-3 text-end">
-                                                <a href="{{ route('posts.files.download', ['locale' => 'ar', 'file' => $file->id]) }}" 
+                                                <a href="{{ route('posts.files.download', ['locale' => 'ar', 'file' => $file->id]) }}"
                                                    class="btn btn-primary btn-sm">
                                                     <i class="fas fa-download me-1"></i>
                                                     تحميل
@@ -397,8 +389,7 @@
                     </div>
                 </div>
                 @endif
-                
-                <!-- Quick Actions -->
+
                 <div class="row">
                     <div class="col-md-12">
                         <div class="card bg-light">
@@ -416,24 +407,24 @@
                                             تعديل الموضوع
                                         </a>
                                     </div>
-                                    
+
                                     <div class="col-md-3 mb-2">
                                         <a href="{{ route('admin.posts.create') }}" class="btn btn-success w-100">
                                             <i class="fas fa-plus me-2"></i>
                                             إضافة موضوع جديد
                                         </a>
                                     </div>
-                                    
+
                                     <div class="col-md-3 mb-2">
                                         <a href="{{ route('admin.categories.show', $post->category) }}" class="btn btn-info w-100">
                                             <i class="fas fa-tag me-2"></i>
                                             عرض القسم
                                         </a>
                                     </div>
-                                    
+
                                     <div class="col-md-3 mb-2">
-                                        <form action="{{ route('admin.posts.destroy', $post) }}" 
-                                              method="POST" 
+                                        <form action="{{ route('admin.posts.destroy', $post) }}"
+                                              method="POST"
                                               class="d-inline w-100"
                                               onsubmit="return confirm('هل أنت متأكد من حذف هذا الموضوع؟ سيتم حذف جميع الملفات المرتبطة به.')">
                                             @csrf
@@ -457,7 +448,7 @@
 
 @section('scripts')
 <script>
-// Auto-refresh views count every 30 seconds
+
 setInterval(function() {
     fetch('{{ route('admin.posts.show', [$post]) }}', {
         method: 'GET',
@@ -467,7 +458,7 @@ setInterval(function() {
     })
     .then(response => response.text())
     .then(html => {
-        // Extract views count from response and update
+
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const newViewsElement = doc.querySelector('.badge.bg-info');

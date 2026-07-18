@@ -36,7 +36,7 @@ class InquiryController extends Controller
 
     public function show(Request $request, Inquiry $inquiry)
     {
-        // لا تقم بالتعليم التلقائي كمقروء إذا تم طلب تجاهل ذلك (مثلاً بعد تعيين كغير مقروء وإعادة التحميل)
+
         if ($inquiry->status === Inquiry::STATUS_NEW && !$request->boolean('skip_mark')) {
             $inquiry->markRead();
         }
@@ -52,22 +52,22 @@ class InquiryController extends Controller
     public function markRead(Inquiry $inquiry)
     {
         $inquiry->markRead();
-        
+
         if (request()->ajax()) {
             return response()->json(['success' => true, 'message' => 'تم تعليم الاستفسار كمقروء']);
         }
-        
+
         return back()->with('success', 'تم تعليم الاستفسار كمقروء');
     }
 
     public function markUnread(Inquiry $inquiry)
     {
         $inquiry->markUnread();
-        
+
         if (request()->ajax()) {
             return response()->json(['success' => true, 'message' => 'تم تعليم الاستفسار كغير مقروء']);
         }
-        
+
         return back()->with('success', 'تم تعليم الاستفسار كغير مقروء');
     }
 }

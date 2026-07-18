@@ -32,8 +32,8 @@ return [
     |
     */
 
-    // دقيقة — الافتراضي سنة كاملة لتقليل إعادة تسجيل الدخول للوحة التحكم
-    'lifetime' => (int) env('SESSION_LIFETIME', 525600),
+    // Minutes of idle lifetime. Prefer shorter values in production (see DEPLOYMENT_SECURITY.md).
+    'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

@@ -13,7 +13,7 @@
                         {{ $comment->status_text }}
                     </span>
                 </div>
-                
+
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
@@ -27,7 +27,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="info-box">
                                 <span class="info-box-icon bg-success">
@@ -40,7 +40,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="info-box">
@@ -53,7 +53,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="col-md-6">
                             <div class="info-box">
                                 <span class="info-box-icon bg-danger">
@@ -66,7 +66,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     @if($comment->post)
                         <div class="row">
                             <div class="col-12">
@@ -92,7 +92,7 @@
                             المقال المرتبط بهذا التعليق غير موجود أو تم حذفه.
                         </div>
                     @endif
-                    
+
                     <div class="row">
                         <div class="col-12">
                             <div class="card card-outline card-secondary">
@@ -110,7 +110,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card-footer">
                     <div class="row">
                         <div class="col-md-6">
@@ -121,7 +121,7 @@
                                 <i class="fas fa-arrow-left"></i> العودة للقائمة
                             </a>
                         </div>
-                        
+
                         <div class="col-md-6 text-right">
                             @if($comment->status !== 'approved')
                                 <form method="POST" action="{{ route('admin.comments.update', $comment) }}" style="display: inline;">
@@ -137,7 +137,7 @@
                                     </button>
                                 </form>
                             @endif
-                            
+
                             @if($comment->status !== 'rejected')
                                 <form method="POST" action="{{ route('admin.comments.update', $comment) }}" style="display: inline;">
                                     @csrf
@@ -152,9 +152,9 @@
                                     </button>
                                 </form>
                             @endif
-                            
-                            <form method="POST" action="{{ route('admin.comments.destroy', $comment) }}" 
-                                  style="display: inline;" 
+
+                            <form method="POST" action="{{ route('admin.comments.destroy', $comment) }}"
+                                  style="display: inline;"
                                   onsubmit="return confirm('هل أنت متأكد من حذف هذا التعليق؟ هذا الإجراء لا يمكن التراجع عنه.')">
                                 @csrf
                                 @method('DELETE')

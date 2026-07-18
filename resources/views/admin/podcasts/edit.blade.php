@@ -14,6 +14,17 @@
             بودكاست بحلقة واحدة. لإضافة سلسلة حلقات استخدم زر «إضافة حلقة» أسفل قائمة الحلقات.
         @endif
     </p>
+    <div>
+                    <a target="_blank" href="{{ route('frontend.podcasts.show', [app()->getLocale(), $podcast->id]) }}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-eye me-2"></i>
+                        عرض
+                    </a>
+                    <a href="{{ route('admin.podcasts.index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        العودة للقائمة
+                    </a>
+                </div>
+            </div>
 
     <form action="{{ route('admin.podcasts.update', $podcast) }}" method="post" enctype="multipart/form-data" id="podcastForm" novalidate>
         @csrf
@@ -197,9 +208,15 @@
                     </div>
                 </div>
             </div>
-            <div class="card-footer d-flex flex-wrap gap-2">
-                <button type="submit" class="btn btn-primary" id="podcastSubmitBtn">تحديث</button>
-                <a href="{{ route('admin.podcasts.index') }}" class="btn btn-secondary">إلغاء</a>
+            <div class="card-footer">
+                <div class="admin-form-actions">
+                    <div class="admin-form-actions__secondary">
+                        <a href="{{ route('admin.podcasts.index') }}" class="btn btn-secondary">إلغاء</a>
+                    </div>
+                    <div class="admin-form-actions__primary">
+                        <button type="submit" class="btn btn-primary" id="podcastSubmitBtn">تحديث</button>
+                    </div>
+                </div>
             </div>
         </div>
     </form>
@@ -221,7 +238,7 @@
     border-color: rgba(43, 69, 150, .25);
 }
 #tracksAccordion .accordion-item {
-    border-color: #dbe3ef !important;
+    border-color:rgb(26, 93, 192) !important;
 }
 #tracksAccordion .accordion-body {
     background: #fff;

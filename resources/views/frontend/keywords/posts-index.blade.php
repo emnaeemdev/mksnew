@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 
-@section('title', (app()->isLocale('ar') ? 'الكلمات المفتاحية للمقالات' : 'Post Keywords') . ' - MK Snow')
+@section('title', (app()->isLocale('ar') ? 'الكلمات المفتاحية للمقالات' : 'Post Keywords') . ' - mksegypt')
 
 @section('content')
 <div class="container py-4">

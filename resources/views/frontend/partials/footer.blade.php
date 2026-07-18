@@ -2,7 +2,7 @@
     <div class="container">
         @if(!empty($footerHtml))
             <div class="mb-4">
-                {!! $footerHtml !!}
+                {!! safe_html($footerHtml) !!}
             </div>
             <hr class="my-4">
         @endif

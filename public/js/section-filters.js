@@ -57,6 +57,38 @@
         input.value = '';
     }
 
+    function formHasActiveFieldFilters(form) {
+        return Array.from(form.elements).some(function (element) {
+            if (!element.name || element.name.indexOf('fields[') !== 0) {
+                return false;
+            }
+
+            if (element.type === 'checkbox' || element.type === 'radio') {
+                return element.checked && String(element.value || '') !== '';
+            }
+
+            return String(element.value || '').trim() !== '';
+        });
+    }
+
+    function shouldDropKeywordMode(form) {
+        const searchInput = form.querySelector('#search');
+        const hasSearch = searchInput && String(searchInput.value || '').trim() !== '';
+        return hasSearch || formHasActiveFieldFilters(form);
+    }
+
+    function syncKeywordFieldOnSubmit(form) {
+        const kwField = form.querySelector('#section_kw_field');
+        if (!kwField) {
+            return;
+        }
+
+        // البحث وفلاتر الحقول منفصلة عن المجموعات السريعة
+        if (shouldDropKeywordMode(form)) {
+            kwField.remove();
+        }
+    }
+
     function initSectionFilters() {
         const form = getFilterForm();
         if (!form) {
@@ -76,6 +108,10 @@
                 }
             });
         }
+
+        form.addEventListener('submit', function () {
+            syncKeywordFieldOnSubmit(form);
+        });
 
         form.addEventListener('click', function (event) {
             const clearDatePartBtn = event.target.closest('[data-clear-date-part]');
@@ -101,8 +137,7 @@
             const clearAllBtn = event.target.closest('[data-clear-all-filters]');
             if (clearAllBtn) {
                 event.preventDefault();
-                clearAllFieldFilters(form);
-                form.submit();
+                window.location.href = window.location.pathname;
             }
         });
     }

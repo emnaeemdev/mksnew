@@ -88,7 +88,7 @@
                                                         <span class="badge bg-info">نص طويل</span>
                                                         @break
                                                     @case('number')
-                                                        <span class="badge bg-success">رقم</span>
+                                                        <span class="badge bg-success">مدى رقم (من - إلى)</span>
                                                         @break
                                                     @case('date')
                                                         <span class="badge bg-warning">تاريخ</span>
@@ -421,7 +421,9 @@
                                             <tr>
                                                 <td>
                                                     <div>
-                                                        <strong>{{ $document->title }}</strong>
+                                                        <a href="{{ route('admin.documents.edit', $document) }}" class="text-decoration-none text-dark">
+                                                            <strong>{{ $document->title }}</strong>
+                                                        </a>
                                                         @if($document->is_featured)
                                                             <span class="badge bg-warning text-dark ms-1">مميز</span>
                                                         @endif

@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+
     public function up(): void
     {
         Schema::create('document_field_values', function (Blueprint $table) {
@@ -17,15 +15,12 @@ return new class extends Migration
             $table->foreignId('field_id')->constrained('document_custom_fields')->onDelete('cascade');
             $table->longText('value')->nullable();
             $table->timestamps();
-            
+
             $table->unique(['document_id', 'field_id']);
             $table->index(['field_id']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('document_field_values');

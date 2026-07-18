@@ -29,7 +29,7 @@
                         <div class="col-lg-6">
                             <div class="content mb-4">
                                 @if(!empty($description))
-                                    <p class="lead text-muted">{!! $description !!}</p>
+                                    <p class="lead text-muted">{!! safe_html($description) !!}</p>
                                 @else
                                     <p class="lead text-muted">{{ __('messages.contact_description') }}</p>
                                 @endif
@@ -100,7 +100,7 @@
                                     <textarea id="message" name="message" rows="5" class="form-control" required>{{ old('message') }}</textarea>
                                 </div>
 
-                                <!-- حقل الكابتشا -->
+                                
                                 <div class="mb-3">
                                     <label for="captcha_answer" class="form-label">{{ __('messages.captcha') }}: {{ $captchaQuestion ?? '' }}</label>
                                     <input type="text" id="captcha_answer" name="captcha_answer" class="form-control @error('captcha_answer') is-invalid @enderror" value="{{ old('captcha_answer') }}" required>

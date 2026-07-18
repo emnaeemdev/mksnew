@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'تعديل القسم: ' . $category->name . ' - MK Snow')
+@section('title', 'تعديل القسم: ' . $category->name . ' - mksegypt')
 @section('page-title', 'تعديل القسم: ' . $category->name)
 
 @section('content')
@@ -66,8 +66,26 @@
                             @enderror
                         </div>
                     </div>
-                    
-                    {{-- Slug auto-generated --}}
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="slug" class="form-label">
+                                <i class="fas fa-link me-1"></i>
+                                الرابط المختصر `slug`
+                            </label>
+                            <input type="text"
+                                   class="form-control @error('slug') is-invalid @enderror"
+                                   id="slug"
+                                   name="slug"
+                                   value="{{ old('slug', $category->slug) }}"
+                                   placeholder="did-you-know">
+                            <div class="form-text">
+                                هذا هو الجزء الذي يظهر في الرابط. اتركه كما هو أو عدله يدويًا.
+                            </div>
+                            @error('slug')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <!-- Arabic Description -->
@@ -283,21 +301,22 @@
                     </div>
                     
                     <!-- Submit Buttons -->
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>
-                            إلغاء
-                        </a>
-                        
-                        <div>
-                            <a href="{{ route('admin.categories.show', $category) }}" class="btn btn-outline-info me-2">
-                                <i class="fas fa-eye me-2"></i>
-                                عرض
+                    <div class="admin-form-actions">
+                        <div class="admin-form-actions__secondary">
+                            <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>
+                                إلغاء
                             </a>
+                        </div>
+                        <div class="admin-form-actions__primary">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>
                                 حفظ التغييرات
                             </button>
+                            <a href="{{ route('admin.categories.show', $category) }}" class="btn btn-outline-info">
+                                <i class="fas fa-eye me-2"></i>
+                                عرض
+                            </a>
                         </div>
                     </div>
                 </form>
@@ -309,14 +328,14 @@
 
 @section('scripts')
 <script>
-// Auto-generate slug from English name (only if current slug matches the pattern)
+// Auto-generate slug from English name unless the user edited slug manually
 document.getElementById('name_en').addEventListener('input', function() {
     const nameEn = this.value;
     const slugField = document.getElementById('slug');
     const originalSlug = '{{ $category->slug }}';
     
-    // Only auto-update if the current slug seems to be auto-generated
-    if (nameEn && slugField.value === originalSlug) {
+    // Only auto-update while slug still matches the original/current generated value
+    if (nameEn && (!slugField.dataset.touched || slugField.value === originalSlug)) {
         const slug = nameEn
             .toLowerCase()
             .replace(/[^a-z0-9\s-]/g, '')
@@ -326,6 +345,10 @@ document.getElementById('name_en').addEventListener('input', function() {
         
         slugField.value = slug;
     }
+});
+
+document.getElementById('slug').addEventListener('input', function() {
+    this.dataset.touched = '1';
 });
 </script>
 @endsection

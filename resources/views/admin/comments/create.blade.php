@@ -84,12 +84,18 @@
                     </div>
                     
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> حفظ التعليق
-                        </button>
-                        <a href="{{ route('admin.comments.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> العودة للقائمة
-                        </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.comments.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> العودة للقائمة
+                                </a>
+                            </div>
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> حفظ التعليق
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

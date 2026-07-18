@@ -34,6 +34,7 @@ class CategoryController extends Controller
         $request->validate([
             'name_ar' => 'required|string|max:255',
             'name_en' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:categories,slug',
             'description_ar' => 'nullable|string',
             'description_en' => 'nullable|string',
             'sort_order' => 'nullable|integer|min:0',
@@ -42,14 +43,14 @@ class CategoryController extends Controller
         $category = new Category();
         $category->name_ar = $request->name_ar;
         $category->name_en = $request->name_en;
-        $category->slug = Str::slug($request->name_en);
+        $category->slug = Str::slug($request->slug ?: $request->name_en);
         $category->description_ar = $request->description_ar;
         $category->description_en = $request->description_en;
         $category->is_active = $request->has('is_active');
         $category->sort_order = $request->sort_order ?? 0;
         $category->save();
 
-        return redirect()->route('admin.categories.index')
+        return redirect()->route('admin.categories.edit', $category)
             ->with('success', 'تم إنشاء القسم بنجاح');
     }
 
@@ -77,6 +78,7 @@ class CategoryController extends Controller
         $request->validate([
             'name_ar' => 'required|string|max:255',
             'name_en' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'description_ar' => 'nullable|string',
             'description_en' => 'nullable|string',
             'sort_order' => 'nullable|integer|min:0',
@@ -87,7 +89,7 @@ class CategoryController extends Controller
 
         $category->name_ar = $request->name_ar;
         $category->name_en = $request->name_en;
-        $category->slug = Str::slug($request->name_en);
+        $category->slug = Str::slug($request->slug ?: $request->name_en);
         $category->description_ar = $request->description_ar;
         $category->description_en = $request->description_en;
         $category->is_active = $request->has('is_active');
@@ -100,7 +102,7 @@ class CategoryController extends Controller
         $category->menu_order_en = $request->menu_order_en;
         $category->save();
 
-        return redirect()->route('admin.categories.index')
+        return redirect()->route('admin.categories.edit', $category)
             ->with('success', 'تم تحديث القسم بنجاح');
     }
 

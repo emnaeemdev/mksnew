@@ -156,7 +156,9 @@
                                         <span class="badge bg-secondary">{{ $field->sort_order }}</span>
                                     </td>
                                     <td>
-                                        <strong>{{ $field->label }}</strong>
+                                        <a href="{{ route('admin.document-custom-fields.edit', $field) }}" class="text-decoration-none text-dark">
+                                            <strong>{{ $field->label }}</strong>
+                                        </a>
                                         <br><small class="text-muted">{{ $field->name }}</small>
                                     </td>
                                     <td>
@@ -168,7 +170,7 @@
                                                 <span class="badge bg-info">نص طويل</span>
                                                 @break
                                             @case('number')
-                                                <span class="badge bg-success">رقم</span>
+                                                <span class="badge bg-success">مدى رقم (من - إلى)</span>
                                                 @break
                                             @case('date')
                                                 <span class="badge bg-warning">تاريخ</span>
@@ -258,7 +260,9 @@
                                 @foreach($section->documents->take(5) as $document)
                                 <tr>
                                     <td>
-                                        <strong>{{ $document->title }}</strong>
+                                        <a href="{{ route('admin.documents.edit', $document) }}" class="text-decoration-none text-dark">
+                                            <strong>{{ $document->title }}</strong>
+                                        </a>
                                         @if($document->is_featured)
                                             <span class="badge bg-warning ms-1">مميز</span>
                                         @endif

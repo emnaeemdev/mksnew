@@ -12,12 +12,10 @@ use App\Models\User;
 
 class SectionSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+
     public function run(): void
     {
-        // إنشاء مستخدم تجريبي إذا لم يكن موجوداً
+
         $user = User::firstOrCreate(
             ['email' => 'admin@example.com'],
             [
@@ -26,7 +24,6 @@ class SectionSeeder extends Seeder
             ]
         );
 
-        // إنشاء قسم المنتجات
         $productsSection = Section::create([
             'name' => 'المنتجات',
             'slug' => 'products',
@@ -36,7 +33,6 @@ class SectionSeeder extends Seeder
             'sort_order' => 1,
         ]);
 
-        // إنشاء حقول مخصصة للمنتجات
         $priceField = CustomField::create([
             'section_id' => $productsSection->id,
             'name' => 'price',
@@ -85,7 +81,6 @@ class SectionSeeder extends Seeder
             'sort_order' => 4,
         ]);
 
-        // إنشاء بيانات تجريبية للمنتجات
         $products = [
             [
                 'title' => 'لابتوب Dell XPS 13',
@@ -127,7 +122,6 @@ class SectionSeeder extends Seeder
                 'user_id' => $user->id,
             ]);
 
-            // إنشاء قيم الحقول المخصصة
             SectionDataValue::create([
                 'section_data_id' => $sectionData->id,
                 'custom_field_id' => $priceField->id,
@@ -153,7 +147,6 @@ class SectionSeeder extends Seeder
             ]);
         }
 
-        // إنشاء قسم الأخبار
         $newsSection = Section::create([
             'name' => 'الأخبار',
             'slug' => 'news',
@@ -163,7 +156,6 @@ class SectionSeeder extends Seeder
             'sort_order' => 2,
         ]);
 
-        // إنشاء حقول مخصصة للأخبار
         $authorField = CustomField::create([
             'section_id' => $newsSection->id,
             'name' => 'author',
@@ -200,7 +192,6 @@ class SectionSeeder extends Seeder
             'sort_order' => 3,
         ]);
 
-        // إنشاء بيانات تجريبية للأخبار
         $news = [
             [
                 'title' => 'تطورات جديدة في عالم التقنية',
@@ -226,7 +217,6 @@ class SectionSeeder extends Seeder
                 'user_id' => $user->id,
             ]);
 
-            // إنشاء قيم الحقول المخصصة
             SectionDataValue::create([
                 'section_data_id' => $sectionData->id,
                 'custom_field_id' => $authorField->id,

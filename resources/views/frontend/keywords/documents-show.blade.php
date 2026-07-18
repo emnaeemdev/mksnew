@@ -24,7 +24,7 @@
         <div class="list-group mb-4">
             @foreach($documents as $document)
                 @php
-                    $sectionSlug = optional($document->section)->name_en ?: optional($document->section)->slug;
+                    $sectionSlug = optional($document->section)->slug;
                     $url = $sectionSlug
                         ? route('content.show', [app()->getLocale(), $sectionSlug, $document->id])
                         : route('frontend.documents.show', [app()->getLocale(), $document]);

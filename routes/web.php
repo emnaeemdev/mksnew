@@ -26,7 +26,6 @@ Route::group([
     'middleware' => [\Illuminate\Routing\Middleware\SubstituteBindings::class, 'setlocale'],
 ], function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
-    
 
     // Posts Routes
     Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
@@ -39,7 +38,7 @@ Route::group([
         // Try to find post by slug and redirect to new format
         $post = \App\Models\Post::where('slug', $slug)->first();
         if ($post && $post->category) {
-            return redirect()->route('content.show', [$locale, $post->category->name_en ?: $post->category->slug, $post->id], 301);
+            return redirect()->route('content.show', [$locale, $post->category->slug, $post->id], 301);
         }
         abort(404);
     })->where('slug', '[^0-9][^/]*'); // Only match non-numeric slugs
@@ -57,6 +56,7 @@ Route::group([
         Route::get('/keywords/{keyword}', [\App\Http\Controllers\Frontend\KeywordController::class, 'documentsShow'])->name('keywords.show');
     
         Route::get('/custom-fields', [DocumentController::class, 'getCustomFields'])->name('custom-fields');
+        Route::get('/files/{file}/download', [DocumentController::class, 'downloadAttachment'])->name('files.download');
         Route::get('/section/{section}', [DocumentController::class, 'section'])->name('section');
         Route::post('/section/{section}', [DocumentController::class, 'section'])->name('section.post');
         Route::post('/section/{section}/filter-counts', [DocumentController::class, 'getFilterCounts'])->name('filter-counts');
@@ -113,7 +113,7 @@ Route::get('/posts/{category}/{slug}', function($category, $slug) {
     // Try to find post by slug and redirect to new format
     $post = \App\Models\Post::where('slug', $slug)->first();
     if ($post && $post->category) {
-        return redirect()->route('content.show', ['ar', $post->category->name_en ?: $post->category->slug, $post->id], 301);
+        return redirect()->route('content.show', ['ar', $post->category->slug, $post->id], 301);
     }
     return redirect('/ar/posts/' . $category);
 });
@@ -132,15 +132,14 @@ Route::get('/about', function() {
 });
 
 // Authentication Routes
-Route::get('/admin/login', [AuthController::class, 'showLoginForm'])->name('admin.login');
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login'); // Default login route
-Route::post('/admin/login', [AuthController::class, 'login']);
-Route::post('/admin/logout', [AuthController::class, 'logout'])->name('admin.logout');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout'); // General logout route
-Route::get('/create-admin', [AuthController::class, 'createDefaultAdmin']); // Temporary route to create admin
+$adminPath = trim((string) config('admin.path', 'panel'), '/');
 
-// Admin Routes (Protected)
-Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
+Route::get("/{$adminPath}/login", [AuthController::class, 'showLoginForm'])->name('admin.login');
+Route::post("/{$adminPath}/login", [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post("/{$adminPath}/logout", [AuthController::class, 'logout'])->name('admin.logout');
+
+// Admin Routes (Protected) — staff only (admin | editor)
+Route::prefix($adminPath)->name('admin.')->middleware(['auth', 'role:admin,editor'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
@@ -148,10 +147,12 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     Route::put('/profile', [AdminController::class, 'updateProfile'])->name('profile.update');
     
-    // Settings Management
-    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-    Route::get('/settings/index', [AdminController::class, 'settings'])->name('settings.index');
-    Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    // Settings Management — admins only
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+        Route::get('/settings/index', [AdminController::class, 'settings'])->name('settings.index');
+        Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    });
     
     // Categories Management
     Route::resource('categories', CategoryController::class);
@@ -174,6 +175,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     
     // Documents Management
     Route::get('documents/custom-fields', [AdminDocumentController::class, 'getCustomFields'])->name('documents.custom-fields');
+    Route::put('documents/pinned-keywords', [AdminDocumentController::class, 'updatePinnedKeywords'])->name('documents.pinned-keywords.update');
     Route::resource('documents', AdminDocumentController::class);
     Route::post('documents/bulk-publish', [AdminDocumentController::class, 'bulkPublish'])->name('documents.bulk-publish');
     Route::post('documents/bulk-unpublish', [AdminDocumentController::class, 'bulkUnpublish'])->name('documents.bulk-unpublish');
@@ -185,6 +187,7 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     Route::get('documents/files/{file}/download', [AdminDocumentController::class, 'downloadFile'])->name('documents.files.download');
 
     // Nashras Management
+    Route::post('nashras/{nashra}/refresh-sheet-cache', [\App\Http\Controllers\Admin\NashraController::class, 'refreshSheetCache'])->name('nashras.refresh-sheet-cache');
     Route::resource('nashras', \App\Http\Controllers\Admin\NashraController::class);
     Route::get('nashras/{nashra}/sheets', [\App\Http\Controllers\Admin\NashraController::class, 'fetchSheets'])->name('nashras.sheets');
     Route::post('nashras/fetch-sheets', [\App\Http\Controllers\Admin\NashraController::class, 'fetchSheets'])->name('nashras.fetch-sheets');
@@ -210,8 +213,10 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
      
       
     
-    // Users Management
-    Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+    // Users Management — admins only
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+    });
     
     // Comments Management
     Route::resource('comments', \App\Http\Controllers\Admin\CommentController::class);
@@ -225,14 +230,8 @@ Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
     // إضافة: تصدير CSV وحذف جماعي لاشتراكات النشرة
     Route::get('newsletter-subscriptions/export', [\App\Http\Controllers\Admin\NewsletterSubscriptionController::class, 'export'])->name('newsletter-subscriptions.export');
     Route::post('newsletter-subscriptions/bulk-delete', [\App\Http\Controllers\Admin\NewsletterSubscriptionController::class, 'bulkDelete'])->name('newsletter-subscriptions.bulk-delete');
-    
-    
-    // Dashboard
-    Route::get('/', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
 });
-Route::redirect('/admin', '/admin/dashboard');
+Route::redirect("/{$adminPath}", "/{$adminPath}/dashboard");
 
 // Language switching
 use App\Http\Controllers\LanguageController;

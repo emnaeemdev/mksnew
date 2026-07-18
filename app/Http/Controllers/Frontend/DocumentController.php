@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Models\DocumentSection;
 use App\Models\DocumentCustomField;
 use Illuminate\Http\Request;
@@ -12,6 +13,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use App\Models\Post;
 use App\Models\Category;
+use App\Models\Keyword;
 use App\Services\DocumentSearchService;
 use Illuminate\Support\Facades\Cache;
 
@@ -97,17 +99,31 @@ class DocumentController extends Controller
         return compact('searchQuery', 'searchHighlightTokens');
     }
 
+    protected function documentAttachedFiles(Document $document)
+    {
+        return DocumentFile::query()
+            ->where('document_id', $document->id)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+    }
+
     public function show($locale, $document)
     {
         \Log::info('Frontend.DocumentController@show invoked', ['locale' => $locale, 'param' => is_object($document) ? get_class($document) : $document]);
         // في حال لم يعمل الربط الضمني، نقوم بحلّ الـ slug يدوياً
         if ($document instanceof Document) {
-            $doc = $document;
+            $doc = $document->loadMissing(['section', 'fieldValues.field', 'files']);
         } else {
-            $doc = Document::where('slug', $document)
-                ->orWhere('id', $document)
+            $doc = Document::with(['section', 'fieldValues.field', 'files'])
+                ->where(function ($query) use ($document) {
+                    $query->where('slug', $document)
+                        ->orWhere('id', $document);
+                })
                 ->firstOrFail();
         }
+
+        $documentFiles = $this->documentAttachedFiles($doc);
 
         if (!$doc->is_published) {
             \Log::warning('Document not published, aborting 404', ['slug' => $doc->slug, 'id' => $doc->id]);
@@ -161,6 +177,7 @@ class DocumentController extends Controller
         return view('frontend.documents.show', array_merge(
             [
                 'document' => $doc,
+                'documentFiles' => $documentFiles,
                 'relatedDocuments' => $relatedDocuments,
                 'previousDocument' => $previousDocument,
                 'nextDocument' => $nextDocument,
@@ -168,6 +185,33 @@ class DocumentController extends Controller
             ],
             $this->documentSearchHighlightData()
         ));
+    }
+
+    public function downloadAttachment($locale, DocumentFile $file)
+    {
+        $document = $file->document()->published()->first();
+
+        if (!$document) {
+            abort(404);
+        }
+
+        if (app()->getLocale() === 'en') {
+            return view('frontend.no-translation');
+        }
+
+        $filePath = storage_path('app/public/' . $file->file_path);
+
+        if (!is_file($filePath)) {
+            abort(404);
+        }
+
+        $downloadName = $file->display_name ?: $file->original_name;
+        $extension = pathinfo($file->original_name, PATHINFO_EXTENSION);
+        if ($extension && !str_ends_with(strtolower($downloadName), '.' . strtolower($extension))) {
+            $downloadName .= '.' . $extension;
+        }
+
+        return response()->download($filePath, $downloadName);
     }
 
     public function search(Request $request)
@@ -848,8 +892,38 @@ class DocumentController extends Controller
         // الحقول المخصصة
         $customFields = $section->customFields()->active()->orderBy('sort_order')->get();
 
-        // تطبيق فلاتر الحقول المخصصة
-        [$query, $appliedFilters] = $this->applyCustomFieldFilters($query, $customFields, $request);
+        $sectionKeywords = collect();
+        $activeSectionKeyword = null;
+        $keywordSlug = trim((string) $request->get('kw', ''));
+
+        // اختصارات عامة لكل أقسام الوثائق (ليست خاصة بقسم فرعي)
+        $sectionKeywords = \App\Models\DocumentPinnedKeyword::orderedKeywords(withDocumentCounts: true);
+
+        if ($keywordSlug !== '') {
+            $activeSectionKeyword = $sectionKeywords->firstWhere('slug', $keywordSlug);
+        }
+
+        // وضع المجموعة السريعة: kw فقط — أي بحث أو فلتر يلغيه تماماً
+        $keywordMode = $activeSectionKeyword
+            && $searchTerm === ''
+            && !$this->requestHasActiveFieldFilters($request);
+
+        if (!$keywordMode) {
+            $activeSectionKeyword = null;
+        }
+
+        if ($keywordMode) {
+            // كل الوثائق المنشورة تحت أي قسم فرعي من أقسام الوثائق وبنفس الكلمة (نطاق document فقط)
+            $query = Document::with(['section', 'user'])
+                ->published()
+                ->whereHas('keywords', function ($q) use ($activeSectionKeyword) {
+                    $q->where('keywords.id', $activeSectionKeyword->id)
+                        ->where('keywords.scope', 'document');
+                });
+            $appliedFilters = [];
+        } else {
+            [$query, $appliedFilters] = $this->applyCustomFieldFilters($query, $customFields, $request);
+        }
 
         // إذا وُجد نص بحث: نفّذ التصنيف المصنّف (تبويب نشط واحد فقط يُحمَّل بالكامل)
         if ($searchTerm !== '') {
@@ -896,7 +970,38 @@ class DocumentController extends Controller
             }
 
             return view('frontend.documents.section', compact(
-                'section', 'customFields', 'appliedFilters', 'totalDocuments', 'totalViews', 'fieldCounts', 'categorizedResults', 'searchTerm', 'allSections'
+                'section', 'customFields', 'appliedFilters', 'totalDocuments', 'totalViews', 'fieldCounts', 'categorizedResults', 'searchTerm', 'allSections', 'sectionKeywords', 'activeSectionKeyword'
+            ));
+        }
+
+        // مجموعة سريعة فقط (بدون بحث أو فلاتر)
+        if ($keywordMode) {
+            $sort = $request->get('sort', 'latest');
+            $perPage = (int) $request->get('per_page', 6);
+            if ($perPage < 1) {
+                $perPage = 6;
+            }
+            if ($perPage > 48) {
+                $perPage = 48;
+            }
+
+            $kwQuery = (clone $query)->with(['section', 'plainFieldValues.field']);
+            $this->applyDocumentListingSort($kwQuery, $sort);
+            $keywordDocuments = $kwQuery->paginate($perPage)->withQueryString();
+
+            foreach ($customFields as $field) {
+                if (in_array($field->type, ['select', 'multiselect', 'radio'])) {
+                    $field->options = $this->getFieldOptions($field, $section);
+                }
+            }
+
+            $fieldCounts = $this->computeFieldCounts($section, $customFields, $request);
+            $totalDocuments = $section->documents()->published()->count();
+            $totalViews = $section->documents()->published()->sum('views_count');
+
+            return view('frontend.documents.section', compact(
+                'section', 'keywordDocuments', 'activeSectionKeyword', 'customFields', 'appliedFilters',
+                'totalDocuments', 'totalViews', 'fieldCounts', 'searchTerm', 'allSections', 'sectionKeywords'
             ));
         }
 
@@ -928,7 +1033,7 @@ class DocumentController extends Controller
 
         return view('frontend.documents.section', compact(
             'section', 'documents', 'customFields', 'appliedFilters',
-            'totalDocuments', 'totalViews', 'fieldCounts', 'searchTerm', 'allSections'
+            'totalDocuments', 'totalViews', 'fieldCounts', 'searchTerm', 'allSections', 'sectionKeywords', 'activeSectionKeyword'
         ));
     }
 
@@ -968,7 +1073,7 @@ class DocumentController extends Controller
                 }
 
                 // توجيه إلى المسار القانوني إذا كان السِّـلَج في الرابط لا يطابق الاسم الإنجليزي لفئة المقال
-                $expectedCategorySlug = optional($post->category)->name_en ?: optional($post->category)->slug;
+                $expectedCategorySlug = optional($post->category)->slug;
                 if ($expectedCategorySlug && $expectedCategorySlug !== $sectionSlug) {
                     return redirect()->route('content.show', [$locale, $expectedCategorySlug, $post->id], 301);
                 }
@@ -1023,7 +1128,7 @@ class DocumentController extends Controller
 
         // إذا كان القسم قسم وثائق، ابحث في الوثائق
         if ($documentSection) {
-            $doc = Document::with(['section', 'user', 'fieldValues.field', 'keywords'])
+            $doc = Document::with(['section', 'user', 'fieldValues.field', 'keywords', 'files'])
                 ->published()
                 ->where('id', $id)
                 ->where('section_id', $documentSection->id)
@@ -1039,7 +1144,7 @@ class DocumentController extends Controller
             }
 
             // توجيه إلى المسار القانوني إذا كان السِّـلَج الوارد غير مطابق، وذلك لكل من الوثائق والمقالات، مع الحفاظ على سلوك الزيادة في المشاهدات وجلب العناصر ذات الصلة.
-            $expectedSectionSlug = optional($doc->section)->name_en ?: optional($doc->section)->slug;
+            $expectedSectionSlug = optional($doc->section)->slug;
             if ($expectedSectionSlug && $expectedSectionSlug !== $sectionSlug) {
                 $url = route('content.show', [$locale, $expectedSectionSlug, $doc->id]);
                 $queryString = request()->getQueryString();
@@ -1087,9 +1192,12 @@ class DocumentController extends Controller
                 'total_views' => (int) Document::published()->where('section_id', $doc->section_id)->sum('views_count'),
             ];
 
+            $documentFiles = $this->documentAttachedFiles($doc);
+
             return view('frontend.documents.show', array_merge(
                 [
                     'document' => $doc,
+                    'documentFiles' => $documentFiles,
                     'relatedDocuments' => $relatedDocuments,
                     'previousDocument' => $previousDocument,
                     'nextDocument' => $nextDocument,

@@ -58,7 +58,7 @@ class CommentController extends Controller
             'status' => 'required|in:pending,approved,rejected'
         ]);
 
-        Comment::create([
+        $comment = Comment::create([
             'name' => $request->name,
             'email' => $request->email,
             'content' => $request->content,
@@ -67,7 +67,7 @@ class CommentController extends Controller
             'ip_address' => $request->ip()
         ]);
 
-        return redirect()->route('admin.comments.index')
+        return redirect()->route('admin.comments.edit', $comment)
             ->with('success', 'تم إنشاء التعليق بنجاح');
     }
 
@@ -110,7 +110,7 @@ class CommentController extends Controller
             'status' => $request->status
         ]);
 
-        return redirect()->route('admin.comments.index')
+        return redirect()->route('admin.comments.edit', $comment)
             ->with('success', 'تم تحديث التعليق بنجاح');
     }
 

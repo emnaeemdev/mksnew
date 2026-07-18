@@ -52,7 +52,9 @@
                                                 {{ $section->id }}
                                             </td>
                                             <td>
-                                                <strong>{{ $section->name }}</strong>
+                                                <a href="{{ route('admin.document-sections.edit', $section) }}" class="text-decoration-none text-dark">
+                                                    <strong>{{ $section->name }}</strong>
+                                                </a>
                                                 <br>
                                                 <small class="text-muted">{{ $section->slug }}</small>
                                             </td>

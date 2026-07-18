@@ -83,6 +83,7 @@ function initializeDataTables() {
 
 // Form validation
 function validateForm(formId) {
+    if (!formId) return true;
     const form = document.getElementById(formId);
     if (!form) return true;
     // النماذج التي تعتمد على تحقق المتصفح/الخادم فقط
@@ -181,8 +182,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Add form validation
-    document.querySelectorAll('form').forEach(form => {
+    // Add form validation (skip forms without id / logout / novalidate)
+    document.querySelectorAll('form[id]').forEach(form => {
+        if (form.hasAttribute('novalidate') || form.id === 'admin-logout-form') {
+            return;
+        }
         form.addEventListener('submit', function(e) {
             if (!validateForm(form.id)) {
                 e.preventDefault();
@@ -196,4 +200,5 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', toggleSidebar);
     }
+
 });

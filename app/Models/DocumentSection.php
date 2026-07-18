@@ -24,12 +24,18 @@ class DocumentSection extends Model
         'show_in_menu_ar',
         'show_in_menu_en',
         'menu_order_ar',
-        'menu_order_en'
+        'menu_order_en',
+        'show_on_homepage',
+        'home_icon',
+        'home_label',
+        'home_sort_order',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'show_on_homepage' => 'boolean',
+        'home_sort_order' => 'integer',
         'show_in_menu' => 'boolean',
         'show_in_menu_ar' => 'boolean',
         'show_in_menu_en' => 'boolean',
@@ -88,6 +94,13 @@ class DocumentSection extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function scopeForHomepage($query)
+    {
+        return $query->where('show_on_homepage', true)
+            ->orderBy('home_sort_order')
+            ->orderBy('sort_order');
     }
 
     /**

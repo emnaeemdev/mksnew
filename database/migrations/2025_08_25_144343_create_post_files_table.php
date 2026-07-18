@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+
     public function up(): void
     {
         Schema::create('post_files', function (Blueprint $table) {
@@ -21,14 +19,11 @@ return new class extends Migration
             $table->string('mime_type')->nullable();
             $table->integer('sort_order')->default(0);
             $table->timestamps();
-            
+
             $table->index(['post_id', 'sort_order']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('post_files');

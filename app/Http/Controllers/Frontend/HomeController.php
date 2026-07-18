@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Frontend;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Category;
+use App\Models\DocumentSection;
 use Illuminate\Http\Request;
 use App\Models\NewsletterSubscription;
 
@@ -14,6 +15,11 @@ class HomeController extends Controller
      * Display the homepage
      */
     public function index($locale = null)
+    {
+        return $this->renderHomePage('frontend.home');
+    }
+
+    private function renderHomePage(string $viewTemplate)
     {
         $currentLocale = app()->getLocale();
         
@@ -99,13 +105,25 @@ class HomeController extends Controller
             ->first();
 
         $didYouKnowUrl = $didYouKnowCategory
-            ? route('posts.category', [$currentLocale, $didYouKnowCategory->slug ?: $didYouKnowCategory->name_en])
+            ? route('posts.category', [$currentLocale, $didYouKnowCategory->slug])
             : route('posts.index', [$currentLocale]);
 
-        // Use different template based on language
-        $viewTemplate = $currentLocale === 'en' ? 'frontend.home-en' : 'frontend.home';
-        
-        return view($viewTemplate, compact('sliderPosts', 'releasePosts', 'otherReportsPosts', 'latestPosts', 'categories', 'didYouKnowUrl'));
+        $homeDocumentLinks = DocumentSection::active()
+            ->forHomepage()
+            ->get()
+            ->map(function (DocumentSection $section) use ($currentLocale) {
+                return [
+                    'title' => $section->home_label ?: $section->name,
+                    'icon' => $section->home_icon ?: 'fa-folder',
+                    'url' => route('frontend.documents.section', [$currentLocale, $section->slug]),
+                ];
+            });
+
+        if ($currentLocale === 'en') {
+            $viewTemplate = 'frontend.home-en';
+        }
+
+        return view($viewTemplate, compact('sliderPosts', 'releasePosts', 'otherReportsPosts', 'latestPosts', 'categories', 'didYouKnowUrl', 'homeDocumentLinks'));
     }
     
     /**
@@ -161,7 +179,7 @@ class HomeController extends Controller
     {
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
-            'email' => 'required|email:rfc,dns|max:255',
+            'email' => 'required|email|max:255',
         ]);
 
         try {

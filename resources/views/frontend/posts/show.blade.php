@@ -5,7 +5,7 @@
 
 @push('meta')
     <!-- Meta Tags -->
-    <meta name="keywords" content="{{ optional($post->category)->name ? optional($post->category)->name . ', MK Snow' : 'MK Snow' }}">
+    <meta name="keywords" content="{{ optional($post->category)->name ? optional($post->category)->name . ', mksegypt.org' : 'mksegypt.org' }}">
     <meta name="author" content="MK Snow">
     
     <!-- Open Graph Meta Tags -->
@@ -111,7 +111,7 @@
                     
                     <!-- Post Content -->
                         <div class="post-content">
-                            {!! $post->content !!}
+                            {!! safe_html($post->content) !!}
                         </div>
 
                     @if($post->relationLoaded('keywords') ? $post->keywords->isNotEmpty() : $post->keywords()->exists())

@@ -23,33 +23,21 @@ class Comment extends Model
         'updated_at' => 'datetime',
     ];
 
-    /**
-     * Get the post that owns the comment.
-     */
     public function post()
     {
         return $this->belongsTo(Post::class);
     }
 
-    /**
-     * Scope a query to only include approved comments.
-     */
     public function scopeApproved($query)
     {
         return $query->where('status', 'approved');
     }
 
-    /**
-     * Scope a query to only include pending comments.
-     */
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
     }
 
-    /**
-     * Get the status badge color.
-     */
     public function getStatusBadgeAttribute()
     {
         return match($this->status) {
@@ -60,9 +48,6 @@ class Comment extends Model
         };
     }
 
-    /**
-     * Get the status text in Arabic.
-     */
     public function getStatusTextAttribute()
     {
         return match($this->status) {

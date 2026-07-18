@@ -215,7 +215,7 @@
             '<input type="date" class="date-smart-native" tabindex="-1" aria-hidden="true">' +
             '</div>' +
             '<input type="hidden" class="date-part-value date-smart-value" id="custom_field_' + fieldId + '" name="' + name + '" value="' + value + '">' +
-            '<div class="form-text">اكتب التاريخ بأي صيغة شائعة أو اختره من أيقونة التقويم. <span class="date-smart-hint text-success" hidden></span></div>' +
+            '<div class="form-text">اكتب التاريخ باي صيغة<span class="date-smart-hint text-success" hidden></span></div>' +
             '</div>';
     }
 

@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+
     public function up(): void
     {
         Schema::create('document_custom_fields', function (Blueprint $table) {
@@ -26,15 +24,12 @@ return new class extends Migration
             $table->text('help_text')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->index(['section_id', 'is_active', 'sort_order']);
             $table->unique(['section_id', 'name']);
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('document_custom_fields');

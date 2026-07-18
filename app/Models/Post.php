@@ -196,37 +196,92 @@ class Post extends Model
     }
 
     /**
-     * Get featured image based on current locale
+     * Get featured image for a specific locale without cross-language fallback.
      */
-    public function getFeaturedImageAttribute()
+    public function localeFeaturedImage(?string $locale = null): ?string
     {
-        $locale = app()->getLocale();
-        
-        if ($locale === 'ar' && $this->featured_image_ar) {
-            return $this->featured_image_ar;
-        } elseif ($locale === 'en' && $this->featured_image_en) {
-            return $this->featured_image_en;
+        $locale = $locale ?? app()->getLocale();
+
+        if ($locale === 'en') {
+            return $this->normalizeMediaPath($this->attributes['featured_image_en'] ?? null);
         }
-        
-        // Fallback to original featured_image or Arabic version
-        return $this->attributes['featured_image'] ?? $this->featured_image_ar;
+
+        $arPath = $this->normalizeMediaPath($this->attributes['featured_image_ar'] ?? null);
+        if ($arPath) {
+            return $arPath;
+        }
+
+        $legacyPath = $this->normalizeMediaPath($this->attributes['featured_image'] ?? null);
+        if ($legacyPath && !str_contains($legacyPath, 'featured/en')) {
+            return $legacyPath;
+        }
+
+        return null;
     }
 
     /**
-     * Get background image based on current locale
+     * Get background image for a specific locale without cross-language fallback.
      */
-    public function getBackgroundImageAttribute()
+    public function localeBackgroundImage(?string $locale = null): ?string
     {
-        $locale = app()->getLocale();
-        
-        if ($locale === 'ar' && $this->background_image_ar) {
-            return $this->background_image_ar;
-        } elseif ($locale === 'en' && $this->background_image_en) {
-            return $this->background_image_en;
+        $locale = $locale ?? app()->getLocale();
+
+        if ($locale === 'en') {
+            return $this->normalizeMediaPath($this->attributes['background_image_en'] ?? null);
         }
-        
-        // Fallback to original background_image or Arabic version
-        return $this->attributes['background_image'] ?? $this->background_image_ar;
+
+        $arPath = $this->normalizeMediaPath($this->attributes['background_image_ar'] ?? null);
+        if ($arPath) {
+            return $arPath;
+        }
+
+        $legacyPath = $this->normalizeMediaPath($this->attributes['background_image'] ?? null);
+        if ($legacyPath && !str_contains($legacyPath, 'backgrounds/en')) {
+            return $legacyPath;
+        }
+
+        return null;
+    }
+
+    private function normalizeMediaPath(?string $path): ?string
+    {
+        return filled($path) ? $path : null;
+    }
+
+    public function adminThumbnailPath(): ?string
+    {
+        foreach ([
+            'featured_image_ar',
+            'featured_image_en',
+            'featured_image',
+            'background_image_ar',
+            'background_image_en',
+            'background_image',
+        ] as $column) {
+            $path = $this->normalizeMediaPath($this->attributes[$column] ?? null);
+            if ($path) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    public function getAdminThumbnailUrlAttribute(): ?string
+    {
+        $path = $this->adminThumbnailPath();
+
+        return $path ? Storage::url($path) : null;
+    }
+
+    public function getFeaturedImageAttribute($value)
+    {
+        return $this->localeFeaturedImage();
+    }
+
+    public function getBackgroundImageAttribute($value)
+    {
+        return $this->localeBackgroundImage();
     }
 
     /**

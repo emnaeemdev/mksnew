@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use App\Services\DocumentSearchService;
+use App\Services\HtmlSanitizer;
+use App\Services\SecureUploadService;
 
 class DocumentController extends Controller
 {
@@ -107,7 +109,22 @@ class DocumentController extends Controller
             'section_draft' => $sectionId ? Document::where('section_id', $sectionId)->where('is_published', false)->count() : null,
         ];
 
-        return view('admin.documents.index', compact('documents', 'sections', 'stats', 'customFields'));
+        $pinnedKeywords = \App\Models\DocumentPinnedKeyword::orderedKeywords();
+
+        return view('admin.documents.index', compact('documents', 'sections', 'stats', 'customFields', 'pinnedKeywords'));
+    }
+
+    public function updatePinnedKeywords(Request $request)
+    {
+        $request->validate([
+            'document_keywords' => 'nullable|array',
+            'document_keywords.*' => 'string|max:255',
+        ]);
+
+        \App\Models\DocumentPinnedKeyword::syncFromNames($request->input('document_keywords', []));
+
+        return redirect()->route('admin.documents.index')
+            ->with('success', 'تم تحديث اختصارات الكلمات المفتاحية بنجاح');
     }
 
     public function create(Request $request)
@@ -136,12 +153,12 @@ class DocumentController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'excerpt' => 'nullable|string|max:500',
-            'featured_image' => 'nullable|file|max:51200',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:51200',
             'is_published' => 'boolean',
             'is_featured' => 'boolean',
             'published_at' => 'nullable|date',
             'sort_order' => 'nullable|integer|min:0',
-            'document_files.*' => 'nullable|file|max:51200', // 50MB max per file
+            'document_files.*' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,jpg,jpeg,png,gif,webp|max:51200',
             'file_display_names.*' => 'nullable|string|max:255'
         ];
 
@@ -176,7 +193,7 @@ class DocumentController extends Controller
                     break;
                 case 'file':
                     $rules["custom_fields.{$field->id}"] = 'nullable|array';
-                    $rules["custom_fields.{$field->id}.*"] = 'file|max:51200';
+                    $rules["custom_fields.{$field->id}.*"] = 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,jpg,jpeg,png,gif,webp|max:51200';
                     continue 2;
                 case 'select':
                 case 'radio':
@@ -212,7 +229,7 @@ class DocumentController extends Controller
             'section_id' => $request->section_id,
             'title' => $request->title,
             'slug' => Str::slug($request->title),
-            'content' => $request->content,
+            'content' => app(HtmlSanitizer::class)->clean($request->content),
             'excerpt' => $request->excerpt,
             'featured_image' => $featuredImagePath,
             'is_published' => $request->boolean('is_published'),
@@ -260,31 +277,16 @@ class DocumentController extends Controller
 
         // معالجة رفع الملفات المتعددة
         if ($request->hasFile('document_files')) {
-            $files = $request->file('document_files');
-            $displayNames = $request->input('file_display_names', []);
-            
-            foreach ($files as $index => $file) {
-                if ($file && $file->isValid()) {
-                    $originalName = $file->getClientOriginalName();
-                    $displayName = $displayNames[$index] ?? pathinfo($originalName, PATHINFO_FILENAME);
-                    $filePath = $file->store('documents/files', 'public');
-                    
-                    \App\Models\DocumentFile::create([
-                        'document_id' => $document->id,
-                        'file_path' => $filePath,
-                        'original_name' => $originalName,
-                        'display_name' => $displayName,
-                        'file_size' => $file->getSize(),
-                        'mime_type' => $file->getMimeType(),
-                        'sort_order' => $index + 1
-                    ]);
-                }
-            }
+            $this->storeDocumentAttachmentFiles(
+                $request->file('document_files'),
+                $request->input('file_display_names', []),
+                $document
+            );
         }
 
         $document->syncKeywordNames($request->input('keywords'));
 
-        return redirect()->route('admin.documents.index')
+        return redirect()->route('admin.documents.edit', $document)
             ->with('success', 'تم إنشاء الوثيقة بنجاح');
     }
 
@@ -303,7 +305,7 @@ class DocumentController extends Controller
         $sections = DocumentSection::active()->orderBy('sort_order')->get();
         $customFields = $document->section->customFields()->active()->orderBy('sort_order')->get();
         $fieldValues = $document->fieldValues()->with('field')->get()->keyBy('field_id');
-        $document->load('keywords');
+        $document->load(['keywords', 'files']);
 
         return view('admin.documents.edit', compact('document', 'sections', 'customFields', 'fieldValues'));
     }
@@ -317,13 +319,15 @@ class DocumentController extends Controller
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'excerpt' => 'nullable|string|max:500',
-            'featured_image' => 'nullable|file|max:51200',
+            'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:51200',
             'is_published' => 'boolean',
             'is_featured' => 'boolean',
             'published_at' => 'nullable|date',
             'sort_order' => 'nullable|integer|min:0',
-            'document_files.*' => 'nullable|file|max:51200', // 50MB per file
-            'file_display_names.*' => 'nullable|string|max:255'
+            'document_files.*' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,jpg,jpeg,png,gif,webp|max:51200',
+            'file_display_names.*' => 'nullable|string|max:255',
+            'existing_file_display_names' => 'nullable|array',
+            'existing_file_display_names.*' => 'nullable|string|max:255',
         ];
 
         // إضافة قواعد التحقق للحقول المخصصة
@@ -357,7 +361,7 @@ class DocumentController extends Controller
                     break;
                 case 'file':
                     $rules["custom_fields.{$field->id}"] = 'nullable|array';
-                    $rules["custom_fields.{$field->id}.*"] = 'file|max:51200';
+                    $rules["custom_fields.{$field->id}.*"] = 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar,jpg,jpeg,png,gif,webp|max:51200';
                     continue 2;
                 case 'select':
                 case 'radio':
@@ -397,7 +401,7 @@ class DocumentController extends Controller
             'section_id' => $request->section_id,
             'title' => $request->title,
             'slug' => Str::slug($request->title),
-            'content' => $request->content,
+            'content' => app(HtmlSanitizer::class)->clean($request->content),
             'excerpt' => $request->excerpt,
             'featured_image' => $featuredImagePath,
             'is_published' => $request->boolean('is_published'),
@@ -406,29 +410,27 @@ class DocumentController extends Controller
             'sort_order' => (int) ($request->sort_order ?? $document->sort_order ?? 0),
         ]);
 
-        // معالجة الملفات الجديدة المرفوعة
-        if ($request->hasFile('document_files')) {
-            $files = $request->file('document_files');
-            $displayNames = $request->input('file_display_names', []);
-            
-            foreach ($files as $index => $file) {
-                if (!$file || !$file->isValid()) {
+        if ($request->has('existing_file_display_names')) {
+            foreach ($request->input('existing_file_display_names', []) as $fileId => $displayName) {
+                $displayName = trim((string) $displayName);
+                if ($displayName === '') {
                     continue;
                 }
-                $originalName = $file->getClientOriginalName();
-                $displayName = $displayNames[$index] ?? pathinfo($originalName, PATHINFO_FILENAME);
-                $filePath = $file->store('documents/files', 'public');
-                
-                DocumentFile::create([
-                    'document_id' => $document->id,
-                    'file_path' => $filePath,
-                    'original_name' => $originalName,
+
+                $document->files()->where('id', $fileId)->update([
                     'display_name' => $displayName,
-                    'file_size' => $file->getSize(),
-                    'mime_type' => $file->getMimeType(),
-                    'sort_order' => $document->files()->count() + $index + 1
                 ]);
             }
+        }
+
+        // معالجة الملفات الجديدة المرفوعة
+        if ($request->hasFile('document_files')) {
+            $this->storeDocumentAttachmentFiles(
+                $request->file('document_files'),
+                $request->input('file_display_names', []),
+                $document,
+                $document->files()->count()
+            );
         }
         
         // تحديث قيم الحقول المخصصة
@@ -684,12 +686,49 @@ class DocumentController extends Controller
             return $paths;
         }
 
+        $uploader = app(SecureUploadService::class);
         foreach ($request->file("custom_fields.{$fieldId}") as $file) {
-            if ($file && $file->isValid()) {
-                $paths[] = $file->store('documents/custom-fields', 'public');
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+            try {
+                $stored = $uploader->store($file, 'documents/custom-fields', 'public');
+                $paths[] = $stored['path'];
+            } catch (\InvalidArgumentException $e) {
+                continue;
             }
         }
 
         return $paths;
+    }
+
+    protected function storeDocumentAttachmentFiles(array $files, array $displayNames, Document $document, int $sortOffset = 0): void
+    {
+        $uploader = app(SecureUploadService::class);
+
+        foreach ($files as $index => $file) {
+            if (!$file || !$file->isValid()) {
+                continue;
+            }
+
+            try {
+                $stored = $uploader->store($file, 'documents/files', 'public');
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+
+            DocumentFile::create([
+                'document_id' => $document->id,
+                'file_path' => $stored['path'],
+                'original_name' => $stored['original_name'],
+                'display_name' => $uploader->sanitizeDisplayName(
+                    $displayNames[$index] ?? null,
+                    pathinfo($stored['original_name'], PATHINFO_FILENAME)
+                ),
+                'file_size' => $stored['size'],
+                'mime_type' => $stored['mime_type'],
+                'sort_order' => $sortOffset + $index + 1,
+            ]);
+        }
     }
 }

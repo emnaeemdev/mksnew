@@ -61,7 +61,7 @@
 
                         <div class="form-group mb-3">
                             <label for="footer_html">محتوى الفوتر (يدعم HTML)</label>
-                            <textarea name="footer_html" id="footer_html" class="form-control" rows="6">{!! old('footer_html', $settings['footer_html'] ?? '') !!}</textarea>
+                            <textarea name="footer_html" id="footer_html" class="form-control" rows="6">{{ old('footer_html', $settings['footer_html'] ?? '') }}</textarea>
                             <small class="form-text text-muted">سيتم عرض هذا المحتوى في أسفل جميع صفحات الموقع. يمكنك إضافة HTML مثل روابط، نص منسق، أو أكواد تتبع.</small>
                         </div>
 
@@ -80,7 +80,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="about_html_ar" class="form-label">المحتوى (عربي)</label>
-                                    <textarea name="about_html_ar" id="about_html_ar" class="form-control @error('about_html_ar') is-invalid @enderror" rows="6">{!! old('about_html_ar', $settings['about_html_ar'] ?? '') !!}</textarea>
+                                    <textarea name="about_html_ar" id="about_html_ar" class="form-control @error('about_html_ar') is-invalid @enderror" rows="6">{{ old('about_html_ar', $settings['about_html_ar'] ?? '') }}</textarea>
                                     @error('about_html_ar')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -89,7 +89,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="about_html_en" class="form-label">المحتوى (إنجليزي)</label>
-                                    <textarea name="about_html_en" id="about_html_en" class="form-control @error('about_html_en') is-invalid @enderror" rows="6">{!! old('about_html_en', $settings['about_html_en'] ?? '') !!}</textarea>
+                                    <textarea name="about_html_en" id="about_html_en" class="form-control @error('about_html_en') is-invalid @enderror" rows="6">{{ old('about_html_en', $settings['about_html_en'] ?? '') }}</textarea>
                                     @error('about_html_en')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -103,7 +103,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="contact_description_ar" class="form-label">الوصف (عربي)</label>
-                                    <textarea name="contact_description_ar" id="contact_description_ar" class="form-control @error('contact_description_ar') is-invalid @enderror" rows="4">{!! old('contact_description_ar', $settings['contact_description_ar'] ?? '') !!}</textarea>
+                                    <textarea name="contact_description_ar" id="contact_description_ar" class="form-control @error('contact_description_ar') is-invalid @enderror" rows="4">{{ old('contact_description_ar', $settings['contact_description_ar'] ?? '') }}</textarea>
                                     @error('contact_description_ar')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -112,7 +112,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="contact_description_en" class="form-label">الوصف (إنجليزي)</label>
-                                    <textarea name="contact_description_en" id="contact_description_en" class="form-control @error('contact_description_en') is-invalid @enderror" rows="4">{!! old('contact_description_en', $settings['contact_description_en'] ?? '') !!}</textarea>
+                                    <textarea name="contact_description_en" id="contact_description_en" class="form-control @error('contact_description_en') is-invalid @enderror" rows="4">{{ old('contact_description_en', $settings['contact_description_en'] ?? '') }}</textarea>
                                     @error('contact_description_en')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -285,7 +285,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-between mt-4">
+                        <div class="admin-form-actions mt-4">
                             <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-right me-1"></i>
                                 العودة للوحة التحكم

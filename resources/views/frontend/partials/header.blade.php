@@ -104,7 +104,15 @@
                 </li>
             </ul>
             
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-2">
+                @if(!empty($frontendAdminShortcut))
+                    <a href="{{ $frontendAdminShortcut['url'] }}"
+                       class="btn btn-sm {{ ($frontendAdminShortcut['mode'] ?? '') === 'edit' ? 'btn-warning' : 'btn-outline-primary' }} frontend-admin-shortcut">
+                        <i class="fas {{ $frontendAdminShortcut['icon'] }} me-1"></i>
+                        {{ $frontendAdminShortcut['label'] }}
+                    </a>
+                @endif
+
                 <!-- Language Switcher -->
                 <div>
                     @if(app()->getLocale() == 'ar')

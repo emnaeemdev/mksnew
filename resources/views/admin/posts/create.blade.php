@@ -14,7 +14,7 @@
                     <i class="fas fa-plus me-2"></i>
                     إضافة موضوع جديد
                 </h5>
-                <a href="{{ route('admin.posts.index') }}" class="btn btn-outline-secondary">
+                <a href="{{ route('admin.posts.index', request('category') ? ['category' => request('category')] : (isset($selectedCategoryId) && $selectedCategoryId ? ['category' => $selectedCategoryId] : [])) }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-2"></i>
                     العودة للقائمة
                 </a>
@@ -45,8 +45,8 @@
                                             required>
                                         <option value="">اختر التصنيف</option>
                                         @foreach($categories as $category)
-                                            <option value="{{ $category->id }}" 
-                                                    {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                            <option value="{{ $category->id }}"
+                                                    {{ (string) old('category_id', $selectedCategoryId ?? '') === (string) $category->id ? 'selected' : '' }}>
                                                 {{ $category->name_ar }}
                                             </option>
                                         @endforeach
@@ -128,12 +128,7 @@
                                         <!-- Arabic Slug hidden: auto-generated -->
                                     </div>
 
-                                    <div class="mb-3">
-                                        @include('admin.partials.keyword-picker', [
-                                            'keywordScope' => 'post',
-                                            'selectedKeywords' => old('keywords', []),
-                                        ])
-                                    </div>
+
                                     
                                     <!-- Arabic Content -->
                                     <div class="row">
@@ -204,6 +199,13 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="col-md-3 mb-1">
+                                        @include('admin.partials.keyword-picker', [
+                                            'keywordScope' => 'post',
+                                            'selectedKeywords' => old('keywords', []),
+                                        ])
+                                    </div>
 
                     
                     <!-- Images Section -->
@@ -631,19 +633,22 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
                     </div>
                     
                     <!-- Submit Buttons -->
                     <div class="d-flex justify-content-between">
-                        <a href="{{ route('admin.posts.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>
-                            إلغاء
-                        </a>
+
                         
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save me-2"></i>
                             حفظ الموضوع
                         </button>
+
+                        <a href="{{ route('admin.posts.index', request('category') ? ['category' => request('category')] : (isset($selectedCategoryId) && $selectedCategoryId ? ['category' => $selectedCategoryId] : [])) }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>
+                            إلغاء
+                        </a>
                     </div>
                 </form>
             </div>

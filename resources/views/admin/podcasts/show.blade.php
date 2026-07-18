@@ -27,7 +27,7 @@
                     </p>
 
                     @if($podcast->content)
-                        <div class="mb-3">{!! $podcast->content !!}</div>
+                        <div class="mb-3">{!! safe_html($podcast->content) !!}</div>
                     @endif
                 </div>
             </div>

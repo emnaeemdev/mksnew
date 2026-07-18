@@ -105,15 +105,21 @@
                     </div>
                     
                     <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> حفظ التغييرات
-                        </button>
-                        <a href="{{ route('admin.comments.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> العودة للقائمة
-                        </a>
-                        <a href="{{ route('admin.comments.show', $comment) }}" class="btn btn-info">
-                            <i class="fas fa-eye"></i> عرض التعليق
-                        </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.comments.index') }}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> العودة للقائمة
+                                </a>
+                                <a href="{{ route('admin.comments.show', $comment) }}" class="btn btn-info">
+                                    <i class="fas fa-eye"></i> عرض التعليق
+                                </a>
+                            </div>
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> حفظ التغييرات
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>

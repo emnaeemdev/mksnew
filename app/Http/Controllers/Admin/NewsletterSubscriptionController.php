@@ -31,7 +31,6 @@ class NewsletterSubscriptionController extends Controller
         return redirect()->route('admin.newsletter-subscriptions.index')->with('success', 'تم حذف الاشتراك بنجاح');
     }
 
-    // تصدير كل النتائج (حسب الفلترة الحالية) إلى CSV
     public function export(Request $request): StreamedResponse
     {
         $search = $request->query('q');
@@ -49,10 +48,8 @@ class NewsletterSubscriptionController extends Controller
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');
 
-            // UTF-8 BOM لضمان عرض عربي صحيح في Excel
             fwrite($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            // رؤوس الأعمدة
             fputcsv($handle, ['ID', 'Name', 'Email', 'Subscribed At']);
 
             $query->chunk(500, function ($rows) use ($handle) {
@@ -72,7 +69,6 @@ class NewsletterSubscriptionController extends Controller
         ]);
     }
 
-    // حذف جماعي للاشتراكات المحددة
     public function bulkDelete(Request $request)
     {
         $ids = $request->input('ids', []);

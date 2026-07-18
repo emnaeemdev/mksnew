@@ -86,7 +86,7 @@
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-between">
+                        <div class="admin-form-actions">
                             <a href="{{ route('admin.dashboard') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-right me-1"></i>
                                 العودة للوحة التحكم

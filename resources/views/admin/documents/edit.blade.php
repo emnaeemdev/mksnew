@@ -10,7 +10,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">تعديل الوثيقة: {{ $document->title }}</h3>
                     <div>
-                        <a href="{{ route('admin.documents.show', $document) }}" class="btn btn-info me-2">
+                        <a href="{{ route('frontend.documents.show', [app()->getLocale(), $document->id]) }}" target= '_blank' class="btn btn-info me-2">
                             <i class="fas fa-eye"></i> عرض
                         </a>
                         <a href="{{ route('admin.documents.index') }}" class="btn btn-secondary">
@@ -349,25 +349,37 @@
                                         @if($document->files->count() > 0)
                                             <div class="mb-4">
                                                 <h6>الملفات الحالية:</h6>
+                                                <p class="form-text mb-3">عدّل «اسم العرض للزوار» ثم اضغط حفظ لتطبيق التغيير.</p>
                                                 <div class="row">
                                                     @foreach($document->files as $file)
                                                         <div class="col-md-6 mb-3">
-                                                            <div class="border rounded p-3 d-flex align-items-center">
-                                                                <div class="me-3">
-                                                                    <i class="{{ $file->getIcon() }} fa-2x text-primary"></i>
-                                                                </div>
-                                                                <div class="flex-grow-1">
-                                                                    <h6 class="mb-1">{{ $file->display_name }}</h6>
-                                                                    <small class="text-muted d-block">{{ $file->original_name }}</small>
-                                                                    <small class="text-muted">{{ $file->getFormattedSize() }}</small>
-                                                                </div>
-                                                                <div>
-                                                                    <a href="{{ route('admin.documents.files.download', $file) }}" class="btn btn-outline-primary btn-sm me-1">
-                                                                        <i class="fas fa-download"></i>
-                                                                    </a>
-                                                                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFile({{ $file->id }})">
-                                                                        <i class="fas fa-trash"></i>
-                                                                    </button>
+                                                            <div class="border rounded p-3 document-existing-file">
+                                                                <div class="d-flex align-items-start gap-3">
+                                                                    <div class="flex-shrink-0 pt-1">
+                                                                        <i class="{{ $file->getIcon() }} fa-2x text-primary"></i>
+                                                                    </div>
+                                                                    <div class="flex-grow-1 min-w-0">
+                                                                        <label class="form-label small mb-1" for="file-display-{{ $file->id }}">اسم العرض للزوار</label>
+                                                                        <input type="text"
+                                                                               id="file-display-{{ $file->id }}"
+                                                                               class="form-control form-control-sm mb-2"
+                                                                               name="existing_file_display_names[{{ $file->id }}]"
+                                                                               value="{{ $file->display_name }}"
+                                                                               placeholder="اسم الملف كما سيظهر للزوار">
+                                                                        <small class="text-muted d-block document-existing-file__original text-truncate"
+                                                                               title="{{ $file->original_name }}">
+                                                                            {{ $file->original_name }}
+                                                                        </small>
+                                                                        <small class="text-muted">{{ $file->getFormattedSize() }}</small>
+                                                                    </div>
+                                                                    <div class="flex-shrink-0 d-flex flex-column gap-1">
+                                                                        <a href="{{ route('admin.documents.files.download', $file) }}" class="btn btn-outline-primary btn-sm" title="تحميل">
+                                                                            <i class="fas fa-download"></i>
+                                                                        </a>
+                                                                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteFile({{ $file->id }})" title="حذف">
+                                                                            <i class="fas fa-trash"></i>
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -410,9 +422,9 @@
                     </div>
                     
                     <div class="card-footer">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <a href="{{ route('admin.documents.index') }}" class="btn btn-secondary me-2">
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.documents.index') }}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> إلغاء
                                 </a>
                                 
@@ -423,12 +435,12 @@
                                 @endif
                             </div>
                             
-                            <div>
-                                <button type="submit" name="action" value="draft" class="btn btn-outline-primary me-2">
-                                    <i class="fas fa-save"></i> حفظ كمسودة
-                                </button>
+                            <div class="admin-form-actions__primary">
                                 <button type="submit" name="action" value="publish" class="btn btn-success">
                                     <i class="fas fa-paper-plane"></i> حفظ ونشر
+                                </button>
+                                <button type="submit" name="action" value="draft" class="btn btn-outline-primary">
+                                    <i class="fas fa-save"></i> حفظ كمسودة
                                 </button>
                             </div>
                         </div>
@@ -590,7 +602,7 @@ function formatFileSize(bytes) {
 
 function deleteFile(fileId) {
     if (confirm('هل أنت متأكد من حذف هذا الملف؟')) {
-        fetch(`/admin/documents/files/${fileId}`, {
+        fetch(@json(route('admin.documents.files.delete', ['file' => '__ID__'])).replace('__ID__', fileId), {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -668,6 +680,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
 .invalid-feedback {
     display: block;
+}
+
+.document-existing-file {
+    overflow: hidden;
+}
+
+.document-existing-file .min-w-0 {
+    min-width: 0;
+}
+
+.document-existing-file__original {
+    max-width: 100%;
 }
 
 .border-end {

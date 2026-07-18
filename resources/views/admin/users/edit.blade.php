@@ -34,6 +34,21 @@
                             
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="username" class="form-label">اسم المستخدم <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('username') is-invalid @enderror"
+                                           id="username" name="username" value="{{ old('username', $user->username) }}" required
+                                           pattern="[A-Za-z0-9_\-\.]+" autocomplete="username">
+                                    @error('username')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    <div class="form-text">يُستخدم لتسجيل الدخول (حروف وأرقام و _ - . فقط)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label for="email" class="form-label">البريد الإلكتروني <span class="text-danger">*</span></label>
                                     <input type="email" class="form-control @error('email') is-invalid @enderror" 
                                            id="email" name="email" value="{{ old('email', $user->email) }}" required>
@@ -44,6 +59,22 @@
                             </div>
                         </div>
                         
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="role" class="form-label">الصلاحية <span class="text-danger">*</span></label>
+                                    <select class="form-select @error('role') is-invalid @enderror" id="role" name="role" required>
+                                        @foreach(($roles ?? []) as $value => $label)
+                                            <option value="{{ $value }}" @selected(old('role', $user->role) === $value)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('role')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -69,14 +100,16 @@
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> حفظ التغييرات
-                                </button>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__secondary">
                                 <a href="{{ route('admin.users.index') }}" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> إلغاء
                                 </a>
+                            </div>
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> حفظ التغييرات
+                                </button>
                             </div>
                         </div>
                     </form>

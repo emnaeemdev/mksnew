@@ -335,6 +335,11 @@ return [
     'no_translation_message' => 'Sorry, this page is not available in the selected language yet.',
     'back_home' => 'Back to Home',
 
+    // 404 Page
+    'not_found_title' => 'Page not found',
+    'not_found_message' => 'Sorry, the page you requested does not exist or may have been moved.',
+    'not_found_code' => '404',
+
     // Privacy Page
     'contact_privacy' => 'Privacy & Contact',
     'contact_privacy_text' => 'For any privacy-related inquiries, please contact us using the information below.',

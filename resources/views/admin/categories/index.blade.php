@@ -1,6 +1,6 @@
 @extends('admin.layout')
 
-@section('title', 'إدارة الأقسام - MK Snow')
+@section('title', 'إدارة الأقسام - mksegypt')
 @section('page-title', 'إدارة الأقسام')
 
 @section('content')
@@ -42,14 +42,18 @@
                                 </td>
                                 <td>{{ $category->id }}</td>
                                 <td>
-                                    <strong>{{ $category->name_ar }}</strong>
+                                    <a href="{{ route('admin.categories.edit', $category) }}" class="text-decoration-none text-dark">
+                                        <strong>{{ $category->name_ar }}</strong>
+                                    </a>
                                     @if($category->description_ar)
                                         <br>
                                         <small class="text-muted">{{ Str::limit($category->description_ar, 50) }}</small>
                                     @endif
                                 </td>
                                 <td>
-                                    <strong>{{ $category->name_en }}</strong>
+                                    <a href="{{ route('admin.categories.edit', $category) }}" class="text-decoration-none text-dark">
+                                        <strong>{{ $category->name_en }}</strong>
+                                    </a>
                                     @if($category->description_en)
                                         <br>
                                         <small class="text-muted">{{ Str::limit($category->description_en, 50) }}</small>
@@ -84,22 +88,26 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ route('admin.categories.show', $category) }}" 
-                                           class="btn btn-outline-info btn-sm" 
-                                           title="عرض">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        
-                                        <a href="{{ route('admin.categories.edit', $category) }}" 
-                                           class="btn btn-outline-warning btn-sm" 
+                                        @if($category->is_active)
+                                            <a href="{{ route('posts.category', [app()->getLocale(), $category->slug]) }}"
+                                               target="_blank"
+                                               rel="noopener"
+                                               class="btn btn-outline-info btn-sm"
+                                               title="عرض في الموقع">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        @endif
+
+                                        <a href="{{ route('admin.categories.edit', $category) }}"
+                                           class="btn btn-outline-warning btn-sm"
                                            title="تعديل">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        
-                                        <button type="button" 
-                                                class="btn btn-outline-danger btn-sm" 
+
+                                        <button type="button"
+                                                class="btn btn-outline-danger btn-sm"
                                                 title="حذف"
-                                                onclick="confirmDelete({{ $category->id }}, '{{ $category->name }}')">
+                                                onclick="confirmDelete({{ $category->id }}, '{{ addslashes($category->name_ar) }}')">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>

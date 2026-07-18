@@ -53,7 +53,7 @@
                 <div class="row g-4">
                     @foreach($sections as $section)
                         <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm hover-card">
+                            <div class="card h-100 doc-card">
                                 <div class="card-body text-center p-4">
                                     <div class="mb-3">
                                         <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" 
@@ -104,7 +104,7 @@
                 <div class="row g-4">
                     @foreach($featuredDocuments as $document)
                         <div class="col-lg-6">
-                            <div class="card h-100 border-0 shadow-sm hover-card">
+                            <div class="card h-100 doc-card">
                                 <div class="row g-0 h-100">
                                     <div class="col-12">
                                         <div class="card-body h-100 d-flex flex-column">
@@ -115,13 +115,13 @@
                                             <h5 class="card-title">
                                                 @php
                     $locale = app()->getLocale();
-                    $sectionName = optional($document->section)->name_en ?: optional($document->section)->slug;
+                    $sectionName = optional($document->section)->slug;
                     $documentShowUrl = $sectionName
                         ? route('content.show', [$locale, $sectionName, $document->id])
                         : route('content.show', [$locale, 'documents', $document->id]);
                                 @endphp
                                 <a href="{{ $documentShowUrl }}" 
-                                    class="text-decoration-none text-dark">
+                                    class="text-decoration-none">
                                     {{ $document->title }}
                                 </a>
                                             </h5>
@@ -171,7 +171,7 @@
                 <div class="row g-4">
                     @foreach($recentDocuments as $document)
                         <div class="col-lg-4 col-md-6">
-                            <div class="card h-100 border-0 shadow-sm hover-card">
+                            <div class="card h-100 doc-card">
 
                                 
                                 <div class="card-body d-flex flex-column">
@@ -185,13 +185,13 @@
                                     <h5 class="card-title">
                                         @php
                                             $locale = app()->getLocale();
-                                            $sectionName = optional($document->section)->name_en ?: optional($document->section)->slug;
+                                            $sectionName = optional($document->section)->slug;
                                             $documentShowUrl = $sectionName
                                                 ? route('content.show', [$locale, $sectionName, $document->id])
                                                 : route('content.show', [$locale, 'documents', $document->id]);
                                         @endphp
                                         <a href="{{ $documentShowUrl }}" 
-                                           class="text-decoration-none text-dark">
+                                           class="text-decoration-none">
                                             {{ Str::limit($document->title, 60) }}
                                         </a>
                                     </h5>

@@ -16,8 +16,8 @@
                         <a href="{{ $medium->url }}" target="_blank" class="btn btn-success btn-sm">
                             <i class="fas fa-download"></i> تحميل
                         </a>
-                        <form method="POST" action="{{ route('admin.media.destroy', $medium) }}" 
-                              style="display: inline-block;" 
+                        <form method="POST" action="{{ route('admin.media.destroy', $medium) }}"
+                              style="display: inline-block;"
                               onsubmit="return confirm('هل أنت متأكد من حذف هذا الملف؟ لا يمكن التراجع عن هذا الإجراء.')">
                             @csrf
                             @method('DELETE')
@@ -27,16 +27,16 @@
                         </form>
                     </div>
                 </div>
-                
+
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-8">
-                            <!-- File Preview -->
+
                             <div class="form-group">
                                 <label>معاينة الملف</label>
                                 <div class="border rounded p-3 text-center" style="background: #f8f9fa;">
                                     @if($medium->is_image)
-                                        <img src="{{ $medium->url }}" alt="{{ $medium->alt_text }}" 
+                                        <img src="{{ $medium->url }}" alt="{{ $medium->alt_text }}"
                                              class="img-fluid" style="max-height: 400px; object-fit: contain;">
                                     @elseif($medium->is_video)
                                         <video controls class="img-fluid" style="max-height: 400px;">
@@ -55,7 +55,7 @@
                                     @endif
                                 </div>
                             </div>
-                            
+
                             @if($medium->description)
                                 <div class="form-group">
                                     <label>الوصف</label>
@@ -65,9 +65,9 @@
                                 </div>
                             @endif
                         </div>
-                        
+
                         <div class="col-md-4">
-                            <!-- File Information -->
+
                             <div class="card">
                                 <div class="card-header">
                                     <h5 class="card-title mb-0">معلومات الملف</h5>
@@ -113,15 +113,14 @@
                                     </table>
                                 </div>
                             </div>
-                            
-                            <!-- File URL -->
+
                             <div class="card mt-3">
                                 <div class="card-header">
                                     <h5 class="card-title mb-0">رابط الملف</h5>
                                 </div>
                                 <div class="card-body">
                                     <div class="input-group">
-                                        <input type="text" class="form-control" id="fileUrl" value="{{ url('' . $medium->url ) }}" readonly>
+                                        <input type="text" class="form-control" id="fileUrl" value="{{ $medium->url }}" readonly>
                                         <div class="input-group-append">
                                             <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('#fileUrl')">
                                                 <i class="fas fa-copy"></i>
@@ -131,8 +130,7 @@
                                     <small class="form-text text-muted mt-2">انقر على زر النسخ لنسخ الرابط</small>
                                 </div>
                             </div>
-                            
-                            <!-- File Type Badge -->
+
                             <div class="card mt-3">
                                 <div class="card-header">
                                     <h5 class="card-title mb-0">نوع الملف</h5>
@@ -160,7 +158,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card-footer">
                     <a href="{{ route('admin.media.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> العودة للمكتبة
@@ -184,14 +182,13 @@ function copyToClipboard(element) {
     input.select();
     input.setSelectionRange(0, 99999);
     document.execCommand('copy');
-    
-    // Show feedback
+
     const button = input.nextElementSibling.querySelector('button');
     const originalText = button.innerHTML;
     button.innerHTML = '<i class="fas fa-check"></i>';
     button.classList.remove('btn-outline-secondary');
     button.classList.add('btn-success');
-    
+
     setTimeout(() => {
         button.innerHTML = originalText;
         button.classList.remove('btn-success');

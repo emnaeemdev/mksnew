@@ -54,6 +54,7 @@ class NashraController extends Controller
         }
 
         $data = $request->all();
+        $data['content_ar'] = app(\App\Services\HtmlSanitizer::class)->clean($data['content_ar'] ?? null);
         
         // رفع الصورة المميزة
         if ($request->hasFile('featured_image')) {
@@ -84,7 +85,7 @@ class NashraController extends Controller
 }
         $nashra->syncKeywordNames($request->input('keywords'));
         
-        return redirect()->route('admin.nashras.index')
+        return redirect()->route('admin.nashras.edit', $nashra)
                        ->with('success', 'تم إنشاء النشرة بنجاح');
     }
 
@@ -129,6 +130,7 @@ class NashraController extends Controller
         }
 
         $data = $request->all();
+        $data['content_ar'] = app(\App\Services\HtmlSanitizer::class)->clean($data['content_ar'] ?? null);
         
         // رفع الصورة المميزة الجديدة
         if ($request->hasFile('featured_image')) {
@@ -154,12 +156,16 @@ class NashraController extends Controller
         $data['status'] = (int) $request->input('status', 0);
         $data['sort_order'] = $data['sort_order'] ?? 0;
         
-        
+        // استخراج معرف Google Sheet من الرابط
+        if (!empty($data['google_drive_url'])) {
+            preg_match('/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $data['google_drive_url'], $matches);
+            $data['google_sheet_id'] = $matches[1] ?? null;
+        }
+
         $nashra->update($data);
         if ($nashra->google_sheet_id) {
-    app(\App\Services\GoogleSheetsService::class)
-        ->clearSheetCache($nashra->google_sheet_id);
-}
+            app(\App\Services\GoogleSheetsService::class)->clearSheetCache($nashra->google_sheet_id);
+        }
         $nashra->syncKeywordNames($request->input('keywords'));
         
         return redirect()->route('admin.nashras.edit', $nashra)
@@ -234,22 +240,41 @@ class NashraController extends Controller
     }
 
     /**
+     * تحديث كاش Google Sheets لنشرة (من لوحة التحكم)
+     */
+    public function refreshSheetCache(Nashra $nashra)
+    {
+        if (!$nashra->google_sheet_id) {
+            return redirect()->back()->with('error', 'لا يوجد معرف Google Sheet لهذه النشرة');
+        }
+
+        try {
+            app(\App\Services\GoogleSheetsService::class)->refreshSheetCache($nashra->google_sheet_id);
+
+            return redirect()->back()->with('success', 'تم تحديث بيانات Google Sheets وحفظها في الكاش المشترك');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'فشل التحديث: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * جلب بيانات Google Sheets لنشرة موجودة
      */
     public function getSheetData(Nashra $nashra)
     {
         try {
-            $googleSheetsService = app('App\\Services\\GoogleSheetsService');
-            $sheetData = $googleSheetsService->getSheetData($nashra->google_sheet_id);
-            
+            $googleSheetsService = app(\App\Services\GoogleSheetsService::class);
+            $payload = $googleSheetsService->getCachedSheetPayload($nashra->google_sheet_id);
+
             return response()->json([
                 'success' => true,
-                'data' => $sheetData
+                'data' => $payload['data'],
+                'cached_at' => $payload['cached_at'],
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'خطأ في جلب البيانات: ' . $e->getMessage()
+                'message' => 'خطأ في جلب البيانات: ' . $e->getMessage(),
             ], 500);
         }
     }

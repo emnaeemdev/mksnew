@@ -1,6 +1,5 @@
-/* Admin Posts Styles */
 
-/* Image Preview Styles */
+
 .image-preview {
     max-width: 200px;
     max-height: 150px;
@@ -17,7 +16,6 @@
     border-radius: 4px;
 }
 
-/* Current File Styles */
 .current-file {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -26,7 +24,6 @@
     margin-top: 10px;
 }
 
-/* Post Image Styles */
 .post-image {
     max-width: 100%;
     height: 200px;
@@ -35,7 +32,6 @@
     border: 2px solid #dee2e6;
 }
 
-/* Post Content Styles */
 .post-content {
     background-color: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -46,7 +42,6 @@
     overflow-y: auto;
 }
 
-/* File Download Styles */
 .file-download {
     background-color: #e3f2fd;
     border: 1px solid #2196f3;

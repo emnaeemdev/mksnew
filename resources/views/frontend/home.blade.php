@@ -4,7 +4,8 @@
 
 
 @section('content')
-<div class="blog-section" >
+<div class="home-page">
+<div class="blog-section home-block home-block--featured">
     <div class="layout-container">
         <div class="main-content">
             @if(isset($sliderPosts) && $sliderPosts->count() > 0)
@@ -78,17 +79,40 @@
         </div>
 
     </div>
-
-    <br>
 </div>
 
-<div class="container">
-    <hr style="height: 2px; background-color: #2b4596; border: none;">
+@if(app()->isLocale('ar'))
+<div class="home-section-break" aria-hidden="true">
+    <!-- <span class="home-section-break__line"></span> -->
+    <!-- <span class="home-section-break__mark"></span> -->
+    <!-- <span class="home-section-break__line"></span> -->
 </div>
 
+<div class="fsec-section home-block home-block--docs">
+    <div class="container">
+        <div class="row justify-content-center align-items-center">
+            @foreach($homeDocumentLinks ?? [] as $link)
+            <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-4 mb-lg-0">
+                <a href="{{ $link['url'] }}" class="card-link text-decoration-none">
+                    <div class="cardhome text-center p-4">
+                        <i class="fas {{ $link['icon'] }} fa-3x mb-3"></i>
+                        <h6 class="card-title">{{ $link['title'] }}</h6>
+                    </div>
+                </a>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
 
+<div class="home-section-break" aria-hidden="true">
+    <span class="home-section-break__line"></span>
+    <span class="home-section-break__mark home-section-break__mark--alt"></span>
+    <span class="home-section-break__line"></span>
+</div>
 
-<div class="blog-section">
+<div class="blog-section home-block home-block--releases">
     <div class="container">
         <h2>
             إصدرات أخرى
@@ -119,65 +143,8 @@
         @endif
     </div>
 </div>
-
-<div class="container">
-
-    <hr style="height: 2px; background-color: #2b4596; border: none;">
-
 </div>
 
-@if(app()->isLocale('ar'))
-<div class="fsec-section" >
-    <br>
-    <br>
-    <div class="container">
-        <div class="row justify-content-center align-items-center">
-            <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-5">
-                <a href="#" class="card-link text-decoration-none">
-                    <div class="cardhome text-center p-4">
-                        <i class="fas fa-balance-scale fa-3x mb-3"></i>
-                        <h6 class="card-title">قوانين</h6>
-                    </div>
-                </a>
-            </div>
-            <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-5">
-                <a href="#" class="card-link text-decoration-none">
-                    <div class="cardhome text-center p-4">
-                        <i class="fas fa-clipboard-check fa-3x mb-3"></i>
-                        <h6 class="card-title">قرارات</h6>
-                    </div>
-                </a>
-            </div>
-            <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-5">
-                <a href="#" class="card-link text-decoration-none">
-                    <div class="cardhome text-center p-4">
-                        <i class="fas fa-gavel fa-3x mb-3"></i>
-                        <h6 class="card-title">المحكمة الدستورية</h6>
-                    </div>
-                </a>
-            </div>
-            <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-5">
-                <a href="#" class="card-link text-decoration-none">
-                    <div class="cardhome text-center p-4">
-                        <i class="fas fa-building fa-3x mb-3"></i>
-                        <h6 class="card-title">محكمة النقض</h6>
-                    </div>
-                </a>
-            </div>
-            <div class="col-12 col-sm-6 col-md-4 col-lg-2 mb-5">
-                <a href="#" class="card-link text-decoration-none">
-                    <div class="cardhome text-center p-4">
-                        <i class="fas fa-institution fa-3x mb-3"></i>
-                        <h6 class="card-title">المحكمة الادارية العليا</h6>
-                    </div>
-                </a>
-            </div>
-        </div>
-    </div>
-    <br>
-    <br>
-</div>
-@endif
 @endsection
 
 @push('styles')
