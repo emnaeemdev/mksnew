@@ -17,23 +17,42 @@
                 </div>
                 
                 <div class="card-body border-bottom">
-                    <form method="POST" action="{{ route('admin.documents.pinned-keywords.update') }}" class="mb-0">
-                        @csrf
-                        @method('PUT')
-                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
-                            <div>
-                                <h5 class="mb-1">اختصارات الكلمات المفتاحية للزائر</h5>
-                                <p class="text-muted small mb-0">تظهر في صفحات أقسام الوثائق وتعرض الوثائق المرتبطة عبر كل الأقسام الفرعية.</p>
+                    @php
+                        $currentSectionId = request('section_id') ?: request('section');
+                        $pinnedSection = $pinnedKeywordsSection ?? null;
+                    @endphp
+
+                    @if($pinnedSection)
+                        <form method="POST" action="{{ route('admin.documents.pinned-keywords.update') }}" class="mb-0">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="section_id" value="{{ $pinnedSection->id }}">
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-2">
+                                <div>
+                                    <h5 class="mb-1">اختصارات الكلمات المفتاحية للزائر</h5>
+                                    <p class="text-muted small mb-0">
+                                        تظهر للزائر في صفحة قسم
+                                        <strong>{{ $pinnedSection->name }}</strong>
+                                        فقط. يمكنك اختيار كلمات مختلفة لكل قسم.
+                                    </p>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-save"></i> حفظ اختصارات هذا القسم
+                                </button>
                             </div>
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-save"></i> حفظ الاختصارات
-                            </button>
+                            @include('admin.partials.section-keyword-picker', [
+                                'selectedKeywords' => $pinnedKeywords ?? collect(),
+                                'inputName' => 'document_keywords',
+                            ])
+                        </form>
+                    @else
+                        <div class="alert alert-light border mb-0">
+                            <strong>اختصارات الكلمات المفتاحية للزائر</strong>
+                            <p class="mb-0 mt-1 text-muted small">
+                                اختر قسمًا من الفلتر أو افتح القسم من القائمة الجانبية أولًا، ثم حدّد الكلمات التي تظهر للزائر في صفحة هذا القسم.
+                            </p>
                         </div>
-                        @include('admin.partials.section-keyword-picker', [
-                            'selectedKeywords' => $pinnedKeywords ?? collect(),
-                            'inputName' => 'document_keywords',
-                        ])
-                    </form>
+                    @endif
                 </div>
 
                 <!-- فلاتر البحث -->

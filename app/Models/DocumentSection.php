@@ -62,6 +62,17 @@ class DocumentSection extends Model
     }
 
     /**
+     * اختصارات الكلمات المفتاحية الظاهرة للزائر في هذا القسم.
+     */
+    public function pinnedKeywords()
+    {
+        return $this->belongsToMany(Keyword::class, 'document_pinned_keywords', 'document_section_id', 'keyword_id')
+            ->withPivot(['sort_order', 'label_override'])
+            ->withTimestamps()
+            ->orderBy('document_pinned_keywords.sort_order');
+    }
+
+    /**
      * Get active custom fields ordered by sort order.
      */
     public function activeCustomFields()

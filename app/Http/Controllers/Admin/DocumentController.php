@@ -109,22 +109,38 @@ class DocumentController extends Controller
             'section_draft' => $sectionId ? Document::where('section_id', $sectionId)->where('is_published', false)->count() : null,
         ];
 
-        $pinnedKeywords = \App\Models\DocumentPinnedKeyword::orderedKeywords();
+        $pinnedKeywords = collect();
+        $pinnedKeywordsSection = null;
+        if ($sectionId) {
+            $pinnedKeywordsSection = DocumentSection::find($sectionId);
+            if ($pinnedKeywordsSection) {
+                $pinnedKeywords = \App\Models\DocumentPinnedKeyword::orderedKeywordsForSection((int) $sectionId);
+            }
+        }
 
-        return view('admin.documents.index', compact('documents', 'sections', 'stats', 'customFields', 'pinnedKeywords'));
+        return view('admin.documents.index', compact(
+            'documents',
+            'sections',
+            'stats',
+            'customFields',
+            'pinnedKeywords',
+            'pinnedKeywordsSection'
+        ));
     }
 
     public function updatePinnedKeywords(Request $request)
     {
         $request->validate([
+            'section_id' => 'required|exists:document_sections,id',
             'document_keywords' => 'nullable|array',
             'document_keywords.*' => 'string|max:255',
         ]);
 
-        \App\Models\DocumentPinnedKeyword::syncFromNames($request->input('document_keywords', []));
+        $sectionId = (int) $request->input('section_id');
+        \App\Models\DocumentPinnedKeyword::syncFromNames($request->input('document_keywords', []), $sectionId);
 
-        return redirect()->route('admin.documents.index')
-            ->with('success', 'تم تحديث اختصارات الكلمات المفتاحية بنجاح');
+        return redirect()->route('admin.documents.index', ['section_id' => $sectionId])
+            ->with('success', 'تم تحديث اختصارات الكلمات المفتاحية لهذا القسم بنجاح');
     }
 
     public function create(Request $request)

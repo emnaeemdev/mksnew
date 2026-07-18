@@ -896,8 +896,11 @@ class DocumentController extends Controller
         $activeSectionKeyword = null;
         $keywordSlug = trim((string) $request->get('kw', ''));
 
-        // اختصارات عامة لكل أقسام الوثائق (ليست خاصة بقسم فرعي)
-        $sectionKeywords = \App\Models\DocumentPinnedKeyword::orderedKeywords(withDocumentCounts: true);
+        // اختصارات خاصة بهذا القسم فقط
+        $sectionKeywords = \App\Models\DocumentPinnedKeyword::orderedKeywordsForSection(
+            (int) $section->id,
+            withDocumentCounts: true
+        );
 
         if ($keywordSlug !== '') {
             $activeSectionKeyword = $sectionKeywords->firstWhere('slug', $keywordSlug);
@@ -913,9 +916,10 @@ class DocumentController extends Controller
         }
 
         if ($keywordMode) {
-            // كل الوثائق المنشورة تحت أي قسم فرعي من أقسام الوثائق وبنفس الكلمة (نطاق document فقط)
+            // وثائق هذا القسم المنشورة المرتبطة بالكلمة المختارة
             $query = Document::with(['section', 'user'])
                 ->published()
+                ->where('section_id', $section->id)
                 ->whereHas('keywords', function ($q) use ($activeSectionKeyword) {
                     $q->where('keywords.id', $activeSectionKeyword->id)
                         ->where('keywords.scope', 'document');

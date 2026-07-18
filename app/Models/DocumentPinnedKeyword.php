@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 class DocumentPinnedKeyword extends Model
 {
     protected $fillable = [
+        'document_section_id',
         'keyword_id',
         'sort_order',
         'label_override',
@@ -16,6 +17,7 @@ class DocumentPinnedKeyword extends Model
 
     protected $casts = [
         'sort_order' => 'integer',
+        'document_section_id' => 'integer',
     ];
 
     public function keyword(): BelongsTo
@@ -23,17 +25,23 @@ class DocumentPinnedKeyword extends Model
         return $this->belongsTo(Keyword::class);
     }
 
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(DocumentSection::class, 'document_section_id');
+    }
+
     /**
-     * الكلمات المثبتة كاختصارات للزائر (نطاق الوثائق فقط).
+     * الكلمات المثبتة كاختصارات للزائر داخل قسم معيّن.
      */
-    public static function orderedKeywords(bool $withDocumentCounts = false): Collection
+    public static function orderedKeywordsForSection(int $sectionId, bool $withDocumentCounts = false): Collection
     {
         $pins = static::query()
-            ->with(['keyword' => function ($q) use ($withDocumentCounts) {
+            ->where('document_section_id', $sectionId)
+            ->with(['keyword' => function ($q) use ($withDocumentCounts, $sectionId) {
                 $q->where('scope', 'document');
                 if ($withDocumentCounts) {
-                    $q->withCount(['documents as section_docs_count' => function ($docs) {
-                        $docs->published();
+                    $q->withCount(['documents as section_docs_count' => function ($docs) use ($sectionId) {
+                        $docs->published()->where('section_id', $sectionId);
                     }]);
                 }
             }])
@@ -50,6 +58,7 @@ class DocumentPinnedKeyword extends Model
             $keyword->pivot = (object) [
                 'sort_order' => $pin->sort_order,
                 'label_override' => $pin->label_override,
+                'document_section_id' => $pin->document_section_id,
             ];
 
             return $keyword;
@@ -57,9 +66,17 @@ class DocumentPinnedKeyword extends Model
     }
 
     /**
+     * @deprecated استخدم orderedKeywordsForSection
+     */
+    public static function orderedKeywords(bool $withDocumentCounts = false): Collection
+    {
+        return collect();
+    }
+
+    /**
      * @param array<int, string>|string|null $names
      */
-    public static function syncFromNames($names): void
+    public static function syncFromNames($names, int $sectionId): void
     {
         $list = self::normalizeNames($names);
         $syncIds = [];
@@ -82,7 +99,10 @@ class DocumentPinnedKeyword extends Model
             }
 
             static::updateOrCreate(
-                ['keyword_id' => $keyword->id],
+                [
+                    'document_section_id' => $sectionId,
+                    'keyword_id' => $keyword->id,
+                ],
                 [
                     'sort_order' => $index,
                     'label_override' => null,
@@ -92,12 +112,14 @@ class DocumentPinnedKeyword extends Model
             $syncIds[] = $keyword->id;
         }
 
+        $query = static::query()->where('document_section_id', $sectionId);
+
         if (empty($syncIds)) {
-            static::query()->delete();
+            $query->delete();
             return;
         }
 
-        static::query()->whereNotIn('keyword_id', $syncIds)->delete();
+        $query->whereNotIn('keyword_id', $syncIds)->delete();
     }
 
     /**
