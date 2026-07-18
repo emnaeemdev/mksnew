@@ -138,6 +138,28 @@
         }
     }
 
+    function positionNativeOverButton(native, pickerBtn) {
+        if (!native || !pickerBtn) return;
+        var group = pickerBtn.closest('.input-group') || pickerBtn.parentElement;
+        if (group) {
+            group.style.position = 'relative';
+        }
+
+        // ضع حقل التاريخ المخفي فوق زر التقويم حتى تفتح القائمة بجواره (مهم في RTL)
+        native.style.position = 'absolute';
+        native.style.left = pickerBtn.offsetLeft + 'px';
+        native.style.top = pickerBtn.offsetTop + 'px';
+        native.style.width = Math.max(pickerBtn.offsetWidth, 40) + 'px';
+        native.style.height = Math.max(pickerBtn.offsetHeight, 38) + 'px';
+        native.style.margin = '0';
+        native.style.padding = '0';
+        native.style.border = '0';
+        native.style.opacity = '0';
+        native.style.pointerEvents = 'none';
+        native.style.zIndex = '5';
+        native.style.colorScheme = 'light';
+    }
+
     function bindSmartDate(root) {
         if (!root || root.dataset.bound === '1') return;
         root.dataset.bound = '1';
@@ -148,12 +170,16 @@
         var hidden = root.querySelector('.date-smart-value');
 
         if (native) {
-            native.style.position = 'absolute';
-            native.style.opacity = '0';
-            native.style.width = '1px';
-            native.style.height = '1px';
-            native.style.pointerEvents = 'none';
             if (hidden && hidden.value) native.value = hidden.value;
+            if (pickerBtn) {
+                positionNativeOverButton(native, pickerBtn);
+            } else {
+                native.style.position = 'absolute';
+                native.style.opacity = '0';
+                native.style.width = '1px';
+                native.style.height = '1px';
+                native.style.pointerEvents = 'none';
+            }
         }
 
         if (display) {
@@ -170,24 +196,24 @@
 
         if (pickerBtn && native) {
             pickerBtn.addEventListener('click', function () {
+                positionNativeOverButton(native, pickerBtn);
                 if (typeof native.showPicker === 'function') {
                     try { native.showPicker(); return; } catch (err) {}
                 }
                 native.style.pointerEvents = 'auto';
-                native.style.opacity = '1';
-                native.style.width = 'auto';
-                native.style.height = 'auto';
                 native.focus();
                 native.click();
+                native.style.pointerEvents = 'none';
             });
             native.addEventListener('change', function () {
                 if (native.value) {
                     applyValue(root, native.value, { updateDisplay: true });
                 }
-                native.style.pointerEvents = 'none';
-                native.style.opacity = '0';
-                native.style.width = '1px';
-                native.style.height = '1px';
+                positionNativeOverButton(native, pickerBtn);
+            });
+
+            window.addEventListener('resize', function () {
+                positionNativeOverButton(native, pickerBtn);
             });
         }
     }

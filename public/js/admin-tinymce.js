@@ -106,7 +106,7 @@ window.initAdminTinyMCE = function (selector, options) {
             'codesample', 'nonbreaking', 'pagebreak', 'save', 'directionality'
         ],
         toolbar: 'undo redo | embedhtml | blocks fontfamily fontsize | bold italic underline | ' +
-            'alignleft aligncenter alignright | numlist bullist | forecolor backcolor | ' +
+            'alignleft aligncenter alignright alignjustify | numlist bullist | forecolor backcolor | ' +
             'image media link | codesample code | fullscreen preview | ltr rtl | help',
         toolbar_mode: 'wrap',
         menubar: 'file edit view insert format tools table help',

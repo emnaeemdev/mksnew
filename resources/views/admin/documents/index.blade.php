@@ -7,19 +7,24 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">إدارة الوثائق</h3>
-                    <div>
-                        <a href="{{ route('admin.documents.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> إضافة وثيقة جديدة
-                        </a>
-                    </div>
+                @php
+                    $currentSectionId = request('section_id') ?: request('section');
+                    $headerSection = $pinnedKeywordsSection
+                        ?? (($currentSectionId ?? null) ? ($sections->firstWhere('id', (int) $currentSectionId) ?? null) : null);
+                    $createUrl = $headerSection
+                        ? route('admin.documents.create', ['section_id' => $headerSection->id])
+                        : route('admin.documents.create');
+                @endphp
+                <div class="card-header">
+                    <h3 class="card-title mb-0">إدارة الوثائق</h3>
+                    @if($headerSection)
+                        <div class="text-muted small mt-1">القسم الحالي: <strong>{{ $headerSection->name }}</strong></div>
+                    @endif
                 </div>
                 
                 <div class="card-body border-bottom">
                     @php
-                        $currentSectionId = request('section_id') ?: request('section');
-                        $pinnedSection = $pinnedKeywordsSection ?? null;
+                        $pinnedSection = $pinnedKeywordsSection ?? $headerSection ?? null;
                     @endphp
 
                     @if($pinnedSection)
@@ -168,13 +173,20 @@
                             </div>
                         @endif
                         
-                        @if(request()->hasAny(['search', 'section_id', 'status', 'featured', 'sort', 'custom_fields']))
-                            <div class="mt-3">
-                                <a href="{{ route('admin.documents.index', request('section_id') ? ['section_id' => request('section_id')] : []) }}" class="btn btn-outline-secondary btn-sm">
+                        <div class="mt-3 d-flex flex-wrap align-items-center gap-2">
+                            <a href="{{ $createUrl }}" class="btn btn-success">
+                                <i class="fas fa-plus-circle me-1"></i>
+                                إضافة وثيقة جديدة
+                                @if($headerSection)
+                                    <span class="d-none d-md-inline">— {{ $headerSection->name }}</span>
+                                @endif
+                            </a>
+                            @if(request()->hasAny(['search', 'section', 'section_id', 'status', 'featured', 'sort', 'custom_fields']))
+                                <a href="{{ route('admin.documents.index', request('section_id') ? ['section_id' => request('section_id')] : []) }}" class="btn btn-outline-secondary">
                                     <i class="fas fa-times"></i> مسح الفلاتر
                                 </a>
-                            </div>
-                        @endif
+                            @endif
+                        </div>
                     </form>
                 </div>
                 
@@ -369,8 +381,11 @@
                                 </a>
                             @else
                                 <p class="text-muted">ابدأ بإضافة وثيقة جديدة.</p>
-                                <a href="{{ route('admin.documents.create') }}" class="btn btn-primary">
-                                    <i class="fas fa-plus"></i> إضافة وثيقة جديدة
+                                <a href="{{ $createUrl }}" class="btn btn-success btn-lg">
+                                    <i class="fas fa-plus-circle"></i> إضافة وثيقة جديدة
+                                    @if($headerSection)
+                                        — {{ $headerSection->name }}
+                                    @endif
                                 </a>
                             @endif
                         </div>

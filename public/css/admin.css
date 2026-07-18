@@ -624,3 +624,18 @@ body {
     flex: 1;
     min-width: 0;
 }
+
+/* حقل التاريخ الذكي: التقويم يفتح بجوار زر الأيقونة */
+.admin-date-smart .input-group {
+    position: relative;
+}
+
+.admin-date-smart .date-smart-native {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    z-index: 5;
+}

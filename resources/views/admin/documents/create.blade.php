@@ -8,8 +8,13 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">إضافة وثيقة جديدة</h3>
-                    <a href="{{ route('admin.documents.index') }}" class="btn btn-secondary">
+                    <div>
+                        <h3 class="card-title mb-0">إضافة وثيقة جديدة</h3>
+                        @if($selectedSection)
+                            <div class="text-muted small mt-1">القسم: <strong>{{ $selectedSection->name }}</strong></div>
+                        @endif
+                    </div>
+                    <a href="{{ $selectedSection ? route('admin.documents.index', ['section_id' => $selectedSection->id]) : route('admin.documents.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> العودة للقائمة
                     </a>
                 </div>
