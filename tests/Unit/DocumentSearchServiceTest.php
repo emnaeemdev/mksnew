@@ -145,4 +145,168 @@ class DocumentSearchServiceTest extends TestCase
         $marked = $this->search->highlightSearchTokensInText($preview, ['صحفيين'], true);
         $this->assertStringContainsString('<mark>', $marked);
     }
+
+    #[Test]
+    public function multi_word_snippet_prefers_phrase_over_single_token(): void
+    {
+        $document = (object) [
+            'content' => 'الحكم صراحة واستقلالا عن كل ركن من أركان حرية التقليد غير لازم. '
+                . 'الإحالة و المحكمة المذكورة قضت قانون حرية الصحافة رقم 96 لسنة 1996.',
+            'excerpt' => '',
+            'title' => 'الطعن رقم 11843',
+            'search_text' => '',
+        ];
+
+        $snippets = $this->search->findDocumentSearchSnippets(
+            $document,
+            'حرية الصحافة',
+            'exact',
+            ['حريه', 'صحافه']
+        );
+
+        $this->assertCount(1, $snippets);
+        $plain = $this->search->snippetToPlainText($snippets[0]);
+        $this->assertStringContainsString('حرية', $plain);
+        $this->assertStringContainsString('الصحافة', $plain);
+        $this->assertStringNotContainsString('التقليد', $plain);
+    }
+
+    #[Test]
+    public function non_adjacent_query_words_each_get_a_snippet(): void
+    {
+        $document = (object) [
+            'content' => 'وردت حرية الرأي في مقدمة النص ثم بعد ذلك ذكرت الصحافة في موضع لاحق قريب.',
+            'excerpt' => '',
+            'title' => 'مثال',
+            'search_text' => '',
+        ];
+
+        $snippets = $this->search->findDocumentSearchSnippets(
+            $document,
+            'حرية الصحافة',
+            'exact',
+            ['حريه', 'صحافه']
+        );
+
+        $this->assertGreaterThanOrEqual(2, count($snippets));
+        $combined = implode(' || ', array_map(fn ($sn) => $this->search->snippetToPlainText($sn), $snippets));
+        $this->assertStringContainsString('حرية', $combined);
+        $this->assertStringContainsString('الصحافة', $combined);
+    }
+
+    #[Test]
+    public function multiple_query_phrases_each_appear_as_snippet(): void
+    {
+        $document = (object) [
+            'content' => '. تقادم . الاعتداء على الحرية الشخصية أو حرمة الحياة الخاصة وغيرها من الحقوق و الحريات العامة. '
+                . 'حو ما نصت عليه المادة ٢٦٥ من قانون الإجراءات الجنائية ، وإن كان يتأدى منه بالضرورة.',
+            'excerpt' => '',
+            'title' => 'الطعن رقم 2257 لسنة 56',
+            'search_text' => '',
+        ];
+
+        $query = 'حرمة الحياة الخاصة قانون الإجراءات الجنائية';
+        $snippets = $this->search->findDocumentSearchSnippets($document, $query, 'exact');
+
+        $this->assertGreaterThanOrEqual(2, count($snippets));
+        $combined = implode(' || ', array_map(fn ($sn) => $this->search->snippetToPlainText($sn), $snippets));
+        $this->assertStringContainsString('حرمة', $combined);
+        $this->assertStringContainsString('الخاصة', $combined);
+        $this->assertStringContainsString('قانون', $combined);
+        $this->assertStringContainsString('الجنائية', $combined);
+
+        $highlight = $this->search->snippetFocusTokens($query);
+        $htmlLines = array_map(
+            fn ($sn) => $this->search->renderSnippetHtml($sn, $highlight),
+            $snippets
+        );
+        $html = implode("\n", $htmlLines);
+        $this->assertStringContainsString('<mark>', $html);
+        $this->assertTrue(
+            (bool) preg_match('/حرمة|الحياة|الخاصة/u', $html)
+            && (bool) preg_match('/قانون|الإجراءات|الجنائية/u', $html),
+            'Expected both query phrases visible: ' . $html
+        );
+    }
+
+    #[Test]
+    public function repeated_word_does_not_create_duplicate_snippets(): void
+    {
+        $document = (object) [
+            'content' => 'حرية التعبير مهمة. وأيضًا حرية الرأي مكفولة. وكذلك حرية الصحافة.',
+            'excerpt' => '',
+            'title' => 'مثال تكرار',
+            'search_text' => '',
+        ];
+
+        $snippets = $this->search->findDocumentSearchSnippets(
+            $document,
+            'حرية',
+            'exact',
+            ['حريه']
+        );
+
+        $this->assertCount(1, $snippets);
+    }
+
+    #[Test]
+    public function render_snippet_highlights_all_query_tokens(): void
+    {
+        $html = $this->search->renderSnippetHtml(
+            [
+                'before' => 'قانون',
+                'match' => 'حرية الصحافة',
+                'after' => 'رقم 96',
+            ],
+            ['حريه', 'صحافه']
+        );
+
+        $this->assertStringContainsString('<mark>', $html);
+        // إما تظليل الجملة كاملة أو كل كلمة على حدة
+        $this->assertTrue(
+            (bool) preg_match('/<mark>[^<]*حري[هة][^<]*الصحاف[هة][^<]*<\/mark>/u', $html)
+            || (
+                preg_match('/<mark>[^<]*حري[هة][^<]*<\/mark>/u', $html)
+                && preg_match('/<mark>[^<]*الصحاف[هة][^<]*<\/mark>/u', $html)
+            ),
+            'Expected both query words highlighted: ' . $html
+        );
+    }
+
+    #[Test]
+    public function snippets_do_not_use_search_text_metadata(): void
+    {
+        $document = (object) [
+            'content' => 'نص الحكم يتحدث عن التقادم فقط دون ذكر الكلمة المطلوبة.',
+            'excerpt' => '',
+            'title' => 'الطعن رقم 62 لسنة 58',
+            'search_text' => 'لما تقدم 2146 1990-11-13 58 حقوق اقتصاديه الصحافه',
+            'search_words' => ' لما تقدم الصحافه ',
+        ];
+
+        $snippets = $this->search->findDocumentSearchSnippets(
+            $document,
+            'صحافة',
+            'any',
+            ['صحافه']
+        );
+
+        $this->assertSame([], $snippets);
+    }
+
+    #[Test]
+    public function classification_select_fields_are_not_indexed_in_content_search(): void
+    {
+        $select = (object) ['field' => (object) ['type' => 'select'], 'value' => 'الصحافة'];
+        $multi = (object) ['field' => (object) ['type' => 'multiselect'], 'value' => 'الصحافة'];
+        $text = (object) ['field' => (object) ['type' => 'text'], 'value' => '2146'];
+        $number = (object) ['field' => (object) ['type' => 'number'], 'value' => '58'];
+        $unknown = (object) ['field' => null, 'value' => 'الصحافة'];
+
+        $this->assertFalse($this->search->shouldIndexFieldValueInContentSearch($select));
+        $this->assertFalse($this->search->shouldIndexFieldValueInContentSearch($multi));
+        $this->assertFalse($this->search->shouldIndexFieldValueInContentSearch($unknown));
+        $this->assertTrue($this->search->shouldIndexFieldValueInContentSearch($text));
+        $this->assertTrue($this->search->shouldIndexFieldValueInContentSearch($number));
+    }
 }

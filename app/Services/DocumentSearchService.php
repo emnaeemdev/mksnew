@@ -51,7 +51,7 @@ class DocumentSearchService
      */
     public function rebuildDocumentIndex(Document $document): void
     {
-        $document->loadMissing('plainFieldValues');
+        $document->loadMissing('plainFieldValues.field');
         $index = $this->buildSearchIndex($document);
         $document->search_text = $index['search_text'];
         $document->search_words = $index['search_words'];
@@ -722,8 +722,32 @@ class DocumentSearchService
     /**
      * @param array{before?:string,match?:string,after?:string} $snippet
      */
-    public function renderSnippetHtml(array $snippet): string
+    public function snippetToPlainText(array $snippet): string
     {
+        $before = trim((string) ($snippet['before'] ?? ''));
+        $match = trim((string) ($snippet['match'] ?? ''));
+        $after = trim((string) ($snippet['after'] ?? ''));
+
+        return $this->collapsePreviewSpaces(trim(implode(' ', array_filter([$before, $match, $after], fn ($p) => $p !== ''))));
+    }
+
+    /**
+     * @param array{before?:string,match?:string,after?:string} $snippet
+     * @param array<int, string> $highlightTokens
+     */
+    public function renderSnippetHtml(array $snippet, array $highlightTokens = []): string
+    {
+        $plain = $this->snippetToPlainText($snippet);
+        if ($plain === '') {
+            return '';
+        }
+
+        $tokens = array_values(array_filter($highlightTokens, fn ($t) => is_string($t) && $t !== ''));
+        if ($tokens !== []) {
+            // e() لا يغيّر الحروف العربية؛ ثم نظلّل كل كلمات البحث في السطر كاملًا
+            return $this->highlightSearchTokensInText(e($plain), $tokens, true);
+        }
+
         $before = (string) ($snippet['before'] ?? '');
         $match = (string) ($snippet['match'] ?? '');
         $after = (string) ($snippet['after'] ?? '');
@@ -759,27 +783,19 @@ class DocumentSearchService
      */
     public function findSnippetInDocument($document, string $normalizedToken, bool $withAlVariant = true, int $contextWords = 8, array $hintTokens = []): ?array
     {
-        $sources = array_values(array_filter([
-            $this->documentDisplaySource($document),
-            is_string($document->search_text ?? null) ? (string) $document->search_text : '',
-            is_string($document->excerpt ?? null) ? (string) $document->excerpt : '',
-            is_string($document->title ?? null) ? (string) $document->title : '',
-        ], fn ($s) => is_string($s) && trim(strip_tags($s)) !== ''));
-
-        foreach (array_unique($sources) as $source) {
-            $sn = $this->findTokenSnippet($source, $normalizedToken, $withAlVariant, $contextWords, $hintTokens);
-            if ($sn !== null) {
-                return $sn;
-            }
+        $source = $this->documentDisplaySource($document);
+        if ($source === '') {
+            return null;
         }
 
-        return null;
+        return $this->findTokenSnippet($source, $normalizedToken, $withAlVariant, $contextWords, $hintTokens);
     }
 
     /**
-     * مقتطف لجملة بحث متعددة الكلمات (مطابقة تامة).
+     * مقتطف لجملة بحث متعددة الكلمات (مطابقة تامة أو متجاورة).
      *
      * @param array<int, string> $tokens
+     * @param array<int, string> $hintTokens
      * @return array{before:string,match:string,after:string}|null
      */
     public function findPhraseSnippetInDocument($document, array $tokens, bool $withAlVariant = true, int $contextWords = 8, array $hintTokens = []): ?array
@@ -795,14 +811,18 @@ class DocumentSearchService
         }
 
         $hints = $hintTokens !== [] ? $hintTokens : $tokens;
+        $pattern = $this->buildArabicPhrasePattern($tokens, $withAlVariant);
         $text = $this->normalizePreviewText($source, $hints);
         if ($text === '') {
             return null;
         }
 
-        $pattern = $this->buildArabicPhrasePattern($tokens, $withAlVariant);
         if (!preg_match($pattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
-            return null;
+            $plain = $this->normalizePreviewText($source, []);
+            if ($plain === '' || $plain === $text || !preg_match($pattern, $plain, $matches, PREG_OFFSET_CAPTURE)) {
+                return null;
+            }
+            $text = $plain;
         }
 
         $matchStr = $matches[1][0];
@@ -824,6 +844,226 @@ class DocumentSearchService
     }
 
     /**
+     * أقرب نافذة نصية تحتوي كل كلمات البحث (حتى لو لم تكن متجاورة تمامًا).
+     *
+     * @param array<int, string> $tokens
+     * @param array<int, string> $hintTokens
+     * @return array{before:string,match:string,after:string}|null
+     */
+    public function findCoOccurrenceSnippetInDocument(
+        $document,
+        array $tokens,
+        bool $withAlVariant = true,
+        int $contextWords = 8,
+        int $maxGapWords = 24,
+        array $hintTokens = []
+    ): ?array {
+        $tokens = array_values(array_unique(array_filter(
+            array_map(fn ($t) => $this->normalizeArabic((string) $t), $tokens),
+            fn ($t) => $t !== '' && mb_strlen($t, 'UTF-8') >= 2
+        )));
+        if (count($tokens) < 2) {
+            return null;
+        }
+
+        $source = $this->documentDisplaySource($document);
+        if ($source === '') {
+            return null;
+        }
+
+        $hints = $hintTokens !== [] ? $hintTokens : $tokens;
+        $best = null; // [span, start, end, words]
+
+        foreach ([$hints, []] as $hintPass) {
+            $text = $this->normalizePreviewText($source, $hintPass);
+            if ($text === '') {
+                continue;
+            }
+
+            $words = preg_split('/[\s\x{00A0}]+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            if (count($words) < 2) {
+                continue;
+            }
+
+            $positions = [];
+            foreach ($tokens as $ti => $token) {
+                $positions[$ti] = [];
+                foreach ($words as $wi => $word) {
+                    if ($this->plainWordMatchesToken($word, $token, $withAlVariant)) {
+                        $positions[$ti][] = $wi;
+                    }
+                }
+                if ($positions[$ti] === []) {
+                    $positions = [];
+                    break;
+                }
+            }
+            if ($positions === []) {
+                continue;
+            }
+
+            $window = $this->bestTokenCoverageWindow($positions, $maxGapWords);
+            if ($window === null) {
+                continue;
+            }
+
+            [$start, $end, $span] = $window;
+            if ($best === null || $span < $best[0]) {
+                $best = [$span, $start, $end, $words];
+                if ($span <= count($tokens) - 1) {
+                    break;
+                }
+            }
+        }
+
+        if ($best === null) {
+            return null;
+        }
+
+        [, $start, $end, $words] = $best;
+        $matchWords = array_slice($words, $start, $end - $start + 1);
+        $beforeWords = array_slice($words, max(0, $start - $contextWords), min($contextWords, $start));
+        $afterWords = array_slice($words, $end + 1, $contextWords);
+
+        return [
+            'before' => $this->collapsePreviewSpaces(implode(' ', $beforeWords)),
+            'match' => $this->collapsePreviewSpaces(implode(' ', $matchWords)),
+            'after' => $this->collapsePreviewSpaces(implode(' ', $afterWords)),
+        ];
+    }
+
+    /**
+     * @param array<int, array<int, int>> $positions
+     * @return array{0:int,1:int,2:int}|null start, end, span
+     */
+    protected function bestTokenCoverageWindow(array $positions, int $maxGapWords): ?array
+    {
+        $tokenCount = count($positions);
+        if ($tokenCount === 0) {
+            return null;
+        }
+
+        // حالتان سريعتان شائعتان
+        if ($tokenCount === 2) {
+            $best = null;
+            foreach ($positions[0] as $i) {
+                foreach ($positions[1] as $j) {
+                    $start = min($i, $j);
+                    $end = max($i, $j);
+                    $span = $end - $start;
+                    if ($span > $maxGapWords) {
+                        continue;
+                    }
+                    if ($best === null || $span < $best[2]) {
+                        $best = [$start, $end, $span];
+                        if ($span <= 1) {
+                            return $best;
+                        }
+                    }
+                }
+            }
+
+            return $best;
+        }
+
+        // عام: لكل ظهور للكلمة الأولى ابحث عن أقرب تغطية لباقي الكلمات
+        $best = null;
+        foreach ($positions[0] as $anchor) {
+            $start = $anchor;
+            $end = $anchor;
+            $ok = true;
+            for ($ti = 1; $ti < $tokenCount; $ti++) {
+                $nearest = null;
+                $nearestDist = null;
+                foreach ($positions[$ti] as $pos) {
+                    $dist = abs($pos - $anchor);
+                    if ($nearestDist === null || $dist < $nearestDist) {
+                        $nearestDist = $dist;
+                        $nearest = $pos;
+                    }
+                }
+                if ($nearest === null) {
+                    $ok = false;
+                    break;
+                }
+                $start = min($start, $nearest);
+                $end = max($end, $nearest);
+            }
+            if (!$ok) {
+                continue;
+            }
+            $span = $end - $start;
+            if ($span > $maxGapWords) {
+                continue;
+            }
+            if ($best === null || $span < $best[2]) {
+                $best = [$start, $end, $span];
+            }
+        }
+
+        return $best;
+    }
+
+    protected function plainWordMatchesToken(string $word, string $normalizedToken, bool $withAlVariant): bool
+    {
+        $wordNorm = $this->normalizeArabic($word);
+        if ($wordNorm === '' || $normalizedToken === '') {
+            return false;
+        }
+
+        $variants = $withAlVariant ? $this->variantsFor($normalizedToken) : [$normalizedToken];
+        foreach ($variants as $variant) {
+            if ($wordNorm === $variant) {
+                return true;
+            }
+            // السماح بمطابقة بدون/مع «ال»
+            if ($withAlVariant) {
+                if (preg_match('/^ال(.+)$/u', $wordNorm, $m) && $m[1] === $variant) {
+                    return true;
+                }
+                if (preg_match('/^ال(.+)$/u', $variant, $m) && $m[1] === $wordNorm) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array{before?:string,match?:string,after?:string} $snippet
+     * @param array<int, string> $tokens
+     */
+    public function scoreSnippetTokenCoverage(array $snippet, array $tokens, bool $withAlVariant = true): int
+    {
+        $plain = $this->snippetToPlainText($snippet);
+        if ($plain === '') {
+            return 0;
+        }
+
+        $words = preg_split('/[\s\x{00A0}]+/u', $plain, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if ($words === []) {
+            return 0;
+        }
+
+        $score = 0;
+        foreach ($tokens as $token) {
+            $token = $this->normalizeArabic((string) $token);
+            if ($token === '' || mb_strlen($token, 'UTF-8') < 2) {
+                continue;
+            }
+            foreach ($words as $word) {
+                if ($this->plainWordMatchesToken($word, $token, $withAlVariant)) {
+                    $score++;
+                    break;
+                }
+            }
+        }
+
+        return $score;
+    }
+
+    /**
      * كلمات التظليل المناسبة لنوع التطابق.
      *
      * @param array<int, string> $entryTokens
@@ -831,21 +1071,91 @@ class DocumentSearchService
      */
     public function highlightTokensForSearch(string $rawSearch, string $matchType = 'any', array $entryTokens = []): array
     {
-        $parsed = $this->parseSearchQuery($rawSearch);
-
-        if ($matchType === 'exact') {
-            return $parsed['tokensForAll'] !== [] ? $parsed['tokensForAll'] : $parsed['tokens'];
-        }
-
-        if ($entryTokens !== []) {
-            return array_values(array_unique(array_filter($entryTokens)));
-        }
-
-        return $parsed['tokensPerWord'] !== [] ? $parsed['tokensPerWord'] : $parsed['tokens'];
+        // كل كلمات الاستعلام للتظليل — حتى تظهر كل أجزاء الجملة الصفراء في المقتطفات
+        return $this->snippetFocusTokens($rawSearch, $entryTokens);
     }
 
     /**
-     * أفضل مقتطف/مقتطفات للعرض مع تسلسل محاولات (جملة كاملة ← جملة مختصرة ← كلمات منفصلة).
+     * بصمة مقتطف لتقليل التكرار (نفس المقطع لا يُعرض مرتين).
+     *
+     * @param array{before?:string,match?:string,after?:string} $snippet
+     */
+    public function snippetFingerprint(array $snippet): string
+    {
+        $match = $this->normalizeArabic(trim((string) ($snippet['match'] ?? '')));
+        if ($match !== '') {
+            return $match;
+        }
+
+        return $this->normalizeArabic($this->snippetToPlainText($snippet));
+    }
+
+    /**
+     * هل المقتطف الجديد يكرر مقطعًا معروضًا بالفعل؟
+     *
+     * @param array{before?:string,match?:string,after?:string} $candidate
+     * @param array<int, array{before?:string,match?:string,after?:string}> $existing
+     */
+    protected function isRedundantSnippet(array $candidate, array $existing): bool
+    {
+        $fp = $this->snippetFingerprint($candidate);
+        if ($fp === '') {
+            return true;
+        }
+
+        foreach ($existing as $sn) {
+            $other = $this->snippetFingerprint($sn);
+            if ($other === '') {
+                continue;
+            }
+            if ($fp === $other) {
+                return true;
+            }
+            // تداخل كبير: أحدهما يحتوي الآخر
+            if (mb_strlen($fp, 'UTF-8') >= 8 && mb_strlen($other, 'UTF-8') >= 8) {
+                if (str_contains($fp, $other) || str_contains($other, $fp)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * كلمات الاستعلام لعرض المقتطفات (كل الأجزاء — بدون حدّ 5 الخاص بتبويبات البحث).
+     *
+     * @param array<int, string> $entryTokens
+     * @return array<int, string>
+     */
+    public function snippetFocusTokens(string $rawSearch, array $entryTokens = []): array
+    {
+        $parsed = $this->parseSearchQuery($rawSearch);
+
+        if ($entryTokens !== []) {
+            $fromEntry = array_values(array_unique(array_filter(
+                array_map(fn ($t) => $this->normalizeArabic((string) $t), $entryTokens),
+                fn ($t) => $t !== '' && mb_strlen($t, 'UTF-8') >= 2
+            )));
+            if ($fromEntry !== []) {
+                return $fromEntry;
+            }
+        }
+
+        if ($parsed['tokensForAll'] !== []) {
+            return $parsed['tokensForAll'];
+        }
+
+        if ($parsed['tokens'] !== []) {
+            return $this->uniqueTokensPreserveOrder($this->contentTokens($parsed['tokens'], 2));
+        }
+
+        return $parsed['tokensPerWord'];
+    }
+
+    /**
+     * أفضل مقتطف/مقتطفات: تغطية كل أجزاء جملة البحث الظاهرة في الوثيقة (جمل متجاورة ثم كلمات)،
+     * مع تظليل لاحق لكل كلمات البحث ودون تكرار نفس المقطع.
      *
      * @param array<int, string> $entryTokens
      * @return array<int, array{before:string,match:string,after:string}>
@@ -857,67 +1167,74 @@ class DocumentSearchService
             return [];
         }
 
-        $parsed = $this->parseSearchQuery($rawSearch);
-        // عند نتيجة لكلمة واحدة: لا تبحث/تفصل باقي كلمات الاستعلام (يمنع تظليل «حريه» داخل «تحريه»)
-        $focusTokens = $entryTokens !== []
-            ? array_values(array_unique(array_filter($entryTokens)))
-            : ($parsed['tokensPerWord'] !== [] ? $parsed['tokensPerWord'] : $parsed['tokens']);
+        $focusTokens = $this->snippetFocusTokens($rawSearch, $entryTokens);
+        if ($focusTokens === []) {
+            return [];
+        }
+
         $hints = $focusTokens;
-
-        $phraseCandidates = [];
-        if ($matchType === 'exact' && count($parsed['tokens']) > 1) {
-            $phraseCandidates[] = $parsed['tokens'];
-        }
-        if ($matchType === 'exact' && count($parsed['tokensPerWord']) > 1) {
-            $phraseCandidates[] = $parsed['tokensPerWord'];
-        }
-        if (count($entryTokens) > 1) {
-            $phraseCandidates[] = $entryTokens;
-        }
-
-        $seenPhrases = [];
-        foreach ($phraseCandidates as $phraseTokens) {
-            if (count($phraseTokens) < 2) {
-                continue;
-            }
-            $key = implode("\x1e", $phraseTokens);
-            if (isset($seenPhrases[$key])) {
-                continue;
-            }
-            $seenPhrases[$key] = true;
-
-            $sn = $this->findPhraseSnippetInDocument($document, $phraseTokens, true, 8, $hints);
-            if ($sn !== null) {
-                return [$sn];
-            }
-        }
-
+        $maxSnippets = 4;
+        $n = count($focusTokens);
+        $covered = array_fill(0, $n, false);
         $snippets = [];
-        foreach (array_slice($focusTokens, 0, 3) as $word) {
-            $sn = $this->findSnippetInDocument($document, $this->normalizeArabic($word), true, 8, $hints);
-            if ($sn !== null) {
-                $snippets[] = $sn;
-            }
-        }
 
-        // احتياطي أخير من search_text/search_words إن فشل مصدر العرض
-        if ($snippets === []) {
-            foreach (array_slice($focusTokens, 0, 3) as $word) {
-                $normalized = $this->normalizeArabic($word);
-                foreach ([$document->search_text ?? '', $document->search_words ?? ''] as $fallbackSource) {
-                    if (!is_string($fallbackSource) || trim($fallbackSource) === '') {
-                        continue;
-                    }
-                    $sn = $this->matchTokenBySpacedScan(
-                        $this->collapsePreviewSpaces($fallbackSource),
-                        $normalized,
-                        true,
-                        8
-                    );
-                    if ($sn !== null) {
-                        $snippets[] = $sn;
+        // 1) أطول مقاطع متجاورة من جملة البحث تظهر في الوثيقة (الأطول أولًا، بترتيب الاستعلام)
+        for ($len = $n; $len >= 1; $len--) {
+            for ($start = 0; $start <= $n - $len; $start++) {
+                if (count($snippets) >= $maxSnippets) {
+                    break 2;
+                }
+
+                $allCovered = true;
+                for ($i = $start; $i < $start + $len; $i++) {
+                    if (!$covered[$i]) {
+                        $allCovered = false;
                         break;
                     }
+                }
+                if ($allCovered) {
+                    continue;
+                }
+
+                $slice = array_slice($focusTokens, $start, $len);
+                $sn = $len === 1
+                    ? $this->findSnippetInDocument($document, $slice[0], true, 8, $hints)
+                    : $this->findPhraseSnippetInDocument($document, $slice, true, 8, $hints);
+
+                if ($sn === null) {
+                    continue;
+                }
+                if ($this->isRedundantSnippet($sn, $snippets)) {
+                    // حتى لو تكرر النص، اعتبر الكلمات مغطاة حتى لا نكرر محاولات بلا فائدة
+                    for ($i = $start; $i < $start + $len; $i++) {
+                        $covered[$i] = true;
+                    }
+                    continue;
+                }
+
+                $snippets[] = $sn;
+                for ($i = $start; $i < $start + $len; $i++) {
+                    $covered[$i] = true;
+                }
+
+                if (!in_array(false, $covered, true)) {
+                    break 2;
+                }
+            }
+        }
+
+        // 2) إن بقيت فجوات متفرقة قريبة في نص الوثيقة فقط (بدون search_text / معلومات الحقول)
+        if (count($snippets) < $maxSnippets) {
+            $uncovered = [];
+            foreach ($focusTokens as $i => $token) {
+                if (!$covered[$i]) {
+                    $uncovered[] = $token;
+                }
+            }
+            if (count($uncovered) >= 2) {
+                $sn = $this->findCoOccurrenceSnippetInDocument($document, $uncovered, true, 8, 24, $hints);
+                if ($sn !== null && !$this->isRedundantSnippet($sn, $snippets)) {
+                    $snippets[] = $sn;
                 }
             }
         }
@@ -1028,14 +1345,14 @@ class DocumentSearchService
             $document->content,
         ];
 
-        $fieldValues = $document->relationLoaded('plainFieldValues')
-            ? $document->plainFieldValues
-            : $document->plainFieldValues()->get();
+        $document->loadMissing('plainFieldValues.field');
+        $fieldValues = $document->plainFieldValues;
 
         foreach ($fieldValues as $fieldValue) {
-            if (!empty($fieldValue->value)) {
-                $parts[] = $fieldValue->value;
+            if (empty($fieldValue->value) || !$this->shouldIndexFieldValueInContentSearch($fieldValue)) {
+                continue;
             }
+            $parts[] = $fieldValue->value;
         }
 
         $combined = implode(' ', array_filter(array_map(function ($part) {
@@ -1047,6 +1364,24 @@ class DocumentSearchService
         }, $parts)));
 
         return $this->normalizeArabic($combined);
+    }
+
+    /**
+     * قيم التصنيف/الاختيار (مثل «الصحافة») لا تدخل بحث النص —
+     * تُستعمل عبر فلاتر الحقول فقط. رقم الطعن والتواريخ النصية تبقى قابلة للبحث.
+     */
+    public function shouldIndexFieldValueInContentSearch($fieldValue): bool
+    {
+        $type = (string) (optional($fieldValue->field)->type ?? '');
+        if ($type === '') {
+            return false;
+        }
+
+        if (in_array($type, ['select', 'multiselect', 'radio', 'checkbox', 'file'], true)) {
+            return false;
+        }
+
+        return in_array($type, ['text', 'textarea', 'number', 'date', 'datetime', 'url', 'email'], true);
     }
 
     public function rebuildSearchText(Document $document): void
@@ -1918,7 +2253,7 @@ class DocumentSearchService
         }
 
         $rankedResults = $this->buildRankedPaginator($baseQuery, $request, $perPage, $rankedBuckets);
-        $uniqueTotal = $rankedResults['paginator']->total();
+        $uniqueTotal = (int) ($rankedResults['unique_total'] ?? $rankedResults['paginator']->total());
         $rankedIds = $this->extractRankedDocumentIds($request, $rankedBuckets);
 
         $scopeCacheKey = $this->searchScopeCacheKey($baseQuery, $searchTerm, $request) . '|ranked_ids';
@@ -2394,10 +2729,6 @@ class DocumentSearchService
         }
 
         $orderedEntries = array_values($orderedEntries);
-        $scopeIdSet = [];
-        foreach ($orderedEntries as $entry) {
-            $scopeIdSet[(int) $entry['id']] = true;
-        }
 
         $pageName = 'page_ranked';
         $total = count($orderedEntries);
@@ -2418,8 +2749,8 @@ class DocumentSearchService
 
         $groups = [];
         foreach ($buckets as $bucket) {
-            $bucketIds = array_map('intval', $bucket['ids'] ?? []);
-            $count = count(array_filter($bucketIds, fn (int $id) => isset($scopeIdSet[$id])));
+            // أعداد التبويبات دائمًا من كل الحاويات — لا تختفي عند اختيار مجموعة
+            $count = count(array_unique(array_map('intval', $bucket['ids'] ?? [])));
             if ($count === 0) {
                 continue;
             }
@@ -2439,7 +2770,23 @@ class DocumentSearchService
                 'pageName' => $pageName,
             ]),
             'groups' => $groups,
+            'unique_total' => $this->countUniqueIdsAcrossBuckets($buckets),
         ];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $buckets
+     */
+    protected function countUniqueIdsAcrossBuckets(array $buckets): int
+    {
+        $ids = [];
+        foreach ($buckets as $bucket) {
+            foreach (($bucket['ids'] ?? []) as $id) {
+                $ids[(int) $id] = true;
+            }
+        }
+
+        return count($ids);
     }
 
     /**

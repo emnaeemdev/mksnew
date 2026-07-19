@@ -24,7 +24,7 @@ class DocumentFieldValueObserver
 
     protected function rebuildParent(DocumentFieldValue $fieldValue): void
     {
-        $document = Document::with('plainFieldValues')->find($fieldValue->document_id);
+        $document = Document::with('plainFieldValues.field')->find($fieldValue->document_id);
         if ($document) {
             $this->searchService->rebuildDocumentIndex($document);
         }

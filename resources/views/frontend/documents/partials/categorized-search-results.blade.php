@@ -22,7 +22,9 @@
     $pageParamKeys = ['page', 'page_ranked', 'page_p', 'page_a', 'page_any', 'page_phrase', 'page_all', 'page_w0', 'page_w1', 'page_w2', 'page_w3', 'page_w4', 'match_group'];
     $baseQuery = request()->except($pageParamKeys);
     $selectedGroup = (string) ($categorizedResults['selected_match_group'] ?? request('match_group', ''));
-    $rankedTotal = ($categorizedResults['ranked'] ?? null) ? (int) $categorizedResults['ranked']->total() : (int) ($categorizedResults['unique_total'] ?? 0);
+    $overallTotal = (int) ($categorizedResults['unique_total'] ?? 0);
+    $filteredTotal = ($categorizedResults['ranked'] ?? null) ? (int) $categorizedResults['ranked']->total() : $overallTotal;
+    $headerTotal = $selectedGroup !== '' ? $filteredTotal : $overallTotal;
 @endphp
 
 <div id="categorized-search-app" data-ajax-search="1" class="ranked-search-app">
@@ -32,7 +34,7 @@
                 <h4 class="ranked-search-title">نتائج البحث</h4>
                 <p class="ranked-search-query mb-0">{{ $raw }}</p>
             </div>
-            <div class="ranked-search-total" data-ranked-search-total>{{ $rankedTotal }} وثيقة</div>
+            <div class="ranked-search-total" data-ranked-search-total>{{ $headerTotal }} وثيقة</div>
         </div>
 
         <div class="ranked-search-summary">
@@ -42,7 +44,7 @@
             </a>
             @foreach($summaryGroups as $group)
                 <a href="{{ request()->url() . '?' . http_build_query(array_merge($baseQuery, ['search' => request('search'), 'sort' => request('sort'), 'per_page' => request('per_page'), 'section_select' => request('section_select'), 'fields' => request('fields'), 'match_group' => $group['key']])) }}"
-                   class="ranked-summary-pill {{ !empty($group['active']) ? 'active' : '' }}">
+                   class="ranked-summary-pill {{ (!empty($group['active']) || $selectedGroup === ($group['key'] ?? '')) ? 'active' : '' }}">
                     {{ $group['label'] }} <strong>{{ $group['count'] }}</strong>
                 </a>
             @endforeach
@@ -76,11 +78,13 @@
         .ranked-search-query{color:#6c757d;font-weight:600}
         .ranked-search-total{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;background:#2b4596;color:#fff;font-weight:700}
         .ranked-search-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
-        .ranked-summary-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:996px;background:#eef3f7;color:#2b4596;text-decoration:none;border:1px solid transparent;font-size:14px}
+        .ranked-summary-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:996px;background:#eef3f7;color:#2b4596;text-decoration:none;border:1px solid transparent;font-size:14px;transition:background .15s ease,color .15s ease,border-color .15s ease,box-shadow .15s ease}
         .ranked-summary-pill:hover{background:#e4ebf3;color:#1f3b87;text-decoration:none}
-        .ranked-summary-pill.active{background:#dfe8fb;border-color:#c6d7f4}
+        .ranked-summary-pill.active{background:#2b4596;color:#fff;border-color:#2b4596;box-shadow:0 2px 8px rgba(43,69,150,.22)}
+        .ranked-summary-pill.active strong{color:#fff}
         .ranked-summary-pill strong{font-size:.92rem}
-        .ranked-summary-clear{background:#fff5e8;color:#b35b00}
+        .ranked-summary-clear{background:#fff5e8;color:#b35b00;border-color:#f0d2a8}
+        .ranked-summary-clear:hover{background:#ffeccf;color:#8f4800}
         .ranked-results-list{display:grid;gap:16px}
         .ranked-result-link,.ranked-result-link:hover,.ranked-result-link:focus,.ranked-result-link:active{display:block;max-width:100%;min-width:0;color:inherit;text-decoration:none}
         .ranked-result-card{background:#fff;border:1px solid #e9640a;border-radius:18px;padding:20px;transition:border-color .2s ease,transform .2s ease;overflow:hidden;max-width:100%;min-width:0}

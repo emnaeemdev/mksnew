@@ -21,7 +21,7 @@ class RebuildDocumentSearchText extends Command
         $bar->start();
 
         Document::query()
-            ->with('plainFieldValues')
+            ->with('plainFieldValues.field')
             ->orderBy('id')
             ->chunkById($chunk, function ($documents) use ($searchService, $bar) {
                 foreach ($documents as $document) {

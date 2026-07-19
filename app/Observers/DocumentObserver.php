@@ -13,7 +13,7 @@ class DocumentObserver
 
     public function saved(Document $document): void
     {
-        $document->loadMissing('plainFieldValues');
+        $document->loadMissing('plainFieldValues.field');
         $index = $this->searchService->buildSearchIndex($document);
 
         if ($document->search_text === $index['search_text'] && $document->search_words === $index['search_words']) {

@@ -143,39 +143,23 @@
 
                             <div class="mt-2 border-top pt-2">
                                 <div class="small text-muted" style="min-height: 80px; max-height: 140px; overflow: hidden; direction: rtl;">
-                                    @if($matchType === 'exact' && !empty($rawSearch))
-                                        @php
-                                            $snippets = $searchHelper->findDocumentSearchSnippets($document, (string) $rawSearch, $matchType, is_array($tokens) ? $tokens : []);
-                                        @endphp
-                                        @foreach($snippets as $sn)
-                                            <div>{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
-                                        @endforeach
-                                    @elseif($matchType === 'all')
-                                        @php
-                                            $words = isset($tokens) && is_array($tokens) ? $tokens : preg_split('/\s+/u', trim(request('search', '')), -1, PREG_SPLIT_NO_EMPTY);
-                                        @endphp
-                                        @foreach(array_unique(array_filter($words)) as $w)
-                                            @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($w), true, 8, $words); @endphp
-                                            @if($sn)
-                                                <div>{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
-                                            @endif
-                                        @endforeach
-                                    @elseif($matchType === 'any' && (!empty($tokens) || !empty($word)))
-                                        @php
-                                            $highlightWords = !empty($tokens) && is_array($tokens)
-                                                ? array_unique(array_filter($tokens))
-                                                : array_filter([$word ?? '']);
-                                        @endphp
-                                        @foreach($highlightWords as $w)
-                                            @php $sn = $searchHelper->findSnippetInDocument($document, $searchHelper->normalizeArabic($w), true, 8, $highlightWords); @endphp
-                                            @if($sn)
-                                                <div>{!! $searchHelper->renderSnippetHtml($sn) !!}</div>
-                                            @endif
-                                        @endforeach
-                                        @if(empty($highlightWords))
-                                            <div class="text-muted">لم يُعثر على مقطع مطابق في النص المعروض.</div>
-                                        @endif
-                                    @endif
+                                    @php
+                                        $rawSearchText = trim((string) ($rawSearch ?? request('search', '')));
+                                        $snippetTokens = !empty($tokens) && is_array($tokens)
+                                            ? array_values(array_unique(array_filter($tokens)))
+                                            : array_values(array_filter([$word ?? '']));
+                                        $highlightWords = $rawSearchText !== ''
+                                            ? $searchHelper->highlightTokensForSearch($rawSearchText, $matchType, $snippetTokens)
+                                            : $snippetTokens;
+                                        $snippets = $rawSearchText !== ''
+                                            ? $searchHelper->findDocumentSearchSnippets($document, $rawSearchText, $matchType, $snippetTokens)
+                                            : [];
+                                    @endphp
+                                    @forelse($snippets as $sn)
+                                        <div>{!! $searchHelper->renderSnippetHtml($sn, $highlightWords) !!}</div>
+                                    @empty
+                                        <div class="text-muted">لم يُعثر على مقطع مطابق في النص المعروض.</div>
+                                    @endforelse
                                 </div>
                             </div>
                     </div>

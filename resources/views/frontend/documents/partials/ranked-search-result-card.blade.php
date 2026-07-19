@@ -36,7 +36,7 @@
 
     $snippetHtml = '';
     foreach ($snippets as $sn) {
-        $line = trim($searchHelper->renderSnippetHtml($sn));
+        $line = trim($searchHelper->renderSnippetHtml($sn, $highlightWords));
         if ($line !== '') {
             $snippetHtml .= '<div class="ranked-result-snippet-line">' . $line . '</div>';
         }
