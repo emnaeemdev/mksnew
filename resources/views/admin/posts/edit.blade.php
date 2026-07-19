@@ -902,21 +902,22 @@
                     </div>
                     
                     <!-- Submit Buttons -->
-                    <div class="d-flex justify-content-between">
-                        <a href="{{ route('admin.posts.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>
-                            إلغاء
-                        </a>
-                        
-                        <div>
-                            <a href="{{ ($post->category && $post->category->name) ? route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) : route('posts.index') }}" class="btn btn-outline-info me-2" target="_blank" rel="noopener">
-                                <i class="fas fa-eye me-2"></i>
-                                عرض
-                            </a>
+                    <div class="admin-form-actions">
+                        <div class="admin-form-actions__primary">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>
                                 حفظ التغييرات
                             </button>
+                            <a href="{{ ($post->category && $post->category->name) ? route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) : route('posts.index') }}" class="btn btn-outline-info" target="_blank" rel="noopener">
+                                <i class="fas fa-eye me-2"></i>
+                                عرض
+                            </a>
+                        </div>
+                        <div class="admin-form-actions__secondary">
+                            <a href="{{ route('admin.posts.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>
+                                إلغاء
+                            </a>
                         </div>
                     </div>
                 </form>

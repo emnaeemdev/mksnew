@@ -301,24 +301,24 @@
                     </div>
                     
                     <!-- Submit Buttons -->
-                    <div class="admin-form-actions">
-                        <div class="admin-form-actions__secondary">
-                            <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-2"></i>
-                                إلغاء
-                            </a>
+                        <div class="admin-form-actions">
+                            <div class="admin-form-actions__primary">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>
+                                    حفظ التغييرات
+                                </button>
+                                <a href="{{ route('admin.categories.show', $category) }}" class="btn btn-outline-info">
+                                    <i class="fas fa-eye me-2"></i>
+                                    عرض
+                                </a>
+                            </div>
+                            <div class="admin-form-actions__secondary">
+                                <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-2"></i>
+                                    إلغاء
+                                </a>
+                            </div>
                         </div>
-                        <div class="admin-form-actions__primary">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i>
-                                حفظ التغييرات
-                            </button>
-                            <a href="{{ route('admin.categories.show', $category) }}" class="btn btn-outline-info">
-                                <i class="fas fa-eye me-2"></i>
-                                عرض
-                            </a>
-                        </div>
-                    </div>
                 </form>
             </div>
         </div>

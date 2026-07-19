@@ -159,15 +159,18 @@
                     
                     <!-- Submit Buttons -->
                     <div class="admin-form-actions">
-                        <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>
-                            إلغاء
-                        </a>
-                        
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>
-                            حفظ القسم
-                        </button>
+                        <div class="admin-form-actions__primary">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                حفظ القسم
+                            </button>
+                        </div>
+                        <div class="admin-form-actions__secondary">
+                            <a href="{{ route('admin.categories.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>
+                                إلغاء
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>

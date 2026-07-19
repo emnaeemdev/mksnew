@@ -27,7 +27,7 @@
     @yield('styles')
     @stack('styles')
 </head>
-<body>
+<body class="@yield('body_class')">
     <!-- Header -->
     @include('frontend.partials.header')
     

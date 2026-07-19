@@ -26,6 +26,9 @@ Route::group([
     'middleware' => [\Illuminate\Routing\Middleware\SubstituteBindings::class, 'setlocale'],
 ], function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::get('/home1', [HomeController::class, 'home1'])->name('home1');
+    Route::get('/home2', [HomeController::class, 'home2'])->name('home2');
+    Route::get('/home3', [HomeController::class, 'home3'])->name('home3');
 
     // Posts Routes
     Route::get('/posts', [PostController::class, 'index'])->name('posts.index');

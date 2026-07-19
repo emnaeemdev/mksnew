@@ -637,18 +637,19 @@
                     </div>
                     
                     <!-- Submit Buttons -->
-                    <div class="d-flex justify-content-between">
-
-                        
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>
-                            حفظ الموضوع
-                        </button>
-
-                        <a href="{{ route('admin.posts.index', request('category') ? ['category' => request('category')] : (isset($selectedCategoryId) && $selectedCategoryId ? ['category' => $selectedCategoryId] : [])) }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2"></i>
-                            إلغاء
-                        </a>
+                    <div class="admin-form-actions">
+                        <div class="admin-form-actions__primary">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                حفظ الموضوع
+                            </button>
+                        </div>
+                        <div class="admin-form-actions__secondary">
+                            <a href="{{ route('admin.posts.index', request('category') ? ['category' => request('category')] : (isset($selectedCategoryId) && $selectedCategoryId ? ['category' => $selectedCategoryId] : [])) }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>
+                                إلغاء
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -48,7 +48,7 @@
                     </a>
                 </li>
             @endif
-
+<hr>
             <li class="nav-item">
                 <div class="sidebar-doc-row">
                     <a class="nav-link {{ request()->routeIs('admin.nashras.*') ? 'active' : '' }}"
@@ -66,7 +66,7 @@
                     </a>
                 </div>
             </li>
-
+<hr>
             <li class="nav-item">
                 <div class="sidebar-doc-row">
                     <a class="nav-link {{ request()->routeIs('admin.podcasts.*') ? 'active' : '' }}"
@@ -84,8 +84,8 @@
                     </a>
                 </div>
             </li>
+<hr>
 
-            <li class="sidebar-divider" aria-hidden="true"></li>
 
             <li class="nav-item sidebar-section">
                 <span class="sidebar-heading">إضافة أو تعديل وثائق</span>

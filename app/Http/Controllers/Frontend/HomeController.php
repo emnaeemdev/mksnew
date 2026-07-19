@@ -19,7 +19,26 @@ class HomeController extends Controller
         return $this->renderHomePage('frontend.home');
     }
 
-    private function renderHomePage(string $viewTemplate)
+    /**
+     * تصاميم تجريبية للصفحة الرئيسية — بدون مبدّل تصميم في الواجهة.
+     * افتح: /ar/home1 أو /ar/home2
+     */
+    public function home1($locale = null)
+    {
+        return $this->renderHomePage('frontend.home1', lockTemplate: true);
+    }
+
+    public function home2($locale = null)
+    {
+        return $this->renderHomePage('frontend.home2', lockTemplate: true);
+    }
+
+    public function home3($locale = null)
+    {
+        return $this->renderHomePage('frontend.home3', lockTemplate: true);
+    }
+
+    private function renderHomePage(string $viewTemplate, bool $lockTemplate = false)
     {
         $currentLocale = app()->getLocale();
         
@@ -46,7 +65,7 @@ class HomeController extends Controller
                                ->forReleasesAr()
                                ->orderBy('sort_order')
                                ->orderBy('published_at', 'desc')
-                               ->limit(4)
+                               ->limit(5)
                                ->get();
         } else {
             $releasePosts = Post::published()
@@ -119,7 +138,7 @@ class HomeController extends Controller
                 ];
             });
 
-        if ($currentLocale === 'en') {
+        if (!$lockTemplate && $currentLocale === 'en') {
             $viewTemplate = 'frontend.home-en';
         }
 

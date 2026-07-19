@@ -12,7 +12,7 @@
     width:100%;max-width:100%;margin:0 auto;padding-inline:clamp(.75rem,2vw,1.5rem)
 }
 .pc-shell{display:grid;gap:1.25rem;max-width:1320px;margin-inline:auto}
-.pc-card{background:#fff;border:1px solid var(--pc-line);border-radius:18px;overflow:hidden}
+.pc-card{background:#fff;border:1px dashed rgb(0 101 251 / 62%);border-radius:18px;overflow:hidden}
 .pc-card-pad{padding:1.25rem}
 .pc-hero{display:grid;grid-template-columns:minmax(260px,34%) 1fr;align-items:stretch}
 .pc-cover-wrap{position:relative;background:#e9eef6}

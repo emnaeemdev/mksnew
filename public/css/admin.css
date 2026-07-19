@@ -450,9 +450,11 @@ body {
     
 }
 
+/* أزرار النماذج: الحفظ يمين (أول زر) — الإلغاء شمال */
+.admin-form-actions,
 .main-content form .admin-form-actions {
     display: flex;
-    flex-direction: row-reverse;
+    flex-direction: row;
     justify-content: space-between;
     align-items: center;
     width: 100%;
@@ -460,6 +462,8 @@ body {
     gap: 0.5rem;
 }
 
+.admin-form-actions__secondary,
+.admin-form-actions__primary,
 .main-content form .admin-form-actions__secondary,
 .main-content form .admin-form-actions__primary {
     display: flex;
@@ -468,9 +472,49 @@ body {
     align-items: center;
 }
 
+/* في RTL: order الأصغر يظهر يمينًا أولًا */
+.admin-form-actions__primary,
+.main-content form .admin-form-actions__primary {
+    order: 1;
+}
+
+.admin-form-actions__secondary,
+.main-content form .admin-form-actions__secondary {
+    order: 2;
+}
+
+/* نماذج بدون غلاف primary/secondary — أزرار مباشرة */
+.admin-form-actions > button[type="submit"],
+.admin-form-actions > .btn-primary,
+.admin-form-actions > .btn-success {
+    order: 1;
+}
+
+.admin-form-actions > .btn-secondary,
+.admin-form-actions > .btn-outline-secondary,
+.admin-form-actions > .btn-outline-danger,
+.admin-form-actions > a.btn:not(.btn-primary):not(.btn-success):not(.btn-info):not(.btn-outline-info) {
+    order: 2;
+}
+
+.admin-form-actions > .btn-info,
+.admin-form-actions > a.btn-outline-info,
+.admin-form-actions > a.btn-info {
+    order: 1;
+}
+
+/* غلاف بدون class (إلغاء/حذف) يروح للشمال */
+.admin-form-actions > div:not(.admin-form-actions__primary):not(.admin-form-actions__secondary) {
+    order: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
 .main-content form .admin-form-actions__primary > button[type="submit"],
 .main-content form .admin-form-actions__primary > .btn[type="submit"] {
-    order: -1;
+    order: unset;
 }
 
 .main-content .table-hover > tbody > tr:hover {

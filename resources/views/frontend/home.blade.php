@@ -120,7 +120,7 @@
         </h2>
         @if(isset($releasePosts) && $releasePosts->count() > 0)
             <div class="row">
-                @foreach($releasePosts as $post)
+                @foreach($releasePosts->take(4) as $post)
                     <div class="col-md-3 mb-4">
                     <a href="{{ route('content.show', [app()->getLocale(), $post->category->name_en ?: $post->category->slug, $post->id]) }}">
                              <div class="main-blog-title-t">

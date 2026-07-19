@@ -352,12 +352,7 @@
     <!-- أيقونة القسم وعدد الوثائق (تحت الفلتر) -->
     <div class="row mb-4">
         <div class="col-12 text-center">
-            <div class="mb-2">
-                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
-                     style="width: 36px; height: 36px;">
-                    <i class="fas fa-folder-open text-primary"></i>
-                </div>
-            </div>
+
             @php
                 $docsCountBadge = isset($keywordDocuments)
                     ? $keywordDocuments->total()
@@ -370,6 +365,12 @@
                             : ($totalDocuments ?? 0))));
             @endphp
             @if(trim((string) request('search', '')) === '')
+            <div class="mb-2">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                     style="width: 36px; height: 36px;">
+                    <i class="fas fa-folder-open text-primary"></i>
+                </div>
+            </div>
                 <span class="badge bg-primary fs-6" data-section-docs-count>{{ $docsCountBadge }} وثيقة</span>
             @endif
         </div>
