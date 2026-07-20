@@ -113,6 +113,7 @@
                                     <span class="h3-docs__idx">{{ str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) }}</span>
                                     <i class="fas {{ $link['icon'] }}"></i>
                                     <span class="h3-docs__name">{{ $link['title'] }}</span>
+                                    <span class="h3-docs__count">{{ number_format((int) ($link['count'] ?? 0)) }}</span>
                                 </a>
                             </li>
                         @endforeach

@@ -45,12 +45,26 @@
                 </p>
             </div>
 
-            <nav class="g1-flow g1-rise" style="--d:.1s" aria-label="{{ $isAr ? 'قنوات' : 'Channels' }}">
-                <a href="{{ url('/'.$locale.'/posts?category=nawafez') }}">مجلة نوافذ</a>
-                <a href="{{ route('frontend.podcasts.index', [$locale]) }}">بودكاست محكمة</a>
-                <a href="{{ route('frontend.nashras.index', [$locale]) }}">نشرة الذاكرة القانونية</a>
-                <a href="{{ $didYouKnowUrl ?? '#' }}">هل تعلم</a>
-            </nav>
+            <div class="g1-channels-panel g1-rise" style="--d:.1s">
+                <nav class="g1-channels" aria-label="{{ $isAr ? 'قنوات' : 'Channels' }}">
+                    <a href="{{ url('/'.$locale.'/posts?category=nawafez') }}" class="g1-channels__link">
+                        <span class="g1-channels__ico" aria-hidden="true"><i class="fas fa-window-restore"></i></span>
+                        <span class="g1-channels__label">مجلة نوافذ</span>
+                    </a>
+                    <a href="{{ route('frontend.podcasts.index', [$locale]) }}" class="g1-channels__link">
+                        <span class="g1-channels__ico" aria-hidden="true"><i class="fas fa-podcast"></i></span>
+                        <span class="g1-channels__label">بودكاست محكمة</span>
+                    </a>
+                    <a href="{{ route('frontend.nashras.index', [$locale]) }}" class="g1-channels__link">
+                        <span class="g1-channels__ico" aria-hidden="true"><i class="fas fa-newspaper"></i></span>
+                        <span class="g1-channels__label">نشرة الذاكرة القانونية</span>
+                    </a>
+                    <a href="{{ $didYouKnowUrl ?? '#' }}" class="g1-channels__link">
+                        <span class="g1-channels__ico" aria-hidden="true"><i class="fas fa-lightbulb"></i></span>
+                        <span class="g1-channels__label">هل تعلم</span>
+                    </a>
+                </nav>
+            </div>
 
             @if($mainPost)
                 @php $secTwo = $sec->take(2); @endphp
@@ -91,18 +105,22 @@
     @if($isAr && ($homeDocumentLinks ?? collect())->isNotEmpty())
         <section class="g1-docs">
             <div class="container">
-                <div class="g1-docs__head g1-rise">
-                    <h2>وثائق قانونية</h2>
-                    <!-- <p>اختصارات سريعة لأقسام الوثائق الأساسية</p> -->
-                </div>
-                <div class="g1-docs__row">
-                    @foreach($homeDocumentLinks as $i => $link)
-                        <a href="{{ $link['url'] }}" class="g1-path g1-rise" style="--d: {{ 0.05 + $i * 0.04 }}s">
-                            <span class="g1-path__num">{{ str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) }}</span>
-                            <i class="fas {{ $link['icon'] }}"></i>
-                            <strong>{{ $link['title'] }}</strong>
+                <div class="g1-docs__panel g1-rise">
+                    <!-- <div class="g1-docs__head">
+                        <h2>وثائق قانونية</h2>
+                        <a class="g1-docs__all" href="{{ route('frontend.documents.index', [$locale]) }}">
+                            كل الوثائق
+                            <i class="fas fa-arrow-left"></i>
                         </a>
-                    @endforeach
+                    </div> -->
+                    <nav class="g1-docs__nav" aria-label="أقسام الوثائق">
+                        @foreach($homeDocumentLinks as $i => $link)
+                            <a href="{{ $link['url'] }}" class="g1-docs__link g1-rise" style="--d: {{ 0.06 + $i * 0.04 }}s">
+                                <span class="g1-docs__ico" aria-hidden="true"><i class="fas {{ $link['icon'] }}"></i></span>
+                                <span class="g1-docs__label">{{ $link['title'] }}</span>
+                            </a>
+                        @endforeach
+                    </nav>
                 </div>
             </div>
         </section>

@@ -12,7 +12,7 @@
 <nav class="section-keyword-strip mb-3" aria-label="مجموعات وثائق سريعة">
     <div class="section-keyword-strip__label">
         <i class="fas fa-layer-group"></i>
-        <span>بحث بالملف</span>
+        <span> بحث سريع </span>
     </div>
     <div class="section-keyword-strip__scroll">
         <a href="{{ $keywordListQuery ? ($baseUrl . '?' . http_build_query($keywordListQuery)) : $baseUrl }}"

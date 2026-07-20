@@ -129,12 +129,16 @@ class HomeController extends Controller
 
         $homeDocumentLinks = DocumentSection::active()
             ->forHomepage()
+            ->withCount(['documents as published_documents_count' => function ($query) {
+                $query->where('is_published', true);
+            }])
             ->get()
             ->map(function (DocumentSection $section) use ($currentLocale) {
                 return [
                     'title' => $section->home_label ?: $section->name,
                     'icon' => $section->home_icon ?: 'fa-folder',
                     'url' => route('frontend.documents.section', [$currentLocale, $section->slug]),
+                    'count' => (int) ($section->published_documents_count ?? 0),
                 ];
             });
 

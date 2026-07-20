@@ -154,7 +154,7 @@ body {
     padding: 15px;
     /* border-radius: 8px; */
     margin-top: 9px;
-    border: 3px solid #FF5733;
+    border: 1px solid #FF5733;
     border-radius: var(--bs-border-radius);
 }
 
@@ -196,7 +196,7 @@ body {
 
 /* ✅ إطار الصورة الرئيسية (ثابت حتى مع hover) */
 .main-image {
-    border: 3px solid #2b4596;
+    border: 2px solid #2b4596;
     border-radius: var(--bs-border-radius);
     overflow: hidden;
     margin-top: 10px;
@@ -219,7 +219,7 @@ body {
 
 /* ✅ إطار الصور الفرعية (ثابت حتى مع hover) */
 .small-image .main-blog-title {
-    border: 2px solid #FF5733;
+    border: 1px solid #FF5733;
     border-radius: var(--bs-border-radius);
     overflow: hidden;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
@@ -482,10 +482,11 @@ li {
 
 
   .effect-img {
-    border: 3px solid #ddd;
+    border: 1px dashed #2b4596;
     border-radius: 15px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     height: 400px;
+    padding: 0px;
   }
 
   .effect-img:hover {

@@ -1,4 +1,4 @@
-/* Home concept 1 — معرض الأغلفة (هيكل مختلف تمامًا، بدون كحلي ثقيل في الأعلى) */
+/* Home concept 1 ? ???? ??????? (???? ????? ??????? ???? ???? ???? ?? ??????) */
 .g1 {
     --ink: #1a2438;
     --muted: #667388;
@@ -48,7 +48,7 @@
     transform: none;
 }
 
-/* Intro — brand first, light */
+/* Intro ? brand first, light */
 .g1-top { padding: 1.25rem 0 1.25rem; }
 
 .g1-intro {
@@ -82,37 +82,84 @@
     line-height: 1.55;
 }
 
-/* Channel flow — text links, no heavy panels */
-.g1-flow {
+/* Channels ? same panel as docs, orange accent on the physical left */
+.g1-channels-panel {
+    position: relative;
+    margin: 0 auto 1.15rem;
+    padding: 1.5rem 1.35rem 1.4rem;
+    border-radius: 22px;
+    background: linear-gradient(216deg, rgb(233 100 10 / 35%), rgba(248, 250, 253, 0.88)), radial-gradient(ellipse 80% 70% at 0% 0%, rgba(227, 91, 24, 0.07), transparent 55%);
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 28px rgba(40, 60, 90, 0.04);
+    overflow: hidden;
+}
+
+.g1-channels-panel::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.1rem;
+    bottom: 1.1rem;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #2b4596, rgb(213 194 185 / 15%));
+}
+
+.g1-channels {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 0.4rem 0.3rem;
-    margin-bottom: 1rem;
+    gap: 0.55rem;
 }
 
-.g1-flow a {
-    position: relative;
-    padding: 0.35rem 0.8rem;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--ink);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.72);
-    border: 1px solid var(--line);
-    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
-}
-
-.g1-flow a:hover {
-    color: var(--accent);
-    border-color: rgba(227, 91, 24, 0.45);
+.g1-channels__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    padding: 0.65rem 0.95rem 0.65rem 0.7rem;
+    border-radius: 5px;
     background: #fff;
+    border: 1px solid rgba(26, 36, 56, 0.08);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.g1-channels__link:hover {
     transform: translateY(-2px);
+    border-color: rgba(227, 91, 24, 0.4);
+    box-shadow: 0 8px 20px rgba(227, 91, 24, 0.1);
+    background: #fffaf6;
+}
+
+.g1-channels__ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 50%;
+    background: rgba(61, 90, 128, 0.08);
+    color: #3d5a80;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+    transition: background 0.22s ease, color 0.22s ease;
+}
+
+.g1-channels__link:hover .g1-channels__ico {
+    background: rgba(227, 91, 24, 0.12);
+    color: var(--accent);
+}
+
+.g1-channels__label {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
 }
 
 /*
-  رئيسي يمين (في RTL) + عمودان فرعيان بالطول شمال
-  العنوان فوق الصورة مباشرة
+  ????? ???? (?? RTL) + ?????? ?????? ?????? ????
+  ??????? ??? ?????? ??????
 */
 .g1-mosaic {
     display: grid;
@@ -239,69 +286,116 @@
     overflow: hidden;
 }
 
-/* Docs — numbered paths, light surfaces */
+/* Docs ? soft archive directory (no numbered cards) */
 .g1-docs {
-    padding: 1rem 0 2.75rem;
+    padding: 0.5rem 0 2.5rem;
+}
+
+.g1-docs__panel {
+    position: relative;
+    padding: 1.5rem 1.35rem 1.4rem;
+    border-radius: 22px;
+    background: linear-gradient(117deg, rgb(43 69 150 / 46%), rgba(248, 250, 253, 0.88)), radial-gradient(ellipse 80% 70% at 100% 0%, rgba(227, 91, 24, 0.07), transparent 55%);
+    border: 1px solid var(--line);
+    box-shadow: 0 10px 28px rgba(40, 60, 90, 0.04);
+    overflow: hidden;
+}
+
+.g1-docs__panel::before {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 1.1rem;
+    bottom: 1.1rem;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, var(--accent), rgba(227, 91, 24, 0.15));
 }
 
 .g1-docs__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+    padding-inline-start: 0.85rem;
     text-align: center;
-    margin-bottom: 1.35rem;
 }
 
 .g1-docs__head h2 {
-    margin: 0 0 0.35rem;
+    margin: 0;
     font-family: var(--display);
-    font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+    font-size: clamp(1.35rem, 2.1vw, 1.7rem);
     font-weight: 700;
 }
 
-.g1-docs__head p {
-    margin: 0;
-    color: var(--muted);
-}
-
-.g1-docs__row {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0.75rem;
-}
-
-.g1-path {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.7rem;
-    padding: 1.15rem 1rem 1.2rem;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.g1-path:hover {
-    transform: translateY(-4px);
-    border-color: rgba(227, 91, 24, 0.35);
-    box-shadow: 0 14px 30px rgba(40, 60, 90, 0.08);
-}
-
-.g1-path__num {
-    font-size: 0.72rem;
+.g1-docs__all {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: var(--accent);
-    opacity: 0.85;
+    transition: gap 0.2s ease, color 0.2s ease;
 }
 
-.g1-path i {
-    font-size: 1.35rem;
+.g1-docs__all:hover {
+    gap: 0.55rem;
+    color: #c44a10;
+}
+
+.g1-docs__nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.55rem;
+    padding-inline-start: 0.85rem;
+}
+
+.g1-docs__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    padding: 0.65rem 0.95rem 0.65rem 0.7rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid rgba(26, 36, 56, 0.08);
+    transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.g1-docs__link:hover {
+    transform: translateY(-2px);
+    border-color: rgba(227, 91, 24, 0.4);
+    box-shadow: 0 8px 20px rgba(227, 91, 24, 0.1);
+    background: #fffaf6;
+}
+
+.g1-docs__ico {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 50%;
+    background: rgba(61, 90, 128, 0.08);
     color: #3d5a80;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+    transition: background 0.22s ease, color 0.22s ease;
 }
 
-.g1-path strong {
-    font-size: 0.9rem;
+.g1-docs__link:hover .g1-docs__ico {
+    background: rgba(227, 91, 24, 0.12);
+    color: var(--accent);
+}
+
+.g1-docs__label {
+    font-size: 0.92rem;
     font-weight: 700;
-    line-height: 1.4;
+    line-height: 1.3;
+    color: var(--ink);
 }
 
 /* Shelf */
@@ -409,8 +503,16 @@
         height: auto;
     }
 
-    .g1-docs__row {
-        grid-template-columns: repeat(2, 1fr);
+    .g1-docs__nav {
+        gap: 0.45rem;
+    }
+
+    .g1-docs__link {
+        padding: 0.55rem 0.8rem 0.55rem 0.55rem;
+    }
+
+    .g1-docs__label {
+        font-size: 0.86rem;
     }
 }
 
@@ -428,12 +530,39 @@
         max-height: 200px;
     }
 
-    .g1-docs__row { grid-template-columns: 1fr; }
+    .g1-docs__panel {
+        padding: 1.25rem 1rem 1.15rem;
+    }
+
+    .g1-channels-panel {
+        padding: 1.25rem 1rem 1.15rem;
+    }
+
+    .g1-docs__nav {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .g1-docs__link {
+        width: auto;
+        min-width: min(100%, 16rem);
+        justify-content: center;
+    }
+
     .g1-book { width: 168px; }
-    .g1-flow a { font-size: 0.85rem; }
+
+    .g1-channels {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .g1-channels__link {
+        width: auto;
+        min-width: min(100%, 16rem);
+    }
 }
 
-/* Footer tuned for home1 � same content, matching light gallery look */
+/* Footer tuned for home1 ? same content, matching light gallery look */
 body.concept-home1 .footer {
     background: #fbfcfe;
     color: #1a2438;

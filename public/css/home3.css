@@ -303,7 +303,7 @@
 
 .h3-docs__list a {
     display: grid;
-    grid-template-columns: 2.5rem 1.5rem 1fr;
+    grid-template-columns: 2.5rem 1.5rem 1fr auto;
     gap: 0.85rem;
     align-items: center;
     padding: 0.95rem 0.25rem;
@@ -330,6 +330,18 @@
 .h3-docs__name {
     font-weight: 700;
     font-size: 0.98rem;
+}
+
+.h3-docs__count {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.55);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.h3-docs__list a:hover .h3-docs__count {
+    color: #ffb891;
 }
 
 /* ========== Publications ========== */
