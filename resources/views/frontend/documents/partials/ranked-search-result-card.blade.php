@@ -52,48 +52,25 @@
         }
     }
 
-    $footerFieldTargets = [
-        'case_number' => ['رقم الحكم', 'رقم الطعن', 'رقم القضية'],
-        'issue_date' => ['تاريخ الإصدار', 'تاريخ الحكم', 'تاريخ النطق'],
-        'judicial_year' => ['السنة القضائية'],
-        'judgment_category' => ['تصنيف الحكم'],
-    ];
-
-    $footerFieldValues = [
-        'case_number' => null,
-        'issue_date' => null,
-        'judicial_year' => null,
-        'judgment_category' => null,
-    ];
-
-    foreach (($document->plainFieldValues ?? collect()) as $fieldValue) {
-        $fieldLabel = trim((string) ($fieldValue->field->label ?? ''));
-        if ($fieldLabel === '' || $fieldValue->value === null || $fieldValue->value === '') {
-            continue;
-        }
-
-        foreach ($footerFieldTargets as $key => $possibleLabels) {
-            if ($footerFieldValues[$key] !== null) {
-                continue;
+    $displayFieldValues = collect($document->plainFieldValues ?? [])
+        ->filter(function ($fieldValue) {
+            if (!$fieldValue->relationLoaded('field') || !$fieldValue->field) {
+                return false;
             }
 
-            foreach ($possibleLabels as $possibleLabel) {
-                if (str_contains($fieldLabel, $possibleLabel)) {
-                    $footerFieldValues[$key] = $fieldValue->field->type === 'date'
-                        ? \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d')
-                        : trim((string) $fieldValue->value);
-                    break;
-                }
+            if (method_exists($fieldValue->field, 'trashed') && $fieldValue->field->trashed()) {
+                return false;
             }
-        }
-    }
 
-    $footerTags = array_filter([
-        'رقم الحكم' => $footerFieldValues['case_number'],
-        'تاريخ الإصدار' => $footerFieldValues['issue_date'],
-        'السنة القضائية' => $footerFieldValues['judicial_year'],
-        'تصنيف الحكم' => $footerFieldValues['judgment_category'],
-    ], fn ($value) => $value !== null && $value !== '');
+            if ($fieldValue->value === null || trim((string) $fieldValue->value) === '') {
+                return false;
+            }
+
+            return in_array($fieldValue->field->type, ['select', 'date', 'text'], true);
+        })
+        ->sortBy(fn ($fieldValue) => $fieldValue->field->sort_order ?? 999)
+        ->take(5)
+        ->values();
 @endphp
 
 <a href="{{ $documentShowUrl }}" class="text-decoration-none ranked-result-link">
@@ -129,12 +106,16 @@
 
         <div class="ranked-result-footer">
             <span class="ranked-result-open">عرض الوثيقة</span>
-            @if(!empty($footerTags))
+            @if($displayFieldValues->isNotEmpty())
                 <div class="ranked-result-footer-tags">
-                    @foreach($footerTags as $tagLabel => $tagValue)
+                    @foreach($displayFieldValues as $fieldValue)
                         <span class="ranked-result-footer-tag">
-                            <strong>{{ $tagLabel }}:</strong>
-                            {{ $tagValue }}
+                            <strong>{{ $fieldValue->field->label }}:</strong>
+                            @if($fieldValue->field->type === 'date')
+                                {{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}
+                            @else
+                                {{ $fieldValue->value }}
+                            @endif
                         </span>
                     @endforeach
                 </div>
