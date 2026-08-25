@@ -136,32 +136,46 @@
                                     <div class="col-md-3 mb-3">
                                         <label for="custom_field_{{ $field->id }}" class="form-label">{{ $field->label }}</label>
                                         @if($field->type === 'select')
-                                            <select class="form-select" id="custom_field_{{ $field->id }}" name="custom_fields[{{ $field->id }}]">
+                                            <select class="form-select admin-field-filter" id="custom_field_{{ $field->id }}" name="custom_fields[{{ $field->id }}]" onchange="document.getElementById('filterForm').submit()">
                                                 <option value="">اختر...</option>
                                                 @if(isset($field->options_with_counts))
                                                     @foreach($field->options_with_counts as $optionData)
-                                                        <option value="{{ $optionData['value'] }}" {{ request("custom_fields.{$field->id}") == $optionData['value'] ? 'selected' : '' }}>
-                                                            {{ $optionData['label'] }} ({{ $optionData['count'] }})
-                                                        </option>
+                                                        @if($optionData['visible'] ?? true)
+                                                            <option value="{{ $optionData['value'] }}" {{ request("custom_fields.{$field->id}") == $optionData['value'] ? 'selected' : '' }}>
+                                                                {{ $optionData['label'] }} ({{ $optionData['count'] }})
+                                                            </option>
+                                                        @endif
                                                     @endforeach
                                                 @else
                                                     @foreach($field->options as $option)
-                                                        <option value="{{ $option }}" {{ request("custom_fields.{$field->id}") == $option ? 'selected' : '' }}>{{ $option }}</option>
+                                                        @php
+                                                            [$optionValue, $optionLabel] = is_array($option)
+                                                                ? [($option['value'] ?? $option['label'] ?? ''), ($option['label'] ?? $option['value'] ?? '')]
+                                                                : [$option, $option];
+                                                        @endphp
+                                                        <option value="{{ $optionValue }}" {{ request("custom_fields.{$field->id}") == $optionValue ? 'selected' : '' }}>{{ $optionLabel }}</option>
                                                     @endforeach
                                                 @endif
                                             </select>
                                         @elseif($field->type === 'multiselect')
-                                            <select class="form-select" id="custom_field_{{ $field->id }}" name="custom_fields[{{ $field->id }}]">
+                                            <select class="form-select admin-field-filter" id="custom_field_{{ $field->id }}" name="custom_fields[{{ $field->id }}]" onchange="document.getElementById('filterForm').submit()">
                                                 <option value="">اختر...</option>
                                                 @if(isset($field->options_with_counts))
                                                     @foreach($field->options_with_counts as $optionData)
-                                                        <option value="{{ $optionData['value'] }}" {{ request("custom_fields.{$field->id}") == $optionData['value'] ? 'selected' : '' }}>
-                                                            {{ $optionData['label'] }} ({{ $optionData['count'] }})
-                                                        </option>
+                                                        @if($optionData['visible'] ?? true)
+                                                            <option value="{{ $optionData['value'] }}" {{ request("custom_fields.{$field->id}") == $optionData['value'] ? 'selected' : '' }}>
+                                                                {{ $optionData['label'] }} ({{ $optionData['count'] }})
+                                                            </option>
+                                                        @endif
                                                     @endforeach
                                                 @else
                                                     @foreach($field->options as $option)
-                                                        <option value="{{ $option }}" {{ request("custom_fields.{$field->id}") == $option ? 'selected' : '' }}>{{ $option }}</option>
+                                                        @php
+                                                            [$optionValue, $optionLabel] = is_array($option)
+                                                                ? [($option['value'] ?? $option['label'] ?? ''), ($option['label'] ?? $option['value'] ?? '')]
+                                                                : [$option, $option];
+                                                        @endphp
+                                                        <option value="{{ $optionValue }}" {{ request("custom_fields.{$field->id}") == $optionValue ? 'selected' : '' }}>{{ $optionLabel }}</option>
                                                     @endforeach
                                                 @endif
                                             </select>

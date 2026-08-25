@@ -668,16 +668,13 @@ class LegacyContentImporter
 
     protected function createNashra(object $row): void
     {
-        $sheetId = trim((string) ($row->url ?? ''));
-        $driveUrl = $sheetId !== ''
-            ? "https://docs.google.com/spreadsheets/d/{$sheetId}/edit"
-            : '';
+        $parsed = Nashra::parseGoogleSheetReference($row->url ?? null);
 
         Nashra::create([
             'title_ar' => Str::limit((string) ($row->title_ar ?? ''), 255, ''),
             'subtitle_ar' => filled($row->sub_title ?? null) ? Str::limit((string) $row->sub_title, 255, '') : null,
-            'google_drive_url' => $driveUrl,
-            'google_sheet_id' => $sheetId ?: null,
+            'google_drive_url' => $parsed['url'],
+            'google_sheet_id' => $parsed['id'],
             'published_at' => $this->normalizeDateTime($row->post_date ?? $row->created_at ?? now()),
             'content_ar' => filled($row->description_ar ?? null) ? $this->prepareHtml((string) $row->description_ar) : null,
             'featured_image' => $this->migrateMediaPath($row->main_image ?? null),

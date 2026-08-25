@@ -31,14 +31,79 @@ class Nashra extends Model
     ];
 
     /**
+     * Parse a Google Sheets URL or bare spreadsheet ID.
+     *
+     * @return array{url: string, id: ?string}
+     */
+    public static function parseGoogleSheetReference(?string $raw): array
+    {
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return ['url' => '', 'id' => null];
+        }
+
+        $working = $raw;
+        while (str_contains($working, 'docs.google.com/spreadsheets/d/')) {
+            if (preg_match('#https?://docs\.google\.com/spreadsheets/d/(.+)$#i', $working, $matches)) {
+                $inner = trim($matches[1]);
+                if (str_starts_with($inner, 'http://') || str_starts_with($inner, 'https://')) {
+                    $working = $inner;
+                    continue;
+                }
+
+                $url = 'https://docs.google.com/spreadsheets/d/' . ltrim($inner, '/');
+                $url = self::normalizeGoogleSheetUrl($url);
+                $id = self::extractSheetIdFromUrl($url);
+
+                return ['url' => $url, 'id' => $id];
+            }
+
+            break;
+        }
+
+        if (preg_match('/^[a-zA-Z0-9-_]{20,}$/', $working)) {
+            return [
+                'url' => 'https://docs.google.com/spreadsheets/d/' . $working . '/edit',
+                'id' => $working,
+            ];
+        }
+
+        if (preg_match_all('/\/spreadsheets\/d\/([a-zA-Z0-9-_]{20,})/', $working, $idMatches)) {
+            $id = end($idMatches[1]);
+
+            return [
+                'url' => 'https://docs.google.com/spreadsheets/d/' . $id . '/edit',
+                'id' => $id,
+            ];
+        }
+
+        return ['url' => $raw, 'id' => null];
+    }
+
+    public static function normalizeGoogleSheetUrl(string $url): string
+    {
+        $url = rtrim(trim($url), '/');
+        $url = preg_replace('#(/edit)+$#', '/edit', $url) ?? $url;
+        $url = preg_replace('~(#gid=\d+)/edit$~', '$1', $url) ?? $url;
+
+        return $url;
+    }
+
+    protected static function extractSheetIdFromUrl(string $url): ?string
+    {
+        if (preg_match_all('/\/spreadsheets\/d\/([a-zA-Z0-9-_]{20,})/', $url, $matches)) {
+            return end($matches[1]) ?: null;
+        }
+
+        return null;
+    }
+
+    /**
      * استخراج معرف Google Sheet من الرابط
      */
-    public function extractGoogleSheetId()
+    public function extractGoogleSheetId(): ?string
     {
-        if (preg_match('/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/', $this->google_drive_url, $matches)) {
-            return $matches[1];
-        }
-        return null;
+        return self::parseGoogleSheetReference($this->google_drive_url)['id'];
     }
 
     /**
@@ -47,11 +112,15 @@ class Nashra extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::saving(function ($nashra) {
-            if ($nashra->google_drive_url) {
-                $nashra->google_sheet_id = $nashra->extractGoogleSheetId();
+            if (! $nashra->google_drive_url) {
+                return;
             }
+
+            $parsed = self::parseGoogleSheetReference($nashra->google_drive_url);
+            $nashra->google_drive_url = $parsed['url'];
+            $nashra->google_sheet_id = $parsed['id'];
         });
     }
 

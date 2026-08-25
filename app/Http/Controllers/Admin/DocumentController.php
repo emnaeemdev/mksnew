@@ -8,6 +8,7 @@ use App\Models\DocumentSection;
 use App\Models\DocumentCustomField;
 use App\Models\DocumentFieldValue;
 use App\Models\DocumentFile;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
@@ -26,85 +27,32 @@ class DocumentController extends Controller
 
     public function index(Request $request)
     {
+        $sectionId = $this->resolveAdminSectionId($request);
+
         $query = Document::with(['section', 'user', 'fieldValues.field'])
             ->withSum('files as downloads_sum', 'download_count')
             ->withCount('files')
             ->orderBy('sort_order')
             ->orderByDesc('published_at');
 
-        // تصفية حسب القسم
-        $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
         if ($sectionId) {
             $query->where('section_id', $sectionId);
         }
 
-        // تصفية حسب الحالة
-        if ($request->filled('status')) {
-            if ($request->status === 'published') {
-                $query->published();
-            } elseif ($request->status === 'draft') {
-                $query->draft();
-            }
-        }
-
-        // البحث في العنوان والمحتوى
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%")
-                  ->orWhere('excerpt', 'like', "%{$search}%");
-            });
-        }
-
-        // فلترة حسب الحقول المخصصة
-        if ($request->filled('custom_fields')) {
-            foreach ($request->custom_fields as $fieldId => $value) {
-                if (!empty($value)) {
-                    $query->whereHas('fieldValues', function($q) use ($fieldId, $value) {
-                        $q->where('field_id', $fieldId)
-                          ->where('value', 'like', "%{$value}%");
-                    });
-                }
-            }
-        }
+        $this->applyAdminListingFilters($query, $request);
 
         $documents = $query->paginate(15);
         $sections = DocumentSection::active()->withCount('documents')->orderBy('sort_order')->get();
         
-        // جلب الحقول المخصصة للقسم المحدد
         $customFields = collect();
-        $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
         if ($sectionId) {
             $selectedSection = DocumentSection::find($sectionId);
             if ($selectedSection) {
                 $customFields = $selectedSection->activeCustomFields()->get();
-                
-                // إضافة عدد الوثائق لكل خيار في الحقول المخصصة
-                foreach ($customFields as $field) {
-                    if (in_array($field->type, ['select', 'multiselect']) && $field->options) {
-                        $optionsWithCounts = [];
-                        foreach ($field->options as $option) {
-                            $count = \App\Models\DocumentFieldValue::where('field_id', $field->id)
-                                ->where('value', 'like', "%{$option}%")
-                                ->whereHas('document', function($q) use ($sectionId) {
-                                    $q->where('section_id', $sectionId);
-                                })
-                                ->count();
-                            $optionsWithCounts[] = [
-                                'value' => $option,
-                                'label' => $option,
-                                'count' => $count
-                            ];
-                        }
-                        $field->options_with_counts = $optionsWithCounts;
-                    }
-                }
+                $this->attachAdminFieldOptionCounts($customFields, (int) $sectionId, $request);
             }
         }
         
-        // إحصائيات الوثائق
-        $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
         $stats = [
             'total_all' => Document::count(),
             'section_total' => $sectionId ? Document::where('section_id', $sectionId)->count() : null,
@@ -722,6 +670,162 @@ class DocumentController extends Controller
                 ];
             })
         ]);
+    }
+
+    protected function resolveAdminSectionId(Request $request): ?int
+    {
+        $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
+
+        return $sectionId ? (int) $sectionId : null;
+    }
+
+    protected function buildAdminDocumentsFilterQuery(Request $request, int $sectionId): Builder
+    {
+        $query = Document::query()->where('section_id', $sectionId);
+        $this->applyAdminListingFilters($query, $request, applyCustomFields: false);
+
+        return $query;
+    }
+
+    protected function applyAdminListingFilters(Builder $query, Request $request, bool $applyCustomFields = true, ?int $excludeCustomFieldId = null): Builder
+    {
+        if ($request->filled('status')) {
+            if ($request->status === 'published') {
+                $query->published();
+            } elseif ($request->status === 'draft') {
+                $query->draft();
+            }
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('content', 'like', "%{$search}%")
+                    ->orWhere('excerpt', 'like', "%{$search}%");
+            });
+        }
+
+        if (!$applyCustomFields || !$request->filled('custom_fields')) {
+            return $query;
+        }
+
+        $customFields = null;
+        $sectionId = $this->resolveAdminSectionId($request);
+        if ($sectionId) {
+            $section = DocumentSection::find($sectionId);
+            if ($section) {
+                $customFields = $section->activeCustomFields()->get()->keyBy('id');
+            }
+        }
+
+        foreach ($request->custom_fields as $fieldId => $value) {
+            $fieldId = (int) $fieldId;
+            if ($excludeCustomFieldId !== null && $fieldId === $excludeCustomFieldId) {
+                continue;
+            }
+
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $field = $customFields?->get($fieldId);
+            $this->applyAdminCustomFieldFilter($query, $field, $fieldId, $value);
+        }
+
+        return $query;
+    }
+
+    protected function applyAdminCustomFieldFilter(Builder $query, ?DocumentCustomField $field, int $fieldId, mixed $value): void
+    {
+        if (in_array($field?->type, ['select', 'radio'], true)) {
+            $query->whereHas('fieldValues', function ($q) use ($fieldId, $value) {
+                $q->where('field_id', $fieldId)->where('value', $value);
+            });
+
+            return;
+        }
+
+        $query->whereHas('fieldValues', function ($q) use ($fieldId, $value) {
+            $q->where('field_id', $fieldId)->where('value', 'like', '%' . $value . '%');
+        });
+    }
+
+    protected function normalizeAdminFieldOption(mixed $option): array
+    {
+        if (is_array($option)) {
+            $value = (string) ($option['value'] ?? $option['label'] ?? '');
+            $label = (string) ($option['label'] ?? $value);
+
+            return [$value, $label];
+        }
+
+        $value = (string) $option;
+
+        return [$value, $value];
+    }
+
+    protected function attachAdminFieldOptionCounts($customFields, int $sectionId, Request $request): void
+    {
+        $hasActiveFilters = $request->filled('search')
+            || $request->filled('status')
+            || collect($request->input('custom_fields', []))
+                ->filter(fn ($value) => $value !== null && $value !== '')
+                ->isNotEmpty();
+
+        foreach ($customFields as $field) {
+            if (!in_array($field->type, ['select', 'multiselect', 'radio'], true) || empty($field->options)) {
+                continue;
+            }
+
+            $fieldQuery = $this->buildAdminDocumentsFilterQuery($request, $sectionId);
+            $this->applyAdminListingFilters($fieldQuery, $request, applyCustomFields: true, excludeCustomFieldId: $field->id);
+
+            $rows = [];
+            if (in_array($field->type, ['select', 'radio'], true)) {
+                $rows = (clone $fieldQuery)
+                    ->join('document_field_values as dfv', 'documents.id', '=', 'dfv.document_id')
+                    ->where('dfv.field_id', $field->id)
+                    ->selectRaw('dfv.value as val, COUNT(DISTINCT documents.id) as cnt')
+                    ->groupBy('dfv.value')
+                    ->pluck('cnt', 'val')
+                    ->toArray();
+            } else {
+                foreach ($field->options as $option) {
+                    [$optionValue] = $this->normalizeAdminFieldOption($option);
+                    if ($optionValue === '') {
+                        continue;
+                    }
+
+                    $rows[$optionValue] = (clone $fieldQuery)
+                        ->whereHas('fieldValues', function ($q) use ($field, $optionValue) {
+                            $q->where('field_id', $field->id)
+                                ->where('value', 'like', '%' . $optionValue . '%');
+                        })
+                        ->count();
+                }
+            }
+
+            $selectedValue = (string) $request->input("custom_fields.{$field->id}", '');
+            $optionsWithCounts = [];
+
+            foreach ($field->options as $option) {
+                [$optionValue, $optionLabel] = $this->normalizeAdminFieldOption($option);
+                if ($optionValue === '') {
+                    continue;
+                }
+
+                $count = (int) ($rows[$optionValue] ?? 0);
+                $optionsWithCounts[] = [
+                    'value' => $optionValue,
+                    'label' => $optionLabel,
+                    'count' => $count,
+                    'visible' => !$hasActiveFilters || $count > 0 || $selectedValue === $optionValue,
+                ];
+            }
+
+            $field->options_with_counts = $optionsWithCounts;
+        }
     }
 
     protected function storeCustomFieldFiles(Request $request, int|string $fieldId): array

@@ -68,10 +68,7 @@
 
 @once
     <style>
-        .ranked-search-app,
-        .ranked-search-shell,
-        .ranked-results-content,
-        .ranked-results-list{max-width:100%;min-width:0;overflow-x:hidden}
+        .ranked-search-app{max-width:100%;min-width:0;overflow-x:hidden}
         .ranked-search-shell{background:#fff;border:1px solid #e8edf3;border-radius:18px;padding:22px;max-width:100%;min-width:0;overflow:hidden}
         .ranked-search-header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:18px}
         .ranked-search-title{margin:0 0 6px;color:#2b4596;font-weight:700}
@@ -85,10 +82,12 @@
         .ranked-summary-pill strong{font-size:.92rem}
         .ranked-summary-clear{background:#fff5e8;color:#b35b00;border-color:#f0d2a8}
         .ranked-summary-clear:hover{background:#ffeccf;color:#8f4800}
+        .ranked-results-content,
+        .ranked-results-list{max-width:100%;min-width:0}
         .ranked-results-list{display:grid;gap:16px}
         .ranked-result-link,.ranked-result-link:hover,.ranked-result-link:focus,.ranked-result-link:active{display:block;max-width:100%;min-width:0;color:inherit;text-decoration:none}
-        .ranked-result-card{background:#fff;border:1px solid #e9640a;border-radius:18px;padding:20px;transition:border-color .2s ease,transform .2s ease;overflow:hidden;max-width:100%;min-width:0}
-        .ranked-result-link:hover .ranked-result-card{border-color:#e9640a;transform:translateY(-2px)}
+        .ranked-result-card{background:#fff;border:1px solid #e9640a;border-radius:18px;padding:20px;transition:border-color .2s ease,transform .2s ease,background-color .2s ease;max-width:100%;min-width:0}
+        .ranked-result-link:hover .ranked-result-card{border-color:#d9540a;transform:translateY(-2px);background:#fffdfb}
         .ranked-result-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
         .ranked-result-tags{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
         .ranked-result-section,.ranked-result-label{display:inline-flex;align-items:center;padding:6px 11px;border-radius:999px;font-size:.82rem;font-weight:700;max-width:100%}
