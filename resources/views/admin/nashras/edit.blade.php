@@ -177,7 +177,9 @@
                                 @error('featured_image')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <div class="form-text">الصيغ المدعومة: JPG, PNG, GIF (الحد الأقصى: 50MB) - اتركه فارغاً للاحتفاظ بالصورة الحالية</div>
+                                <div class="form-text">الصيغ المدعومة: JPG, PNG, GIF (الحد الأقصى: 50MB) - اتركه فارغاً للاحتفاظ بالصورة الحالية
+                                    <br>المقاس المقترح: <strong>500×600</strong> بكسل — قريب من حجم بطاقة النشرة على الموقع
+                                </div>
                             </div>
                             
                             <!-- ملف PDF -->

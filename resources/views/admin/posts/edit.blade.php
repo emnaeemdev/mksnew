@@ -270,6 +270,7 @@
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
                             الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                            <br>المقاس المقترح: <strong>640×800</strong> بكسل (عمودي 4:5) — يكفي لبطاقة المقال والجوانب في الرئيسية
                         </div>
                         <div id="featured-preview-ar" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة الصورة المميزة العربية">
@@ -317,6 +318,7 @@
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
                             الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                            <br>المقاس المقترح: <strong>1920×500</strong> بكسل (شريط عريض) — مطابق لخلفية صفحة المقال (~عرض الشاشة × ارتفاع ~500px)
                         </div>
                         <div id="bg-preview-ar" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة صورة الخلفية العربية">
@@ -369,6 +371,7 @@
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
                             الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                            <br>المقاس المقترح: <strong>640×800</strong> بكسل (عمودي 4:5) — يكفي لبطاقة المقال والجوانب في الرئيسية
                         </div>
                         <div id="featured-preview-en" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة الصورة المميزة الإنجليزية">
@@ -416,6 +419,7 @@
                         <div class="form-text">
                             <i class="fas fa-info-circle me-1"></i>
                             الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                            <br>المقاس المقترح: <strong>1920×500</strong> بكسل (شريط عريض) — مطابق لخلفية صفحة المقال (~عرض الشاشة × ارتفاع ~500px)
                         </div>
                         <div id="bg-preview-en" class="image-preview" style="display: none;">
                             <img src="" alt="معاينة صورة الخلفية الإنجليزية">

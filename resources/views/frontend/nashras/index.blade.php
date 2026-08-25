@@ -27,20 +27,24 @@
 
     <div class="container">
         @if($nashras->count() > 0)
-            <div class="row">
+            <div class="row g-3 g-md-4">
                 @foreach($nashras as $nashra)
-                    <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="col-12 col-sm-6 col-lg-4">
                         <div class="post-card">
                             <a href="{{ route('frontend.nashras.show', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}"
                                class="text-decoration-none">
                                 @if($nashra->featured_image)
                                     <img src="{{ $nashra->featured_image_url }}"
                                          class="post-image post-image-hover"
-                                         alt="{{ $nashra->title_ar }}">
+                                         alt="{{ $nashra->title_ar }}"
+                                         loading="lazy"
+                                         decoding="async">
                                 @else
                                     <img src="{{ asset('images/placeholder.jpg') }}"
                                          class="post-image post-image-hover"
-                                         alt="{{ $nashra->title_ar }}">
+                                         alt="{{ $nashra->title_ar }}"
+                                         loading="lazy"
+                                         decoding="async">
                                 @endif
                             </a>
 

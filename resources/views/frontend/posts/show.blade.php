@@ -154,9 +154,6 @@
                                             <i class="fas fa-download me-1"></i>
                                             {{ $currentLocale == 'ar' ? 'تحميل' : 'Download' }}
                                         </a>
-                                        <div class="mt-2 text-muted small">
-                                            {{ $currentLocale == 'ar' ? 'عدد التحميلات' : 'Downloads' }}: {{ $file->download_count ?? 0 }}
-                                        </div>
                                     </div>
                                 </div>
                             </div>

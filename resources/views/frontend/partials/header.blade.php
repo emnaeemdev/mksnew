@@ -1,8 +1,11 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
     <div class="container">
         <a class="navbar-brand fw-bold" href="{{ route('home') }}">
-           
-            <img alt="Logo" src="{{ asset('images/logo-arabic-header_mks.png') }}" class="footer_logo" style="width: 100%;" />
+            @if(app()->getLocale() == 'ar')
+                <img alt="Logo" src="{{ asset('images/logo-arabic-header_mks.png') }}" class="footer_logo" style="width: 100%;" />
+            @else
+                <img alt="Logo" src="{{ asset('images/logo_header_en_mks.png') }}" class="footer_logo" style="width: 100%;" />
+            @endif
         </a>
         
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -89,19 +92,19 @@
                     <!-- empty -->
                 @endif
                 
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about', [app()->getLocale()]) }}">
-                       
-                        {{ __('messages.about') }}
-                    </a>
-                </li>
-                
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact', [app()->getLocale()]) }}">
-                       
-                        {{ __('messages.contact') }}
-                    </a>
-                </li>
+                @if(app()->getLocale() == 'ar')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about', [app()->getLocale()]) }}">
+                            {{ __('messages.about') }}
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('contact') ? 'active' : '' }}" href="{{ route('contact', [app()->getLocale()]) }}">
+                            {{ __('messages.contact') }}
+                        </a>
+                    </li>
+                @endif
             </ul>
             
             <div class="d-flex align-items-center gap-2">

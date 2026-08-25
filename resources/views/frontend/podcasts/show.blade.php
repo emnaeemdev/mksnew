@@ -257,10 +257,10 @@
                                href="{{ $activeLinks['soundcloud'] ?? '#' }}" target="_blank" rel="noopener">
                                 <i class="fab fa-soundcloud"></i> SoundCloud
                             </a>
-                            <a data-social="youtube" class="{{ !empty($activeLinks['youtube']) ? 'is-visible' : '' }}"
+                            <!-- <a data-social="youtube" class="{{ !empty($activeLinks['youtube']) ? 'is-visible' : '' }}"
                                href="{{ $activeLinks['youtube'] ?? '#' }}" target="_blank" rel="noopener">
                                 <i class="fab fa-youtube"></i> YouTube
-                            </a>
+                            </a> -->
                         </div>
                     @else
                         <div class="alert alert-light border mb-0">

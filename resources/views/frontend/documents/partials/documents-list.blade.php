@@ -34,7 +34,7 @@
                         </div>
                         
                         <h5 class="card-title">
-                            <a href="{{ route('content.show', [app()->getLocale(), $section->name, $document->id]) }}" 
+                            <a href="{{ route('content.show', [app()->getLocale(), $section->slug ?? $section->name, $document->publicId()]) }}" 
                                class="text-decoration-none text-dark">
                                 {{ Str::limit($document->title, 60) }}
                             </a>

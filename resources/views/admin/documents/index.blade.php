@@ -254,6 +254,8 @@
                                         <th width="15%">القسم</th>
                                         <th width="10%">الحالة</th>
                                         <th width="10%">المشاهدات</th>
+                                        <th width="10%">الملفات</th>
+                                        <th width="10%">التحميلات</th>
                                         <th width="10%">التاريخ</th>
                                         <th width="10%">الإجراءات</th>
                                     </tr>
@@ -307,6 +309,20 @@
                                             </td>
                                             <td>
                                                 <span class="badge bg-info">{{ number_format($document->views_count) }}</span>
+                                            </td>
+                                            <td>
+                                                @if(($document->files_count ?? 0) > 0)
+                                                    <span class="badge bg-info">
+                                                        <i class="fas fa-file"></i> {{ (int) $document->files_count }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary" title="إجمالي تحميلات الملفات">
+                                                    <i class="fas fa-download"></i> {{ number_format((int) ($document->downloads_sum ?? 0)) }}
+                                                </span>
                                             </td>
                                             <td>
                                                 <small>{{ $document->published_at->format('Y-m-d') }}</small>

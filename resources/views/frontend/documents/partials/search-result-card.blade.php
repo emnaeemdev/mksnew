@@ -3,8 +3,8 @@
         $locale = app()->getLocale();
         $sectionSlug = optional($document->section)->slug;
         $documentShowUrl = $sectionSlug
-            ? route('content.show', [$locale, $sectionSlug, $document->id])
-            : route('content.show', [$locale, 'documents', $document->id]);
+            ? route('content.show', [$locale, $sectionSlug, $document->publicId()])
+            : route('content.show', [$locale, 'documents', $document->publicId()]);
         $searchHelper = app(\App\Services\DocumentSearchService::class);
         $searchParam = trim((string) request('search', $rawSearch ?? ''));
         if ($searchParam !== '') {

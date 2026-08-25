@@ -57,6 +57,9 @@
                         <img src="{{ asset('storage/'.$podcast->cover_image_path) }}" class="img-fluid mb-2 d-block rounded" style="max-height:150px;object-fit:cover" alt="">
                     @endif
                     <input type="file" name="cover_image" class="form-control" accept="image/*">
+                    <div class="form-text">الحد الأقصى: 50MB، الأنواع المدعومة: JPG, PNG, GIF
+                        <br>المقاس المقترح: <strong>800×800</strong> بكسل (مربع) — يكفي لغلاف البودكاست على الموقع
+                    </div>
                 </div>
             </div>
         </div>

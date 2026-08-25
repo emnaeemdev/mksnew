@@ -38,6 +38,7 @@
                                     <th width="15%">العنوان الفرعي</th>
                                     <th width="10%">تاريخ النشر</th>
                                     <th width="10%">الحالة</th>
+                                    <th width="10%">التحميلات</th>
                                     <th width="10%">ترتيب العرض</th>
                                     <th width="10%">الإجراءات</th>
                                 </tr>
@@ -87,6 +88,11 @@
                                             </form>
                                         </td>
                                         <td>
+                                            <span class="badge bg-secondary" title="عدد التحميلات">
+                                                <i class="fas fa-download"></i> {{ number_format((int) ($nashra->download_count ?? 0)) }}
+                                            </span>
+                                        </td>
+                                        <td>
                                             <span class="badge bg-info">{{ $nashra->sort_order }}</span>
                                         </td>
                                         <td>
@@ -124,7 +130,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted py-4">
+                                        <td colspan="8" class="text-center text-muted py-4">
                                             <i class="fas fa-newspaper fa-3x mb-3"></i>
                                             <p>لا توجد نشرات حتى الآن</p>
                                             <a href="{{ route('admin.nashras.create') }}" class="btn btn-primary">

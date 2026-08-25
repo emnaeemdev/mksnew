@@ -15,12 +15,14 @@ class DocumentFile extends Model
         'display_name',
         'file_size',
         'mime_type',
-        'sort_order'
+        'sort_order',
+        'download_count',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
-        'sort_order' => 'integer'
+        'sort_order' => 'integer',
+        'download_count' => 'integer',
     ];
 
     public function document(): BelongsTo

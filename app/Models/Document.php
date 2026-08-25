@@ -14,6 +14,7 @@ class Document extends Model
 
     protected $fillable = [
         'section_id',
+        'legacy_id',
         'title',
         'slug',
         'content',
@@ -35,7 +36,16 @@ class Document extends Model
         'published_at' => 'datetime',
         'views_count' => 'integer',
         'sort_order' => 'integer',
+        'legacy_id' => 'integer',
     ];
+
+    /**
+     * رقم الوثيقة الظاهر في روابط الواجهة (رقم الموقع القديم إن وجد).
+     */
+    public function publicId(): int
+    {
+        return (int) ($this->legacy_id ?: $this->id);
+    }
 
     protected $dates = [
         'published_at',
@@ -91,7 +101,11 @@ class Document extends Model
      */
     public function fieldValues()
     {
+        // whereHas('field') respects SoftDeletes and works inside whereHas('fieldValues').
+        // Do not put whereNull('document_custom_fields.deleted_at') here — Laravel applies
+        // that constraint in exists() subqueries without the join, which breaks filters.
         return $this->hasMany(DocumentFieldValue::class, 'document_id')
+            ->whereHas('field')
             ->join('document_custom_fields', 'document_field_values.field_id', '=', 'document_custom_fields.id')
             ->orderBy('document_custom_fields.sort_order')
             ->select('document_field_values.*');

@@ -205,6 +205,13 @@ class DocumentController extends Controller
             abort(404);
         }
 
+        $downloaded = session()->get('downloaded_document_files', []);
+        if (!in_array($file->id, $downloaded, true)) {
+            $file->increment('download_count');
+            $downloaded[] = $file->id;
+            session()->put('downloaded_document_files', $downloaded);
+        }
+
         $downloadName = $file->display_name ?: $file->original_name;
         $extension = pathinfo($file->original_name, PATHINFO_EXTENSION);
         if ($extension && !str_ends_with(strtolower($downloadName), '.' . strtolower($extension))) {
@@ -1172,12 +1179,16 @@ class DocumentController extends Controller
             }
         }
 
-        // إذا كان القسم قسم وثائق، ابحث في الوثائق
+        // إذا كان القسم قسم وثائق، ابحث في الوثائق برقم الموقع القديم أولاً ثم الـ id الحالي
         if ($documentSection) {
             $doc = Document::with(['section', 'user', 'fieldValues.field', 'keywords', 'files'])
                 ->published()
-                ->where('id', $id)
                 ->where('section_id', $documentSection->id)
+                ->where(function ($q) use ($id) {
+                    $q->where('legacy_id', $id)
+                        ->orWhere('id', $id);
+                })
+                ->orderByRaw('CASE WHEN legacy_id = ? THEN 0 ELSE 1 END', [(int) $id])
                 ->first();
         } else {
             $doc = null;
@@ -1191,8 +1202,9 @@ class DocumentController extends Controller
 
             // توجيه إلى المسار القانوني إذا كان السِّـلَج الوارد غير مطابق، وذلك لكل من الوثائق والمقالات، مع الحفاظ على سلوك الزيادة في المشاهدات وجلب العناصر ذات الصلة.
             $expectedSectionSlug = optional($doc->section)->slug;
-            if ($expectedSectionSlug && $expectedSectionSlug !== $sectionSlug) {
-                $url = route('content.show', [$locale, $expectedSectionSlug, $doc->id]);
+            $canonicalId = $doc->publicId();
+            if (($expectedSectionSlug && $expectedSectionSlug !== $sectionSlug) || (int) $id !== (int) $canonicalId) {
+                $url = route('content.show', [$locale, $expectedSectionSlug ?: $sectionSlug, $canonicalId]);
                 $queryString = request()->getQueryString();
                 if ($queryString) {
                     $url .= '?' . $queryString;

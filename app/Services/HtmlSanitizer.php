@@ -5,7 +5,6 @@ namespace App\Services;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
-use DOMXPath;
 
 class HtmlSanitizer
 {
@@ -14,7 +13,7 @@ class HtmlSanitizer
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'strong', 'b', 'em', 'i', 'u', 's', 'sub', 'sup', 'small',
         'ul', 'ol', 'li',
-        'a', 'img',
+        'a', 'img', 'iframe',
         'blockquote', 'pre', 'code',
         'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption',
         'figure', 'figcaption',
@@ -23,12 +22,28 @@ class HtmlSanitizer
     protected array $allowedAttributes = [
         'a' => ['href', 'title', 'target', 'rel'],
         'img' => ['src', 'alt', 'title', 'width', 'height'],
+        'iframe' => [
+            'src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen',
+            'loading', 'title', 'class', 'style', 'referrerpolicy',
+        ],
         'td' => ['colspan', 'rowspan'],
         'th' => ['colspan', 'rowspan'],
         '*' => ['class', 'id', 'dir', 'lang'],
     ];
 
     protected array $allowedProtocols = ['http', 'https', 'mailto', 'tel'];
+
+    /** مضيفون مسموح تضمينهم فقط (HTTPS). */
+    protected array $allowedEmbedHosts = [
+        'www.youtube.com',
+        'youtube.com',
+        'youtube-nocookie.com',
+        'www.youtube-nocookie.com',
+        'player.vimeo.com',
+        'w.soundcloud.com',
+        'docs.google.com',
+        'drive.google.com',
+    ];
 
     public function clean(?string $html): string
     {
@@ -65,7 +80,6 @@ class HtmlSanitizer
             $tag = strtolower($node->tagName);
 
             if (!in_array($tag, $this->allowedTags, true)) {
-                // Keep children, drop the unsafe wrapper.
                 while ($node->firstChild) {
                     $node->parentNode?->insertBefore($node->firstChild, $node);
                 }
@@ -109,9 +123,27 @@ class HtmlSanitizer
                     $node->setAttribute('rel', 'noopener noreferrer');
                 }
             }
+
+            if ($tag === 'iframe') {
+                $src = trim((string) $node->getAttribute('src'));
+                if ($src === '' || !$this->isAllowedEmbedSrc($src)) {
+                    $node->parentNode?->removeChild($node);
+                    return;
+                }
+
+                $node->setAttribute('src', $src);
+                $node->setAttribute('loading', 'lazy');
+                $node->setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+                if (!$node->hasAttribute('allowfullscreen')) {
+                    $node->setAttribute('allowfullscreen', 'allowfullscreen');
+                }
+                // لا نسمح بتمرير أبناء داخل iframe
+                while ($node->firstChild) {
+                    $node->removeChild($node->firstChild);
+                }
+            }
         }
 
-        // Copy children first because the list mutates while sanitizing.
         $children = [];
         foreach ($node->childNodes as $child) {
             $children[] = $child;
@@ -119,6 +151,26 @@ class HtmlSanitizer
         foreach ($children as $child) {
             $this->sanitizeNode($child);
         }
+    }
+
+    public function isAllowedEmbedSrc(string $url): bool
+    {
+        if ($url === '' || !preg_match('#^https://#i', $url)) {
+            return false;
+        }
+
+        $host = strtolower((string) (parse_url($url, PHP_URL_HOST) ?? ''));
+        if ($host === '') {
+            return false;
+        }
+
+        foreach ($this->allowedEmbedHosts as $allowed) {
+            if ($host === $allowed || str_ends_with($host, '.' . $allowed)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function isSafeUrl(string $url): bool
@@ -140,7 +192,6 @@ class HtmlSanitizer
             return in_array(strtolower($m[1]), $this->allowedProtocols, true);
         }
 
-        // Relative URLs
         return true;
     }
 }

@@ -5,7 +5,7 @@
     $locale = app()->getLocale();
     $sectionSlug = optional($document->section)->slug ?: ($section->slug ?? null);
     $documentShowUrl = $sectionSlug
-        ? route('content.show', [$locale, $sectionSlug, $document->id])
+        ? route('content.show', [$locale, $sectionSlug, $document->publicId()])
         : route('frontend.documents.show', [$locale, $document]);
 
     $displayFields = collect($document->plainFieldValues ?? [])

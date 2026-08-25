@@ -12,16 +12,16 @@ use App\Models\NewsletterSubscription;
 class HomeController extends Controller
 {
     /**
-     * Display the homepage
+     * Display the homepage (home1 design)
      */
     public function index($locale = null)
     {
-        return $this->renderHomePage('frontend.home');
+        return $this->renderHomePage('frontend.home1');
     }
 
     /**
-     * تصاميم تجريبية للصفحة الرئيسية — بدون مبدّل تصميم في الواجهة.
-     * افتح: /ar/home1 أو /ar/home2
+     * نفس تصميم الرئيسية — للإبقاء على الرابط /ar/home1
+     * افتح أيضاً: /ar/home2 أو /ar/home3
      */
     public function home1($locale = null)
     {

@@ -8,6 +8,22 @@
 body {
     font-family: 'Cairo', sans-serif;
     background-color: #f8f9fa;
+    overflow-x: hidden;
+}
+
+img,
+video,
+iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+.document-content img,
+.post-content img,
+.content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
 }
 
 .navbar {
@@ -356,6 +372,10 @@ body {
 }
 
 @media (max-width: 768px) {
+    .navbar-brand img {
+        max-height: 42px;
+    }
+
     .hero-title {
         font-size: 2rem;
     }
@@ -374,6 +394,13 @@ body {
     
     .stats-number {
         font-size: 2rem;
+    }
+
+    .document-content img,
+    .post-content img {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 100%;
     }
 }
 

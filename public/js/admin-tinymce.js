@@ -9,12 +9,14 @@ window.buildEmbedHtml = function (input) {
 
     let raw = String(input).trim();
 
-    // كود iframe جاهز
+    // كود iframe جاهز — نقبل فقط المضيفين الموثوقين
     if (/<iframe[\s\S]*?<\/iframe>/i.test(raw)) {
-        if (/src=["']https?:\/\/(www\.)?(youtube\.com|youtu\.be|docs\.google\.com|drive\.google\.com)/i.test(raw)) {
-            return raw.replace(/width=["'][^"']*["']/i, 'width="100%"').replace(/height=["'][^"']*["']/i, 'height="480"');
+        if (/src=["']https?:\/\/(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com|player\.vimeo\.com|w\.soundcloud\.com|docs\.google\.com|drive\.google\.com)/i.test(raw)) {
+            return raw
+                .replace(/width=["'][^"']*["']/i, 'width="100%"')
+                .replace(/height=["'][^"']*["']/i, 'height="480"');
         }
-        return raw;
+        return '';
     }
 
     // استخراج src من iframe جزئي
@@ -46,9 +48,23 @@ window.buildEmbedHtml = function (input) {
         return '<iframe width="100%" height="480" src="' + embedUrl + '" frameborder="0" allowfullscreen loading="lazy"></iframe>';
     }
 
-    // رابط عام — iframe بسيط
+    // رابط عام — لا نضمّن إلا المضيفين الموثوقين
     if (/^https?:\/\//i.test(raw)) {
-        return '<iframe width="100%" height="480" src="' + raw + '" frameborder="0" allowfullscreen loading="lazy"></iframe>';
+        try {
+            const host = new URL(raw).hostname.replace(/^www\./, '');
+            const allowed = [
+                'youtube.com', 'youtu.be', 'youtube-nocookie.com',
+                'player.vimeo.com', 'soundcloud.com', 'w.soundcloud.com',
+                'docs.google.com', 'drive.google.com'
+            ];
+            const ok = allowed.some(function (h) {
+                return host === h || host.endsWith('.' + h);
+            });
+            if (ok) {
+                return '<iframe width="100%" height="480" src="' + raw + '" frameborder="0" allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+            }
+        } catch (e) {}
+        return '';
     }
 
     return raw;

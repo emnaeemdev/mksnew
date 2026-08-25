@@ -27,6 +27,8 @@ class DocumentController extends Controller
     public function index(Request $request)
     {
         $query = Document::with(['section', 'user', 'fieldValues.field'])
+            ->withSum('files as downloads_sum', 'download_count')
+            ->withCount('files')
             ->orderBy('sort_order')
             ->orderByDesc('published_at');
 

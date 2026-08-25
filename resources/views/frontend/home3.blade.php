@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 
-@section('title', (app()->isLocale('ar') ? 'تجربة تصميم 3' : 'Home concept 3') . ' | ' . ($siteName ?? config('app.name')))
+@section('title', app()->isLocale('ar') ? (($siteName ?? config('app.name')) . ' - الصفحة الرئيسية') : (($siteName ?? config('app.name')) . ' - Home'))
 @section('body_class', 'concept-home3')
 
 @section('content')

@@ -113,24 +113,6 @@
                         </div>
                     @endif
                     
-                    <!-- معلومات النشر -->
-                    <div class="d-flex flex-wrap align-items-center text-muted mb-4">
-                        <div class="me-4 mb-2">
-                            <i class="fas fa-calendar me-1"></i>
-                            <span>{{ $document->created_at->format('Y-m-d') }}</span>
-                        </div>
-                        <div class="me-4 mb-2">
-                            <i class="fas fa-clock me-1"></i>
-                            <span>{{ $document->created_at->diffForHumans() }}</span>
-                        </div>
-                        @if($document->updated_at != $document->created_at)
-                            <div class="me-4 mb-2">
-                                <i class="fas fa-edit me-1"></i>
-                                <span>آخر تحديث: {{ $document->updated_at->diffForHumans() }}</span>
-                            </div>
-                        @endif
-                    </div>
-
                     <!-- @if(($document->relationLoaded('keywords') && $document->keywords->isNotEmpty()) || (!$document->relationLoaded('keywords') && $document->keywords()->exists()))
                         @php $document->loadMissing('keywords'); @endphp
                         <div class="mb-4">
@@ -316,7 +298,7 @@
                         <div class="card-body">
                             @foreach($relatedDocuments as $related)
                                 @if($related->section && $related->section->slug)
-                                    <a href="{{ route('content.show', [app()->getLocale(), $related->section->slug, $related->id]) }}"
+                                    <a href="{{ route('content.show', [app()->getLocale(), $related->section->slug, $related->publicId()]) }}"
                                        class="related-post-card">
                                         <div class="related-thumb d-flex align-items-center justify-content-center bg-light">
                                             <i class="fas fa-file-alt text-muted"></i>
@@ -328,7 +310,6 @@
                                                     <i class="fas fa-eye me-1"></i>
                                                     {{ number_format($related->views_count) }}
                                                 </span>
-                                                <span>{{ optional($related->published_at ?? $related->created_at)->diffForHumans() }}</span>
                                             </div>
                                         </div>
                                     </a>

@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 
-@section('title', (app()->isLocale('ar') ? 'تجربة تصميم 1 — معرض الأغلفة' : 'Home concept 1') . ' | ' . ($siteName ?? config('app.name')))
+@section('title', app()->isLocale('ar') ? (($siteName ?? config('app.name')) . ' - الصفحة الرئيسية') : (($siteName ?? config('app.name')) . ' - Home'))
 @section('body_class', 'concept-home1')
 
 @section('content')
@@ -12,9 +12,9 @@
     $sec = $slider->slice(1, 3)->values();
     $brand = $siteName ?? 'الذاكرة والمعرفة للدراسات';
 
-    $imgOf = function ($post, bool $bg = false) {
+    
+    $imgOf = function ($post) {
         if (!$post) return null;
-        if ($bg && $post->background_image) return asset('storage/' . $post->background_image);
         if ($post->featured_image) return asset('storage/' . $post->featured_image);
         if ($post->background_image) return asset('storage/' . $post->background_image);
         return null;
@@ -68,12 +68,12 @@
 
             @if($mainPost)
                 @php $secTwo = $sec->take(2); @endphp
-                {{-- رئيسي يمين + فرعيان عموديان شمال — العنوان على الصورة --}}
+                {{-- مثل home3: رئيسية + صورتان عموديتان جنبًا إلى جنب --}}
                 <div class="g1-mosaic g1-rise" style="--d:.18s">
                     <a class="g1-cover g1-cover--hero" href="{{ $urlOf($mainPost) }}">
                         <div class="g1-cover__frame">
-                            @if($src = $imgOf($mainPost, true))
-                                <img src="{{ $src }}" alt="{{ $mainPost->title }}">
+                            @if($src = $imgOf($mainPost))
+                                <img src="{{ $src }}" alt="{{ $mainPost->title }}" loading="eager" decoding="async">
                             @endif
                             <div class="g1-cover__caption">
                                 <span>{{ $catOf($mainPost) }}</span>
@@ -82,21 +82,19 @@
                         </div>
                     </a>
 
-                    <div class="g1-side">
-                        @foreach($secTwo as $i => $post)
-                            <a class="g1-cover g1-cover--side" href="{{ $urlOf($post) }}">
-                                <div class="g1-cover__frame">
-                                    @if($src = $imgOf($post))
-                                        <img src="{{ $src }}" alt="{{ $post->title }}">
-                                    @endif
-                                    <div class="g1-cover__caption">
-                                        <span>{{ $catOf($post) }}</span>
-                                        <h3>{{ $post->title }}</h3>
-                                    </div>
+                    @foreach($secTwo as $post)
+                        <a class="g1-cover g1-cover--side" href="{{ $urlOf($post) }}">
+                            <div class="g1-cover__frame">
+                                @if($src = $imgOf($post))
+                                    <img src="{{ $src }}" alt="{{ $post->title }}" loading="lazy" decoding="async">
+                                @endif
+                                <div class="g1-cover__caption">
+                                    <span>{{ $catOf($post) }}</span>
+                                    <h3>{{ $post->title }}</h3>
                                 </div>
-                            </a>
-                        @endforeach
-                    </div>
+                            </div>
+                        </a>
+                    @endforeach
                 </div>
             @endif
         </div>
@@ -141,7 +139,7 @@
                             <em>{{ $catOf($post) }}</em>
                             <div class="g1-book__art">
                                 @if($post->featured_image)
-                                    <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}">
+                                    <img src="{{ asset('storage/' . $post->featured_image) }}" alt="{{ $post->title }}" loading="lazy" decoding="async">
                                 @endif
                             </div>
                             <h3>{{ $post->title }}</h3>

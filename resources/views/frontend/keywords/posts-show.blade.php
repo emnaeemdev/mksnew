@@ -21,15 +21,15 @@
     </div>
 
     @if($posts->count())
-        <div class="row">
+        <div class="row g-3 g-md-4">
             @foreach($posts as $post)
-                <div class="col-lg-4 col-md-6 mb-4">
+                <div class="col-12 col-sm-6 col-lg-4">
                     <div class="post-card">
                         <a href="{{ route('content.show', [app()->getLocale(), $post->category->slug, $post->id]) }}" class="text-decoration-none">
                             @if($post->featured_image)
-                                <img src="{{ asset('storage/' . $post->featured_image) }}" class="post-image post-image-hover" alt="{{ $post->title }}">
+                                <img src="{{ asset('storage/' . $post->featured_image) }}" class="post-image post-image-hover" alt="{{ $post->title }}" loading="lazy">
                             @else
-                                <img src="{{ asset('images/placeholder.jpg') }}" class="post-image post-image-hover" alt="{{ $post->title }}">
+                                <img src="{{ asset('images/placeholder.jpg') }}" class="post-image post-image-hover" alt="{{ $post->title }}" loading="lazy">
                             @endif
                         </a>
                         <div class="card-body">

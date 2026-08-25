@@ -18,7 +18,7 @@ class PostController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Post::with('category');
+        $query = Post::with(['category', 'files']);
         
         // Filter by category
         if ($request->has('category') && $request->category) {

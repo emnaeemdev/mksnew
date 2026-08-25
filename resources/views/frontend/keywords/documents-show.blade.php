@@ -26,7 +26,7 @@
                 @php
                     $sectionSlug = optional($document->section)->slug;
                     $url = $sectionSlug
-                        ? route('content.show', [app()->getLocale(), $sectionSlug, $document->id])
+                        ? route('content.show', [app()->getLocale(), $sectionSlug, $document->publicId()])
                         : route('frontend.documents.show', [app()->getLocale(), $document]);
                 @endphp
                 <a href="{{ $url }}" class="list-group-item list-group-item-action py-3">

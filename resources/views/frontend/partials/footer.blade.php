@@ -33,10 +33,10 @@
                     @endif
                 
                 <div class="d-flex flex-wrap gap-3 justify-content-center">
-                    <a href="#" class="text-white" title="فيسبوك"><i class="fab fa-facebook fa-lg"></i></a>
-                    <a href="#" class="text-white" title="تويتر"><i class="fab fa-twitter fa-lg"></i></a>
-                    <a href="#" class="text-white" title="إنستغرام"><i class="fab fa-instagram fa-lg"></i></a>
-                    <a href="#" class="text-white" title="يوتيوب"><i class="fab fa-youtube fa-lg"></i></a>
+                    <a href="https://www.facebook.com/MKFSEgypt" class="text-white" title="فيسبوك"><i class="fab fa-facebook fa-lg"></i></a>
+                    <a href="https://x.com/MKS_Egypt" class="text-white" title="تويتر"><i class="fab fa-twitter fa-lg"></i></a>
+                    <!-- <a href="#" class="text-white" title="إنستغرام"><i class="fab fa-instagram fa-lg"></i></a>
+                    <a href="#" class="text-white" title="يوتيوب"><i class="fab fa-youtube fa-lg"></i></a> -->
                 </div>
             </div>
 

@@ -117,8 +117,8 @@
                     $locale = app()->getLocale();
                     $sectionName = optional($document->section)->slug;
                     $documentShowUrl = $sectionName
-                        ? route('content.show', [$locale, $sectionName, $document->id])
-                        : route('content.show', [$locale, 'documents', $document->id]);
+                        ? route('content.show', [$locale, $sectionName, $document->publicId()])
+                        : route('content.show', [$locale, 'documents', $document->publicId()]);
                                 @endphp
                                 <a href="{{ $documentShowUrl }}" 
                                     class="text-decoration-none">
@@ -187,8 +187,8 @@
                                             $locale = app()->getLocale();
                                             $sectionName = optional($document->section)->slug;
                                             $documentShowUrl = $sectionName
-                                                ? route('content.show', [$locale, $sectionName, $document->id])
-                                                : route('content.show', [$locale, 'documents', $document->id]);
+                                                ? route('content.show', [$locale, $sectionName, $document->publicId()])
+                                                : route('content.show', [$locale, 'documents', $document->publicId()]);
                                         @endphp
                                         <a href="{{ $documentShowUrl }}" 
                                            class="text-decoration-none">

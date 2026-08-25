@@ -314,7 +314,7 @@ return [
     'please_wait' => 'يرجى الانتظار',
     'operation_in_progress' => 'العملية قيد التنفيذ',
         'about' => 'عن الذاكرة',
-    'contact' => 'أتصل بنا',
+    'contact' => 'تواصل معنا',
 
     // Contact Page
     'address' => 'العنوان',

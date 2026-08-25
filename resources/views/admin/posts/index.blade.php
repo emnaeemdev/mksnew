@@ -82,6 +82,7 @@
                             <th>اللغات</th>
                             <th>المشاهدات</th>
                             <th>الملفات</th>
+                            <th>التحميلات</th>
                             <th>تاريخ النشر</th>
                             <th>الإجراءات</th>
                         </tr>
@@ -168,6 +169,12 @@
                                     @else
                                         <span class="text-muted">-</span>
                                     @endif
+                                </td>
+                                <td>
+                                    @php $downloads = $post->files ? (int) $post->files->sum('download_count') : 0; @endphp
+                                    <span class="badge bg-secondary" title="إجمالي تحميلات الملفات">
+                                        <i class="fas fa-download"></i> {{ number_format($downloads) }}
+                                    </span>
                                 </td>
                                 <td class="text-muted">
                                     @if($post->published_at)

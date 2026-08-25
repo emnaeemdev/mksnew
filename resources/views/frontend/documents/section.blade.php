@@ -472,7 +472,7 @@
         <div class="row g-4 mb-5">
     @foreach($documents as $document)
         <div class="col-lg-4 col-md-6">
-            <a href="{{ route('content.show', [app()->getLocale(), $section->slug, $document->id]) }}" class="text-decoration-none">
+            <a href="{{ route('content.show', [app()->getLocale(), $section->slug, $document->publicId()]) }}" class="text-decoration-none">
                 <div class="card h-100 doc-card">
                     <!-- <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
                          style="height: 200px;">
