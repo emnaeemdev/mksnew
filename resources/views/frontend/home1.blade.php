@@ -36,12 +36,10 @@
     <section class="g1-top">
         <div class="container">
             <div class="g1-intro g1-rise">
-                <!-- <p class="g1-intro__eyebrow">{{ $isAr ? 'منصة معرفية' : 'Knowledge platform' }}</p> -->
+      
                 <h1 class="g1-intro__brand">{{ $brand }}</h1>
                 <p class="g1-intro__lead">
-                    <!-- {{ $isAr
-                        ? 'ادخل من الغلاف — مواضيع مختارة، وثائق، وإصدارات في مسار بصري واحد.'
-                        : 'Enter through the cover — selected stories, documents, and publications.' }} -->
+
                 </p>
             </div>
 
@@ -68,7 +66,7 @@
 
             @if($mainPost)
                 @php $secTwo = $sec->take(2); @endphp
-                {{-- مثل home3: رئيسية + صورتان عموديتان جنبًا إلى جنب --}}
+              
                 <div class="g1-mosaic g1-rise" style="--d:.18s">
                     <a class="g1-cover g1-cover--hero" href="{{ $urlOf($mainPost) }}">
                         <div class="g1-cover__frame">
@@ -104,13 +102,7 @@
         <section class="g1-docs">
             <div class="container">
                 <div class="g1-docs__panel g1-rise">
-                    <!-- <div class="g1-docs__head">
-                        <h2>وثائق قانونية</h2>
-                        <a class="g1-docs__all" href="{{ route('frontend.documents.index', [$locale]) }}">
-                            كل الوثائق
-                            <i class="fas fa-arrow-left"></i>
-                        </a>
-                    </div> -->
+
                     <nav class="g1-docs__nav" aria-label="أقسام الوثائق">
                         @foreach($homeDocumentLinks as $i => $link)
                             <a href="{{ $link['url'] }}" class="g1-docs__link g1-rise" style="--d: {{ 0.06 + $i * 0.04 }}s">
@@ -129,7 +121,7 @@
             <div class="container">
                 <div class="g1-shelf__head g1-rise">
                     <h2>إصدارات أخرى</h2>
-                    <!-- <p>{{ $isAr ? 'رفّ الأغلفة — أحدث ما نُشر' : 'Latest covers' }}</p> -->
+
                 </div>
             </div>
             <div class="g1-shelf__scroller">

@@ -21,7 +21,7 @@
                     </a>
                 </li>
                 
-                <!-- Post Categories with language-specific show_in_menu option -->
+                
                 @php
                     $currentLang = app()->getLocale();
                     $showInMenuField = $currentLang == 'ar' ? 'show_in_menu_ar' : 'show_in_menu_en';
@@ -43,7 +43,7 @@
                     </li>
                 @endforeach
                 
-                <!-- Documents Dropdown with language-specific settings -->
+                
                 @php
                     $docShowInMenuField = $currentLang == 'ar' ? 'show_in_menu_ar' : 'show_in_menu_en';
                     $docMenuOrderField = $currentLang == 'ar' ? 'menu_order_ar' : 'menu_order_en';
@@ -57,7 +57,7 @@
                 @endphp
                 
                 @if($documentSections->count() > 0)
-                    <!-- Dropdown sections if any -->
+                   
                     @php
                         $dropdownSections = $documentSections->where('is_dropdown', true);
                     @endphp
@@ -87,9 +87,9 @@
                         </li>
                     @endforeach
                     
-                    <!-- General documents link if no sections are configured for menu -->
+                    
                 @else
-                    <!-- empty -->
+                   
                 @endif
                 
                 @if(app()->getLocale() == 'ar')
@@ -134,6 +134,3 @@
         </div>
     </div>
 </nav>
-
-<!-- Spacer for fixed navbar -->
-<!-- <div style="height: 80px;"></div> -->

@@ -7,8 +7,8 @@
             <hr class="my-4">
         @endif
 
-        <div class="row g-4"><!-- g-4 يضيف مسافات متساوية بين الأعمدة -->
-            <!-- العمود 1 -->
+        <div class="row g-4">
+            
             <div class="col-md-3 d-flex flex-column text-center">
                 <h5 class="fw-bold mb-3">
                     <a href="{{ route('home', [app()->getLocale()]) }}" class="text-decoration-none">
@@ -24,7 +24,7 @@
 
             </div>
 
-            <!-- العمود 2 -->
+           
             <div class="col-md-3 d-flex flex-column text-center">
                      @if(app()->getLocale() == 'ar')
                         <h6 class="fw-bold mb-3">تابعنا</h6>
@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <!-- العمود 3 -->
+          
             <div class="col-md-3 d-flex flex-column text-center">
                 <h6 class="fw-bold mb-3">{{ __('messages.newsletter_heading') }}</h6>
                 <p class="text-muted small mb-3">
@@ -73,7 +73,7 @@
                 </form>
             </div>
 
-            <!-- العمود 4 -->
+            
             <div class="col-md-3 d-flex flex-column text-center">
                                      @if(app()->getLocale() == 'ar')
                                         <p class="small mb-1">محتوى الموقع منشور برخصة المشاع الإبداعي</p>

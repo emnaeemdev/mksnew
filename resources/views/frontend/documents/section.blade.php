@@ -5,7 +5,6 @@
 
 @section('content')
 <div class="container">
-    <!-- رأس القسم -->
     <div class="row">
         <div class="col-12">
             <nav aria-label="breadcrumb">
@@ -39,7 +38,6 @@
         </div>
     </div>
     
-    <!-- الفلترة والبحث -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
@@ -50,7 +48,6 @@
                         <form action="{{ route('frontend.documents.index') }}" method="GET" id="filterForm">
                     @endif
                         <div class="row g-4 align-items-end">
-                            <!-- مربع البحث -->
                             <div class="col-lg-4">
                                 <label for="search" class="form-label">
                                     @if(request('section_select') === 'all')
@@ -64,7 +61,6 @@
 
     
                             
-                            <!-- الترتيب -->
                             <div class="col-lg-2">
                                 <label for="sort" class="form-label">الترتيب</label>
                                 <select class="form-select" id="sort" name="sort" onchange="document.getElementById('filterForm').submit()">
@@ -76,7 +72,6 @@
                             </div>
 
                             
-                            <!-- عدد النتائج -->
                             <div class="col-lg-2">
                                 <label for="per_page" class="form-label">عدد النتائج</label>
                                 <select class="form-select" id="per_page" name="per_page" onchange="document.getElementById('filterForm').submit()">
@@ -86,7 +81,6 @@
                                     <option value="48" {{ request('per_page') == '48' ? 'selected' : '' }}>48</option>
                                 </select>
                             </div>
-                                                    <!-- اختيار القسم -->
                             <div class="col-4">
                                 <label for="section_select" class="form-label">القسم</label>
                                 <select class="form-select" id="section_select" name="section_select">
@@ -125,12 +119,10 @@
                             <input type="hidden" name="match_group" id="match_group_field" value="{{ request('match_group') }}">
                         @endif
 
-                        {{-- الإبقاء على kw مع الترتيب/عدد النتائج فقط؛ البحث وفلاتر الحقول تلغيه عبر JS --}}
                         @if(!empty($activeSectionKeyword))
                             <input type="hidden" name="kw" id="section_kw_field" value="{{ $activeSectionKeyword->slug }}">
                         @endif
                         
-                        <!-- فلترة الحقول المخصصة -->
                         @if($customFields->count() > 0)
                             @php
                                 $hasAnyFieldFilter = collect(request('fields', []))->flatten()->filter(function ($value) {
@@ -349,7 +341,6 @@
         @include('frontend.documents.partials.section-keyword-sidebar')
     @endif
 
-    <!-- أيقونة القسم وعدد الوثائق (تحت الفلتر) -->
     <div class="row mb-4">
         <div class="col-12 text-center">
 
@@ -376,7 +367,6 @@
         </div>
     </div>
     
-    <!-- عرض إحصائيات النتائج عند استخدام الفلاتر فقط -->
     @if(request('fields'))
         <div class="row mb-4 search-results">
             <div class="col-12">
@@ -424,12 +414,10 @@
         </div>
     @endif
 
-    {{-- نتائج البحث المصنفة (داخل .container) --}}
     @if(isset($categorizedResults) && $categorizedResults)
         @include('frontend.documents.partials.categorized-search-results', ['categorizedResults' => $categorizedResults])
     @endif
 
-    {{-- مجموعة كلمة مفتاحية مثبتة --}}
     @if(isset($keywordDocuments))
         <div class="section-keyword-results mb-5">
             @if($activeSectionKeyword)
@@ -464,20 +452,14 @@
         </div>
     @endif
 
-    <!-- قائمة الوثائق -->
     @if(isset($documents) && !isset($keywordDocuments))
     <div class="documents-container">
     @if($documents->count() > 0)
-        <!-- العرض التقليدي -->
         <div class="row g-4 mb-5">
     @foreach($documents as $document)
         <div class="col-lg-4 col-md-6">
-            <a href="{{ route('content.show', [app()->getLocale(), $section->slug, $document->publicId()]) }}" class="text-decoration-none">
+            <a href="{{ route('content.show', [app()->getLocale(), $section->slug, $document->id]) }}" class="text-decoration-none">
                 <div class="card h-100 doc-card">
-                    <!-- <div class="card-img-top bg-light d-flex align-items-center justify-content-center" 
-                         style="height: 200px;">
-                        <i class="fas fa-file-alt text-muted" style="font-size: 3rem;"></i>
-                    </div> -->
 
                     <div class="card-body d-flex flex-column">
                         <div class="mb-2">
@@ -497,7 +479,6 @@
                             </p>
                         @endif
 
-                        <!-- الحقول المخصصة المهمة -->
                         @if($document->fieldValues->count() > 0)
                             <div class="mb-3">
                                 @foreach($document->fieldValues->take(5) as $fieldValue)
@@ -515,17 +496,7 @@
                             </div>
                         @endif
 
-                        <!-- <div class="mt-auto">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted">
-                                    <i class="fas fa-eye me-1"></i>
-                                    {{ number_format($document->views_count) }}
-                                </small>
-                                <small class="text-muted">
-                                    {{ $document->created_at->diffForHumans() }}
-                                </small>
-                            </div>
-                        </div> -->
+                       
                     </div>
                 </div>
             </a>
@@ -534,7 +505,6 @@
 </div>
 
         
-        <!-- التصفح -->
         @if($documents->hasPages())
             <div class="row">
                 <div class="col-12">
@@ -545,7 +515,6 @@
             </div>
         @endif
     @else
-        <!-- لا توجد وثائق -->
         <div class="row">
             <div class="col-12">
                 <div class="text-center py-5">
@@ -577,14 +546,13 @@
             </div>
         </div>
     @endif
-    </div> <!-- إغلاق documents-container -->
+    </div> 
     @endif
 
 </div>
 
 @push('scripts')
 <script>
-// منع أي تمرير غير مرغوب فيه عند الضغط على التبويبات
 document.addEventListener('DOMContentLoaded', function() {
     const tabButtons = document.querySelectorAll('#results-tabs .nav-link, #results-tabs-bottom .nav-link');
     tabButtons.forEach(function(btn) {
@@ -661,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // جعل القوائم المنسدلة تحدث الصفحة فوراً
+    
     const dropdowns = document.querySelectorAll('#sort, #per_page, select[name^="fields["][name$="]"]');
     
     dropdowns.forEach(function(dropdown) {
@@ -670,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // جعل قوائم التاريخ المنسدلة تحدث الصفحة فوراً
+    
     const dateDropdowns = document.querySelectorAll('select[name*="[day]"], select[name*="[month]"], select[name*="[year]"]');
     
     dateDropdowns.forEach(function(dropdown) {
@@ -693,24 +661,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @push('scripts')
 <script>
-// نظام الفلاتر بدون AJAX - تحديث الصفحة مباشرة
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('filterForm');
     if (!form) return;
     
-    // مستمع للتغييرات على القوائم المنسدلة - إرسال النموذج فوراً
+    
     form.addEventListener('change', function(e) {
         const target = e.target;
         
-        // التحقق من أن العنصر المتغير هو قائمة منسدلة للحقول المخصصة أو عناصر أخرى
+     
         if (target.tagName === 'SELECT') {
-            // إرسال النموذج مباشرة عند تغيير أي قائمة منسدلة
+            
             form.submit();
         }
     });
     
-    // زر مسح الفلاتر — الرابط يعيد الصفحة نظيفة (بحث + فلاتر + kw)
-    // دالة لتهيئة تأثيرات hover
+    
     function initHoverEffects() {
         const hoverCards = document.querySelectorAll('.hover-card');
         hoverCards.forEach(card => {
@@ -726,11 +693,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // تهيئة تأثيرات hover عند تحميل الصفحة
     initHoverEffects();
 });
 
-// تأثيرات hover للبطاقات
 $(document).ready(function() {
     $('.hover-card').hover(
         function() {
@@ -808,7 +773,6 @@ $(document).ready(function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // جعل القوائم المنسدلة تحدث الصفحة فوراً
     const dropdowns = document.querySelectorAll('#sort, #per_page, select[name^="fields["][name$="]"]');
     
     dropdowns.forEach(function(dropdown) {
@@ -817,7 +781,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // جعل قوائم التاريخ المنسدلة تحدث الصفحة فوراً
     const dateDropdowns = document.querySelectorAll('select[name*="[day]"], select[name*="[month]"], select[name*="[year]"]');
     
     dateDropdowns.forEach(function(dropdown) {
@@ -840,24 +803,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @push('scripts')
 <script>
-// نظام الفلاتر بدون AJAX - تحديث الصفحة مباشرة
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('filterForm');
     if (!form) return;
     
-    // مستمع للتغييرات على القوائم المنسدلة - إرسال النموذج فوراً
     form.addEventListener('change', function(e) {
         const target = e.target;
         
-        // التحقق من أن العنصر المتغير هو قائمة منسدلة للحقول المخصصة أو عناصر أخرى
         if (target.tagName === 'SELECT') {
-            // إرسال النموذج مباشرة عند تغيير أي قائمة منسدلة
             form.submit();
         }
     });
     
-    // زر مسح الفلاتر — الرابط يعيد الصفحة نظيفة (بحث + فلاتر + kw)
-    // دالة لتهيئة تأثيرات hover
     function initHoverEffects() {
         const hoverCards = document.querySelectorAll('.hover-card');
         hoverCards.forEach(card => {
@@ -873,11 +830,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // تهيئة تأثيرات hover عند تحميل الصفحة
     initHoverEffects();
 });
 
-// تأثيرات hover للبطاقات
 $(document).ready(function() {
     $('.hover-card').hover(
         function() {
@@ -955,7 +910,6 @@ $(document).ready(function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // جعل القوائم المنسدلة تحدث الصفحة فوراً
     const dropdowns = document.querySelectorAll('#sort, #per_page, select[name^="fields["][name$="]"]');
     
     dropdowns.forEach(function(dropdown) {
@@ -964,7 +918,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // جعل قوائم التاريخ المنسدلة تحدث الصفحة فوراً
     const dateDropdowns = document.querySelectorAll('select[name*="[day]"], select[name*="[month]"], select[name*="[year]"]');
     
     dateDropdowns.forEach(function(dropdown) {
@@ -986,7 +939,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @push('styles')
 <style>
-/* تقليل المسافة قبل وبعد تنبيهات عدم وجود نتائج داخل التبويبات */
 .tab-pane .alert {
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
