@@ -43,7 +43,7 @@
     <div class="container">
         <div class="row g-4">
             <div class="col-md-3">
-                <a href="#" class="text-decoration-none">
+                <a href="{{ route('posts.category', [app()->getLocale(), 'reports']) }}" class="text-decoration-none">
                     <div class="card h-100 text-center border-0 shadow-sm hover-card">
                         <div class="card-body d-flex flex-column justify-content-center">
                             <i class="fas fa-file-alt fa-4x text-primary mb-3"></i>
@@ -53,7 +53,7 @@
                 </a>
             </div>
             <div class="col-md-3">
-                <a href="#" class="text-decoration-none">
+                <a href="{{ route('posts.category', [app()->getLocale(), 'press-release']) }}" class="text-decoration-none">
                     <div class="card h-100 text-center border-0 shadow-sm hover-card">
                         <div class="card-body d-flex flex-column justify-content-center">
                             <i class="fas fa-newspaper fa-4x text-primary mb-3"></i>
