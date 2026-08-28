@@ -25,5 +25,6 @@ Thumbs.db
 
 # Local ops notes (may contain ADMIN_PATH / secrets)
 /DEPLOYMENT_SECURITY.md
+/CPANEL_DEPLOY.md
 /_admin-date-selects-git.js
 /scripts/
