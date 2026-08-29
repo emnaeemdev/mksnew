@@ -104,7 +104,7 @@
 
         .login-brand p {
             margin: 0;
-            max-width: 28ch;
+            /* max-width: 28ch; */
             font-size: 1rem;
             line-height: 1.7;
             color: rgba(255,255,255,0.86);
@@ -296,13 +296,15 @@
 <body>
     <div class="login-shell">
         <aside class="login-brand">
-            <div>
-                <div class="login-brand__mark">
-                    <img src="{{ asset('images/logo-arabic-header_mks.png') }}" alt="الذاكرة والمعرفة للدراسات">
-                </div>
-                <h1>الذاكرة والمعرفة للدراسات</h1>
-                <p>منصة معرفية لإدارة المحتوى والوثائق والإصدارات من مكان واحد بواجهة آمنة وواضحة.</p>
-            </div>
+        <div style="text-align: center;">
+    <div class="login-brand__mark">
+        <img src="{{ asset('images/logo-arabic-header_mks.png') }}" alt="الذاكرة والمعرفة للدراسات">
+    </div>
+
+    <h1>الذاكرة والمعرفة للدراسات</h1>
+
+    <p>لوحة تحكم الموقع الإلكتروني للذاكرة والمعرفة للدراسات</p>
+</div>
             <div class="login-brand__foot">
 
             </div>
