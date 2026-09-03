@@ -71,15 +71,17 @@ class NewsletterSubscriptionController extends Controller
 
     public function bulkDelete(Request $request)
     {
-        $ids = $request->input('ids', []);
-        if (!is_array($ids) || empty($ids)) {
-            return back()->with('error', 'لم يتم تحديد أي اشتراكات للحذف');
-        }
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:newsletter_subscriptions,id',
+        ]);
 
+        $ids = $validated['ids'];
         $count = NewsletterSubscription::whereIn('id', $ids)->count();
         NewsletterSubscription::whereIn('id', $ids)->delete();
 
-        return redirect()->route('admin.newsletter-subscriptions.index')
+        return redirect()
+            ->route('admin.newsletter-subscriptions.index', $request->only('q'))
             ->with('success', "تم حذف {$count} اشتراك/اشتراكات بنجاح");
     }
 }

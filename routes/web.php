@@ -228,11 +228,10 @@ Route::prefix($adminPath)->name('admin.')->middleware(['auth', 'role:admin,edito
     Route::resource('media', \App\Http\Controllers\Admin\MediaController::class);
     
     // Newsletter Subscriptions Management
-    Route::resource('newsletter-subscriptions', \App\Http\Controllers\Admin\NewsletterSubscriptionController::class)
-        ->only(['index', 'destroy']);
-    // إضافة: تصدير CSV وحذف جماعي لاشتراكات النشرة
     Route::get('newsletter-subscriptions/export', [\App\Http\Controllers\Admin\NewsletterSubscriptionController::class, 'export'])->name('newsletter-subscriptions.export');
     Route::post('newsletter-subscriptions/bulk-delete', [\App\Http\Controllers\Admin\NewsletterSubscriptionController::class, 'bulkDelete'])->name('newsletter-subscriptions.bulk-delete');
+    Route::resource('newsletter-subscriptions', \App\Http\Controllers\Admin\NewsletterSubscriptionController::class)
+        ->only(['index', 'destroy']);
 });
 Route::redirect("/{$adminPath}", "/{$adminPath}/dashboard");
 

@@ -20,7 +20,6 @@
 </div>
 
 <div class="card">
-    
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-striped mb-0 align-middle">
@@ -66,12 +65,11 @@
     </div>
     <div class="card-footer d-flex justify-content-between align-items-center">
         <div>
-            
             <form id="bulkDeleteForm" method="POST" action="{{ route('admin.newsletter-subscriptions.bulk-delete') }}" class="d-none">
                 @csrf
             </form>
-            <button type="button" id="bulkDeleteBtn" class="btn btn-danger">
-                <i class="fa fa-trash me-1"></i> حذف الكل
+            <button type="button" id="bulkDeleteBtn" class="btn btn-danger" disabled>
+                <i class="fa fa-trash me-1"></i> مسح المحدد
             </button>
         </div>
         @if($subscriptions->hasPages())
@@ -85,66 +83,135 @@
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const selectAll = document.getElementById('selectAll');
-        const checks = document.querySelectorAll('.row-check');
-        if (selectAll) {
-            selectAll.addEventListener('change', function() {
-                checks.forEach(ch => ch.checked = selectAll.checked);
-            });
+document.addEventListener('DOMContentLoaded', function () {
+    function copyText(text, onSuccess) {
+        if (!text) {
+            return;
         }
 
-        document.querySelectorAll('.copy-email-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const email = this.dataset.email || '';
-                navigator.clipboard.writeText(email).then(() => {
-                    this.classList.add('btn-success');
-                    setTimeout(() => this.classList.remove('btn-success'), 800);
-                });
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(onSuccess).catch(function () {
+                fallbackCopy(text, onSuccess);
+            });
+            return;
+        }
+
+        fallbackCopy(text, onSuccess);
+    }
+
+    function fallbackCopy(text, onSuccess) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+
+        try {
+            document.execCommand('copy');
+            if (onSuccess) {
+                onSuccess();
+            }
+        } catch (error) {
+            alert('تعذر نسخ النص');
+        }
+
+        document.body.removeChild(textarea);
+    }
+
+    function flashButton(button) {
+        button.classList.add('btn-success');
+        setTimeout(function () {
+            button.classList.remove('btn-success');
+        }, 800);
+    }
+
+    const selectAll = document.getElementById('selectAll');
+    const checks = document.querySelectorAll('.row-check');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+
+    function updateBulkDeleteState() {
+        if (!bulkDeleteBtn) {
+            return;
+        }
+
+        const selectedCount = document.querySelectorAll('.row-check:checked').length;
+        bulkDeleteBtn.disabled = selectedCount === 0;
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            checks.forEach(function (checkbox) {
+                checkbox.checked = selectAll.checked;
+            });
+            updateBulkDeleteState();
+        });
+    }
+
+    checks.forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateBulkDeleteState);
+    });
+
+    document.querySelectorAll('.copy-email-btn').forEach(function (button) {
+        button.addEventListener('click', function () {
+            const email = this.dataset.email || '';
+            copyText(email, function () {
+                flashButton(button);
             });
         });
-
-        const copyAllBtn = document.getElementById('copyAllEmailsBtn');
-        if (copyAllBtn) {
-            copyAllBtn.addEventListener('click', function() {
-                const emails = Array.from(document.querySelectorAll('td.email-cell'))
-                    .map(td => td.textContent.trim())
-                    .filter(Boolean)
-                    .join('\n');
-                if (emails) {
-                    navigator.clipboard.writeText(emails).then(() => {
-                        copyAllBtn.classList.add('btn-success');
-                        setTimeout(() => copyAllBtn.classList.remove('btn-success'), 800);
-                    });
-                }
-            });
-        }
-
-        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
-        if (bulkDeleteBtn) {
-            bulkDeleteBtn.addEventListener('click', function() {
-                const selected = Array.from(document.querySelectorAll('.row-check:checked')).map(cb => cb.value);
-                if (selected.length === 0) {
-                    alert('يرجى اختيار عناصر للحذف');
-                    return;
-                }
-                if (!confirm('هل تريد حذف العناصر ال�
-حددة؟')) {
-                    return;
-                }
-                const form = document.getElementById('bulkDeleteForm');
-
-                form.querySelectorAll('input[name="ids[]"]').forEach(el => el.remove());
-                selected.forEach(id => {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'ids[]';
-                    input.value = id;
-                    form.appendChild(input);
-                });
-                form.submit();
-            });
-        }
     });
+
+    const copyAllBtn = document.getElementById('copyAllEmailsBtn');
+    if (copyAllBtn) {
+        copyAllBtn.addEventListener('click', function () {
+            const emails = Array.from(document.querySelectorAll('td.email-cell'))
+                .map(function (cell) { return cell.textContent.trim(); })
+                .filter(Boolean)
+                .join('\n');
+
+            if (!emails) {
+                alert('لا توجد إيميلات في هذه الصفحة');
+                return;
+            }
+
+            copyText(emails, function () {
+                flashButton(copyAllBtn);
+            });
+        });
+    }
+
+    if (bulkDeleteBtn) {
+        bulkDeleteBtn.addEventListener('click', function () {
+            const selected = Array.from(document.querySelectorAll('.row-check:checked')).map(function (checkbox) {
+                return checkbox.value;
+            });
+
+            if (selected.length === 0) {
+                alert('يرجى اختيار عناصر للحذف');
+                return;
+            }
+
+            if (!confirm('هل تريد حذف العناصر المحددة؟')) {
+                return;
+            }
+
+            const form = document.getElementById('bulkDeleteForm');
+            form.querySelectorAll('input[name="ids[]"]').forEach(function (input) {
+                input.remove();
+            });
+
+            selected.forEach(function (id) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ids[]';
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            form.submit();
+        });
+    }
+});
 </script>
 @endpush
