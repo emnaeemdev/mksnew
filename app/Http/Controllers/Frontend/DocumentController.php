@@ -110,7 +110,6 @@ class DocumentController extends Controller
 
     public function show($locale, $document)
     {
-        \Log::info('Frontend.DocumentController@show invoked', ['locale' => $locale, 'param' => is_object($document) ? get_class($document) : $document]);
         // في حال لم يعمل الربط الضمني، نقوم بحلّ الـ slug يدوياً
         if ($document instanceof Document) {
             $doc = $document->loadMissing(['section', 'fieldValues.field', 'files']);
@@ -901,11 +900,9 @@ class DocumentController extends Controller
         if (app()->getLocale() === 'en') {
             return view('frontend.no-translation');
         }
-        \Log::info('Frontend.DocumentController@section invoked', ['locale' => $locale, 'param' => is_object($section) ? get_class($section) : $section]);
         if (!$section instanceof DocumentSection) {
             $section = DocumentSection::where('slug', $section)->firstOrFail();
         }
-        \Log::info('Resolved section', ['id' => $section->id, 'slug' => $section->slug]);
 
         // جميع الأقسام لاستخدامها في القائمة المنسدلة
         $allSections = DocumentSection::active()->orderBy('sort_order')

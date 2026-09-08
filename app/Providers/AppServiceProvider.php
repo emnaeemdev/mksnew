@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Events\ConnectionEstablished;
 use App\Http\View\Composers\SidebarComposer;
 use App\Http\View\Composers\FrontendAdminShortcutComposer;
 use Illuminate\Pagination\Paginator; // added
@@ -12,6 +15,7 @@ use App\Models\Document;
 use App\Models\DocumentFieldValue;
 use App\Observers\DocumentObserver;
 use App\Observers\DocumentFieldValueObserver;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // قبل أي استعلام: تسجيل حماية انقطاع MySQL
+        $this->registerMysqlIdleReconnect();
+
         // تسجيل View Composer للقائمة الجانبية
         View::composer('admin.partials.sidebar', SidebarComposer::class);
         View::composer('frontend.partials.header', FrontendAdminShortcutComposer::class);
@@ -59,5 +66,56 @@ class AppServiceProvider extends ServiceProvider
 
         Document::observe(DocumentObserver::class);
         DocumentFieldValue::observe(DocumentFieldValueObserver::class);
+    }
+
+    /**
+     * إذا بقي اتصال MySQL خاملًا ثم انقطع، أعد الاتصال قبل الاستعلام التالي
+     * بدل بدء بحث ثقيل على اتصال ميت.
+     */
+    protected function registerMysqlIdleReconnect(): void
+    {
+        Event::listen(ConnectionEstablished::class, function (ConnectionEstablished $event) {
+            $connection = $event->connection;
+
+            if (!$connection instanceof Connection) {
+                return;
+            }
+
+            if (!in_array($connection->getDriverName(), ['mysql', 'mariadb'], true)) {
+                return;
+            }
+
+            static $registered = [];
+            $name = $connection->getName();
+            if (isset($registered[$name])) {
+                return;
+            }
+            $registered[$name] = true;
+
+            $connection->beforeExecuting(function ($query, $bindings, Connection $connection) {
+                static $lastActivity = [];
+                $name = $connection->getName();
+                $now = microtime(true);
+                $idleFor = isset($lastActivity[$name]) ? ($now - $lastActivity[$name]) : 0.0;
+
+                // أقل من wait_timeout الشائع على الاستضافات المشتركة (غالبًا 60 ثانية)
+                if ($idleFor >= 25) {
+                    try {
+                        $pdo = $connection->getPdo();
+                        if ($pdo) {
+                            $pdo->query('SELECT 1');
+                        }
+                    } catch (Throwable $e) {
+                        try {
+                            $connection->reconnect();
+                        } catch (Throwable $reconnectError) {
+                            // سيُعاد رمي الخطأ من الاستعلام الأصلي إن لزم
+                        }
+                    }
+                }
+
+                $lastActivity[$name] = $now;
+            });
+        });
     }
 }

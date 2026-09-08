@@ -36,6 +36,8 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // اختياري: إبقاء جلسة MySQL أطول على الاستضافة المشتركة (لا يغيّر البحث)
+                PDO::MYSQL_ATTR_INIT_COMMAND => env('DB_MYSQL_SESSION_SQL'),
             ]) : [],
         ],
 
@@ -56,6 +58,7 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::MYSQL_ATTR_INIT_COMMAND => env('DB_MYSQL_SESSION_SQL'),
             ]) : [],
         ],
 
