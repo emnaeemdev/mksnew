@@ -88,7 +88,7 @@
 
         <h4 class="ranked-result-title">{{ $searchHelper->plainTextForPreview($document->title, 300) }}</h4>
 
-        <div class="ranked-result-meta">
+        <!-- <div class="ranked-result-meta">
             @if($document->published_at)
                 <span>{{ \Carbon\Carbon::parse($document->published_at)->format('Y-m-d') }}</span>
             @endif
@@ -96,7 +96,7 @@
                 <span>·</span>
                 <span>{{ implode(' + ', $highlightWords) }}</span>
             @endif
-        </div>
+        </div> -->
 
         @if($snippetHtml !== '')
             <div class="ranked-result-snippets">

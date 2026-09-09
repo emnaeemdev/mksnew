@@ -63,9 +63,6 @@
                 <!-- فلاتر البحث -->
                 <div class="card-body border-bottom">
                     <form method="GET" action="{{ route('admin.documents.index') }}" id="filterForm">
-                        @if(request('section_id'))
-                            <input type="hidden" name="section_id" value="{{ request('section_id') }}">
-                        @endif
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label for="search" class="form-label">البحث</label>
@@ -75,14 +72,14 @@
                             
                             <div class="col-md-2">
                                 <label for="section" class="form-label">القسم</label>
-                                <select class="form-select" id="section" name="section">
+                                <select class="form-select" id="section" name="section_id" onchange="document.getElementById('filterForm').submit()">
                                     <option value="">جميع الأقسام</option>
                                     @foreach($sections as $section)
                                         @php
                                             $selectedSectionId = request('section_id') ?: request('section');
                                         @endphp
                                         <option value="{{ $section->id }}" 
-                                                {{ $selectedSectionId == $section->id ? 'selected' : '' }}>
+                                                {{ (string) $selectedSectionId === (string) $section->id ? 'selected' : '' }}>
                                             {{ $section->name }} ({{ $section->documents_count }})
                                         </option>
                                     @endforeach
