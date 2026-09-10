@@ -787,6 +787,61 @@ class DocumentSearchService
         return '';
     }
 
+    /**
+     * مصدر مقتطفات البحث: يتجنّب HTML الضخم (قرارات بمئات الكيلوبايت/ميجابايت)
+     * حتى لا يُعاد strip+normalize عشرات المرات لكل نتيجة.
+     */
+    public function documentSnippetSource($document): string
+    {
+        $maxBytes = 120000;
+        if (function_exists('app') && app()->bound('config')) {
+            $maxBytes = max(20000, (int) config('document_search.snippet_source_max_bytes', 120000));
+        }
+
+        $content = '';
+        if ($this->documentAttributeLoaded($document, 'content')) {
+            $content = (string) ($document->content ?? '');
+        } elseif (is_object($document) && isset($document->content) && is_string($document->content)) {
+            $content = $document->content;
+        } elseif (!empty($document->id)) {
+            $content = (string) (\App\Models\Document::query()->whereKey($document->id)->value('content') ?? '');
+        }
+
+        if (trim(strip_tags($content)) !== '') {
+            if (strlen($content) <= $maxBytes) {
+                return $content;
+            }
+
+            $searchText = '';
+            if ($this->documentAttributeLoaded($document, 'search_text')) {
+                $searchText = (string) ($document->search_text ?? '');
+            } elseif (is_object($document) && isset($document->search_text) && is_string($document->search_text)) {
+                $searchText = $document->search_text;
+            } elseif (!empty($document->id)) {
+                $searchText = (string) (\App\Models\Document::query()->whereKey($document->id)->value('search_text') ?? '');
+            }
+
+            if (trim($searchText) !== '') {
+                return $searchText;
+            }
+
+            $plain = $this->htmlToPlainText($content);
+            if (strlen($plain) > $maxBytes) {
+                return mb_substr($plain, 0, (int) floor($maxBytes / 2), 'UTF-8');
+            }
+
+            return $plain;
+        }
+
+        foreach ([$document->excerpt ?? '', $document->title ?? ''] as $source) {
+            if (is_string($source) && trim(strip_tags($source)) !== '') {
+                return $source;
+            }
+        }
+
+        return '';
+    }
+
     protected function documentAttributeLoaded($document, string $attribute): bool
     {
         if (!is_object($document) || !method_exists($document, 'getAttributes')) {
@@ -862,7 +917,7 @@ class DocumentSearchService
      */
     public function findSnippetInDocument($document, string $normalizedToken, bool $withAlVariant = true, int $contextWords = 8, array $hintTokens = []): ?array
     {
-        $source = $this->documentDisplaySource($document);
+        $source = $this->documentSnippetSource($document);
         if ($source === '') {
             return null;
         }
@@ -884,42 +939,89 @@ class DocumentSearchService
             return null;
         }
 
-        $source = $this->documentDisplaySource($document);
+        $source = $this->documentSnippetSource($document);
         if ($source === '') {
             return null;
         }
 
         $hints = $hintTokens !== [] ? $hintTokens : $tokens;
+        $plain = $this->normalizePreviewText($source, []);
+        $glued = $hints !== [] ? $this->normalizePreviewText($source, $hints) : $plain;
+
+        return $this->findPhraseSnippetFromPrepared($plain, $glued, $tokens, $withAlVariant, $contextWords);
+    }
+
+    /**
+     * @param array<int, string> $tokens
+     * @return array{before:string,match:string,after:string}|null
+     */
+    protected function findPhraseSnippetFromPrepared(
+        string $plain,
+        string $glued,
+        array $tokens,
+        bool $withAlVariant = true,
+        int $contextWords = 8
+    ): ?array {
         $pattern = $this->buildArabicPhrasePattern($tokens, $withAlVariant);
-        $text = $this->normalizePreviewText($source, $hints);
-        if ($text === '') {
+
+        foreach ([$glued, $plain] as $text) {
+            if ($text === '' || @preg_match($pattern, $text, $matches, PREG_OFFSET_CAPTURE) !== 1) {
+                continue;
+            }
+
+            $matchStr = $matches[1][0];
+            $bytePos = $matches[1][1];
+            $prefix = substr($text, 0, $bytePos);
+            $pos = mb_strlen($prefix, 'UTF-8');
+            $len = mb_strlen($matchStr, 'UTF-8');
+
+            $beforeText = mb_substr($text, 0, $pos);
+            $afterText = mb_substr($text, $pos + $len);
+            $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            return [
+                'before' => $this->collapsePreviewSpaces(implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - $contextWords, 0)))),
+                'match' => $matchStr,
+                'after' => $this->collapsePreviewSpaces(implode(' ', array_slice($afterTokens, 0, $contextWords))),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{before:string,match:string,after:string}|null
+     */
+    protected function findTokenSnippetFromPrepared(
+        string $plain,
+        string $glued,
+        string $normalizedToken,
+        bool $withAlVariant = true,
+        int $contextWords = 8
+    ): ?array {
+        if (trim($normalizedToken) === '') {
             return null;
         }
 
-        if (!preg_match($pattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
-            $plain = $this->normalizePreviewText($source, []);
-            if ($plain === '' || $plain === $text || !preg_match($pattern, $plain, $matches, PREG_OFFSET_CAPTURE)) {
-                return null;
-            }
-            $text = $plain;
+        $sn = $this->matchTokenInPlainText($plain, $normalizedToken, $withAlVariant, $contextWords);
+        if ($sn !== null) {
+            return $sn;
         }
 
-        $matchStr = $matches[1][0];
-        $bytePos = $matches[1][1];
-        $prefix = substr($text, 0, $bytePos);
-        $pos = mb_strlen($prefix, 'UTF-8');
-        $len = mb_strlen($matchStr, 'UTF-8');
+        if ($glued !== '' && $glued !== $plain) {
+            $sn = $this->matchTokenInPlainText($glued, $normalizedToken, $withAlVariant, $contextWords);
+            if ($sn !== null) {
+                return $sn;
+            }
+        }
 
-        $beforeText = mb_substr($text, 0, $pos);
-        $afterText = mb_substr($text, $pos + $len);
-        $beforeTokens = preg_split('/[\s\x{00A0}]+/u', trim($beforeText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $afterTokens = preg_split('/[\s\x{00A0}]+/u', trim($afterText), -1, PREG_SPLIT_NO_EMPTY) ?: [];
-
-        return [
-            'before' => $this->collapsePreviewSpaces(implode(' ', array_slice($beforeTokens, max(count($beforeTokens) - $contextWords, 0)))),
-            'match' => $matchStr,
-            'after' => $this->collapsePreviewSpaces(implode(' ', array_slice($afterTokens, 0, $contextWords))),
-        ];
+        return $this->matchTokenBySpacedScan(
+            $plain !== '' ? $plain : $glued,
+            $normalizedToken,
+            $withAlVariant,
+            $contextWords
+        );
     }
 
     /**
@@ -945,7 +1047,7 @@ class DocumentSearchService
             return null;
         }
 
-        $source = $this->documentDisplaySource($document);
+        $source = $this->documentSnippetSource($document);
         if ($source === '') {
             return null;
         }
@@ -1251,7 +1353,18 @@ class DocumentSearchService
             return [];
         }
 
+        $source = $this->documentSnippetSource($document);
+        if ($source === '') {
+            return [];
+        }
+
         $hints = $focusTokens;
+        $plain = $this->normalizePreviewText($source, []);
+        $glued = $this->normalizePreviewText($source, $hints);
+        if ($plain === '' && $glued === '') {
+            return [];
+        }
+
         $maxSnippets = 4;
         $n = count($focusTokens);
         $covered = array_fill(0, $n, false);
@@ -1277,8 +1390,8 @@ class DocumentSearchService
 
                 $slice = array_slice($focusTokens, $start, $len);
                 $sn = $len === 1
-                    ? $this->findSnippetInDocument($document, $slice[0], true, 8, $hints)
-                    : $this->findPhraseSnippetInDocument($document, $slice, true, 8, $hints);
+                    ? $this->findTokenSnippetFromPrepared($plain, $glued, $slice[0], true, 8)
+                    : $this->findPhraseSnippetFromPrepared($plain, $glued, $slice, true, 8);
 
                 if ($sn === null) {
                     continue;
@@ -2868,7 +2981,7 @@ class DocumentSearchService
                         'match_type' => 'any',
                         'tokens' => $words,
                         'word' => null,
-                        'ids' => $this->orderIdsByPreferredList($baseQuery, $ids, $applySort),
+                        'ids' => $this->orderIdsByDatePos($ids, $datePos),
                     ];
                 }
                 continue;
@@ -2958,6 +3071,21 @@ class DocumentSearchService
             'intval',
             $applySort((clone $baseQuery)->whereIn('documents.id', $ids))->pluck('documents.id')->all()
         ));
+    }
+
+    /**
+     * @param array<int, int> $ids
+     * @param array<int, int> $datePos map id => sort position
+     * @return array<int, int>
+     */
+    protected function orderIdsByDatePos(array $ids, array $datePos): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        usort($ids, function (int $a, int $b) use ($datePos): int {
+            return ($datePos[$a] ?? PHP_INT_MAX) <=> ($datePos[$b] ?? PHP_INT_MAX);
+        });
+
+        return $ids;
     }
 
     /**

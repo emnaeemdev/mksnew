@@ -499,7 +499,14 @@ class DocumentController extends Controller
      */
     protected function getFieldOptions($field, $section)
     {
-        if (in_array($field->type, ['select', 'multiselect', 'radio'])) {
+        if (!in_array($field->type, ['select', 'multiselect', 'radio'], true)) {
+            return collect();
+        }
+
+        $version = (int) Cache::get(self::fieldCountsVersionKey((int) $section->id), 1);
+        $cacheKey = 'doc_field_options_v1:' . $section->id . ':' . $field->id . ':v' . $version;
+
+        $values = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($field, $section) {
             return $section->documents()
                 ->published()
                 ->join('document_field_values', 'documents.id', '=', 'document_field_values.document_id')
@@ -508,9 +515,27 @@ class DocumentController extends Controller
                 ->pluck('document_field_values.value')
                 ->filter()
                 ->sort()
-                ->values();
-        }
-        return collect();
+                ->values()
+                ->all();
+        });
+
+        return collect($values);
+    }
+
+    /**
+     * @return array{0:int,1:int} [totalDocuments, totalViews]
+     */
+    protected function sectionPublishedStats(DocumentSection $section): array
+    {
+        $version = (int) Cache::get(self::fieldCountsVersionKey((int) $section->id), 1);
+        $cacheKey = 'doc_section_stats_v1:' . $section->id . ':v' . $version;
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($section) {
+            return [
+                (int) $section->documents()->published()->count(),
+                (int) $section->documents()->published()->sum('views_count'),
+            ];
+        });
     }
 
     /**
@@ -696,10 +721,11 @@ class DocumentController extends Controller
         $key = self::fieldCountsVersionKey($sectionId);
         if (!Cache::has($key)) {
             Cache::forever($key, 2);
-            return;
+        } else {
+            Cache::increment($key);
         }
 
-        Cache::increment($key);
+        Cache::forget('doc_sections_menu_counts_v1');
     }
 
     /**
@@ -905,10 +931,12 @@ class DocumentController extends Controller
         }
 
         // جميع الأقسام لاستخدامها في القائمة المنسدلة
-        $allSections = DocumentSection::active()->orderBy('sort_order')
-            ->withCount(['documents as published_docs_count' => function ($q) {
-                $q->where('is_published', true);
-            }])->get();
+        $allSections = Cache::remember('doc_sections_menu_counts_v1', now()->addMinutes(10), function () {
+            return DocumentSection::active()->orderBy('sort_order')
+                ->withCount(['documents as published_docs_count' => function ($q) {
+                    $q->where('is_published', true);
+                }])->get();
+        });
 
         // قراءة اختيار المستخدم من القائمة: قسم آخر أو كل الأقسام
         $selectedSectionParam = $request->get('section_select');
@@ -1015,8 +1043,7 @@ class DocumentController extends Controller
                 $totalDocuments = Document::published()->count();
                 $totalViews = (int) Document::published()->sum('views_count');
             } else {
-                $totalDocuments = $section->documents()->published()->count();
-                $totalViews = $section->documents()->published()->sum('views_count');
+                [$totalDocuments, $totalViews] = $this->sectionPublishedStats($section);
             }
 
             return view('frontend.documents.section', compact(
@@ -1046,8 +1073,7 @@ class DocumentController extends Controller
             }
 
             $fieldCounts = $this->computeFieldCounts($section, $customFields, $request);
-            $totalDocuments = $section->documents()->published()->count();
-            $totalViews = $section->documents()->published()->sum('views_count');
+            [$totalDocuments, $totalViews] = $this->sectionPublishedStats($section);
 
             return view('frontend.documents.section', compact(
                 'section', 'keywordDocuments', 'activeSectionKeyword', 'customFields', 'appliedFilters',
@@ -1067,8 +1093,7 @@ class DocumentController extends Controller
             $totalDocuments = Document::published()->count();
             $totalViews = (int) Document::published()->sum('views_count');
         } else {
-            $totalDocuments = $section->documents()->published()->count();
-            $totalViews = $section->documents()->published()->sum('views_count');
+            [$totalDocuments, $totalViews] = $this->sectionPublishedStats($section);
         }
 
         // الحقول المخصصة مع خياراتها
