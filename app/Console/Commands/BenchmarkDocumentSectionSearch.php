@@ -55,8 +55,10 @@ class BenchmarkDocumentSectionSearch extends Command
         if ($categorized) {
             $this->info('Phrase: ' . ($categorized['phrase']->total() ?? 0));
             $this->info('All: ' . ($categorized['all']->total() ?? 0));
-            foreach ($categorized['per_word'] as $word => $page) {
-                $this->info("Word [{$word}]: " . $page->total());
+            foreach ($categorized['per_word'] as $idx => $entry) {
+                $word = is_array($entry) ? ($entry['word'] ?? $idx) : $idx;
+                $page = is_array($entry) ? ($entry['page'] ?? null) : $entry;
+                $this->info("Word [{$word}]: " . ($page?->total() ?? 0));
             }
             $this->info('Unique total: ' . ($categorized['unique_total'] ?? 0));
         }

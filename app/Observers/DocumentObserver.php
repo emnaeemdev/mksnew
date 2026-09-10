@@ -15,15 +15,22 @@ class DocumentObserver
     {
         $document->loadMissing('plainFieldValues.field');
         $index = $this->searchService->buildSearchIndex($document);
+        $indexChanged = $document->search_text !== $index['search_text']
+            || $document->search_words !== $index['search_words'];
 
-        if ($document->search_text === $index['search_text'] && $document->search_words === $index['search_words']) {
-            return;
+        if ($indexChanged) {
+            $document->search_text = $index['search_text'];
+            $document->search_words = $index['search_words'];
+            $document->saveQuietly();
+            $this->searchService->syncSearchTokensForDocument((int) $document->id, $index['search_words']);
+        } elseif ($document->wasRecentlyCreated) {
+            // حماية للوثيقة الجديدة حتى لو صادف أن search_text كان مجهزًا قبل الحفظ.
+            $this->searchService->syncSearchTokensForDocument((int) $document->id, $index['search_words']);
         }
 
-        $document->search_text = $index['search_text'];
-        $document->search_words = $index['search_words'];
-        $document->saveQuietly();
-        $this->searchService->syncSearchTokensForDocument((int) $document->id, $index['search_words']);
+        if ($indexChanged || $document->wasRecentlyCreated || $this->searchVisibilityOrOrderChanged($document)) {
+            $this->searchService->bumpSearchCacheVersion();
+        }
     }
 
     public function deleted(Document $document): void
@@ -33,5 +40,24 @@ class DocumentObserver
                 ->where('document_id', $document->id)
                 ->delete();
         }
+
+        $this->searchService->bumpSearchCacheVersion();
+    }
+
+    protected function searchVisibilityOrOrderChanged(Document $document): bool
+    {
+        foreach ([
+            'section_id',
+            'is_published',
+            'published_at',
+            'sort_order',
+            'title',
+        ] as $field) {
+            if ($document->wasChanged($field)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -22,7 +22,7 @@
                     <div class="row g-2 g-md-3 align-items-end">
                         <div class="col-md-6">
                             <label for="search" class="form-label mb-1">ابحث في الوثائق</label>
-                            <input type="text" name="search" id="search" value="{{ request('search') }}" class="form-control" placeholder="اكتب كلمات البحث...">
+                            <input type="text" name="search" id="search" value="{{ request('search') }}" class="form-control" placeholder="اكتب كلمات البحث..." maxlength="{{ (int) config('document_search.max_query_chars', 150) }}" title="حد أقصى {{ (int) config('document_search.max_query_words', 5) }} كلمات">
                         </div>
                         <div class="col-md-4">
                             <label for="section" class="form-label mb-1">القسم</label>

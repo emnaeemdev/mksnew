@@ -25,7 +25,8 @@ class RebuildDocumentSearchText extends Command
             ->orderBy('id')
             ->chunkById($chunk, function ($documents) use ($searchService, $bar) {
                 foreach ($documents as $document) {
-                    $searchService->rebuildDocumentIndex($document);
+                    // سنمسح الكاش مرة واحدة بعد اكتمال الأمر، بدل زيادة الإصدار لكل وثيقة.
+                    $searchService->rebuildDocumentIndex($document, bumpCacheVersion: false);
                     $bar->advance();
                 }
             });
@@ -34,6 +35,7 @@ class RebuildDocumentSearchText extends Command
         $this->newLine();
 
         Cache::flush();
+        $searchService->bumpSearchCacheVersion();
         $this->info('Document search index rebuild completed (search_text + search_words + tokens).');
 
         return self::SUCCESS;

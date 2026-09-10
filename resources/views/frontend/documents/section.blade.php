@@ -56,7 +56,7 @@
                                         البحث في {{ app()->getLocale() === 'ar' ? $section->name : $section->name_en }}
                                     @endif
                                 </label>
-                                <input type="text" id="search" name="search" class="form-control" value="{{ old('search', $searchTerm ?? request('search')) }}" placeholder="اكتب عبارة أو كلمات...">
+                                <input type="text" id="search" name="search" class="form-control" value="{{ old('search', $searchTerm ?? request('search')) }}" placeholder="اكتب عبارة أو كلمات..." maxlength="{{ (int) config('document_search.max_query_chars', 150) }}" title="حد أقصى {{ (int) config('document_search.max_query_words', 5) }} كلمات">
                             </div>
 
     

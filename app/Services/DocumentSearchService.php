@@ -3,23 +3,74 @@
 namespace App\Services;
 
 use App\Models\Document;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Throwable;
 
 class DocumentSearchService
 {
+    protected const SEARCH_CACHE_VERSION_KEY = 'document_search_cache_version';
+
     /** @var array<string, array{counts: array, scatteredPlan: array}> */
     protected array $searchScopeCache = [];
 
-    /** @var array<string, array<int, int>> */
+    /** @var array<string, array<mixed>> */
     protected array $rankedDocumentIdsCache = [];
 
     /** @var bool|null */
     protected static ?bool $tokenIndexReady = null;
+
+    protected ?int $cachedSearchVersion = null;
+
+    protected function maxQueryWords(): int
+    {
+        try {
+            return max(1, (int) config('document_search.max_query_words', 5));
+        } catch (Throwable) {
+            // يسمح باختبار دوال النص كوحدة مستقلة بدون boot كامل لـ Laravel.
+            return 5;
+        }
+    }
+
+    public function searchCacheVersion(): int
+    {
+        if ($this->cachedSearchVersion !== null) {
+            return $this->cachedSearchVersion;
+        }
+
+        try {
+            return $this->cachedSearchVersion = max(
+                1,
+                (int) Cache::get(self::SEARCH_CACHE_VERSION_KEY, 1)
+            );
+        } catch (Throwable) {
+            return $this->cachedSearchVersion = 1;
+        }
+    }
+
+    public function bumpSearchCacheVersion(): void
+    {
+        $this->searchScopeCache = [];
+        $this->rankedDocumentIdsCache = [];
+
+        try {
+            if (!Cache::has(self::SEARCH_CACHE_VERSION_KEY)) {
+                Cache::forever(self::SEARCH_CACHE_VERSION_KEY, 2);
+                $this->cachedSearchVersion = 2;
+                return;
+            }
+
+            $this->cachedSearchVersion = (int) Cache::increment(self::SEARCH_CACHE_VERSION_KEY);
+        } catch (Throwable) {
+            $this->cachedSearchVersion = null;
+            // تعطّل الكاش لا يجب أن يمنع حفظ أو حذف الوثيقة.
+        }
+    }
 
     protected function useTokenIndex(): bool
     {
@@ -49,7 +100,7 @@ class DocumentSearchService
     /**
      * يعيد بناء search_text و search_words وفهرس الكلمات لوثيقة واحدة.
      */
-    public function rebuildDocumentIndex(Document $document): void
+    public function rebuildDocumentIndex(Document $document, bool $bumpCacheVersion = true): void
     {
         $document->loadMissing('plainFieldValues.field');
         $index = $this->buildSearchIndex($document);
@@ -57,6 +108,10 @@ class DocumentSearchService
         $document->search_words = $index['search_words'];
         $document->saveQuietly();
         $this->syncSearchTokensForDocument((int) $document->id, $index['search_words']);
+
+        if ($bumpCacheVersion) {
+            $this->bumpSearchCacheVersion();
+        }
     }
 
     /**
@@ -140,9 +195,23 @@ class DocumentSearchService
 
     public function arabicStopWords(): array
     {
-        return [
+        static $normalizedStopWords = null;
+
+        if ($normalizedStopWords !== null) {
+            return $normalizedStopWords;
+        }
+
+        $raw = [
             'او', 'أو', 'على', 'الى', 'إلى', 'في', 'رقم', 'طعن', 'من', 'عن', 'ما', 'ماذا', 'هل', 'ثم', 'كما', 'بل', 'لكن', 'لم', 'لن', 'لا', 'أن', 'إن', 'اذا', 'إذا', 'قد', 'و', 'يا', 'ذلك', 'هذه', 'هذا', 'هناك', 'هنا', 'مع', 'كل', 'بعد', 'قبل', 'حتى', 'بين', 'أي', 'أى', 'اي', 'أين', 'هي', 'هو', 'هم', 'هن', 'أنا', 'نحن', 'انت', 'أنت', 'انتم', 'أنتم', 'كان', 'كانت', 'يكون', 'تكون', 'يكونون', 'قانون',
         ];
+
+        // نفس تطبيع البحث حتى تتطابق «على» مع «علي» بعد تحويل ى→ي
+        $normalizedStopWords = array_values(array_unique(array_map(
+            fn (string $word) => $this->normalizeArabic($word),
+            $raw
+        )));
+
+        return $normalizedStopWords;
     }
 
     /**
@@ -215,21 +284,31 @@ class DocumentSearchService
      */
     public function parseSearchQuery(string $searchTerm): array
     {
+        $maxWords = $this->maxQueryWords();
+
         $rawNormalized = $this->normalizeArabic($searchTerm);
         $rawTokens = $this->tokenizeArabic($rawNormalized);
         $rawTokens = $this->splitAttachedConjunctionWaw($rawTokens);
         // إزالة التكرار المتتالي: "حرية الصحافة الصحافة" → "حرية الصحافة"
-        $tokens = $this->collapseConsecutiveDuplicates($rawTokens);
-        $normalizedPhrase = implode(' ', $tokens);
+        $rawTokens = $this->collapseConsecutiveDuplicates($rawTokens);
+
         $stopWords = $this->arabicStopWords();
+
+        // أولًا: استبعاد الممنوعة والقصيرة، ثم أخذ أول N كلمات محتوى
+        // حتى لا تضيع كلمات مفيدة بسبب «على/من/قانون» داخل حد الـ 5
+        $contentTokens = $this->uniqueTokensPreserveOrder($this->contentTokens($rawTokens, 2));
+        $tokens = array_slice($contentTokens, 0, $maxWords);
+        $normalizedPhrase = implode(' ', $tokens);
+
         $isSingleToken = count($tokens) === 1;
         $singleTokenExcluded = $isSingleToken && (mb_strlen($tokens[0] ?? '') < 4 || in_array($tokens[0] ?? '', $stopWords, true));
-        // لا نشترط وجود أدوات الوقف (مثل «و») في الفهرس — طولها 1 وغير مفهرسة
-        $tokensForAll = $singleTokenExcluded ? [] : $this->uniqueTokensPreserveOrder($this->contentTokens($tokens, 2));
+        // بعد الفلترة المسبقة: كلمات الجملة هي نفسها كلمات المحتوى المحدودة
+        $tokensForAll = $singleTokenExcluded ? [] : $tokens;
+
         $eligiblePerWord = array_values(array_filter($tokens, function ($t) use ($stopWords) {
             return mb_strlen($t) >= 4 && !in_array($t, $stopWords, true);
         }));
-        $tokensPerWord = array_slice($this->uniqueTokensPreserveOrder($eligiblePerWord), 0, 5);
+        $tokensPerWord = array_slice($this->uniqueTokensPreserveOrder($eligiblePerWord), 0, $maxWords);
 
         return compact('normalizedPhrase', 'tokens', 'tokensForAll', 'tokensPerWord', 'singleTokenExcluded');
     }
@@ -1420,10 +1499,15 @@ class DocumentSearchService
      */
     protected function applyMultiWordPhraseMatch(Builder $query, array $tokens, bool $withAlVariant): Builder
     {
+        $maxWords = $this->maxQueryWords();
+
+        // فلترة المحتوى أولًا ثم الحد — حتى لو وصل المسار بكلمات خام
         $matchTokens = $this->contentTokens($tokens, 2);
         if ($matchTokens === []) {
-            $matchTokens = $tokens;
+            $matchTokens = array_values(array_filter($tokens, fn ($t) => is_string($t) && $t !== ''));
         }
+        $matchTokens = array_slice($this->uniqueTokensPreserveOrder($matchTokens), 0, $maxWords);
+        $tokens = $matchTokens;
 
         // اشتراط وجود كلمات المحتوى فقط في الفهرس (تجاهل «و» وغيرها من أدوات الوقف)
         if ($this->useTokenIndex()) {
@@ -2013,20 +2097,141 @@ class DocumentSearchService
      */
     protected function computeTabCountsViaTokenIndex(Builder $baseQuery, array $parsed, bool $withAlVariant): array
     {
-        $perWordCounts = [];
-        foreach ($parsed['tokensPerWord'] as $idx => $word) {
-            $perWordCounts[$idx] = $this->countDocumentsWithToken($baseQuery, $word, $withAlVariant);
+        return $this->computeTokenIndexScope($baseQuery, $parsed, $withAlVariant)['counts'];
+    }
+
+    /**
+     * يحسب أعداد التبويبات وخطة الكلمات المتفرقة من مرور واحد على فهرس التوكنات،
+     * مع استعلام إضافي فقط للتحقق من المطابقة التامة داخل المرشحين.
+     *
+     * النتيجة مكافئة للمسار السابق:
+     * - per_word: كل وثائق كل كلمة.
+     * - all: كل كلمات المحتوى مع استبعاد المطابقة التامة.
+     * - unique: اتحاد phrase + all + per_word.
+     * - scatteredPlan: نفس حد أول N وثيقة لكل كلمة وبترتيب document_id.
+     *
+     * @return array{
+     *   counts: array{phrase:int,all:int,per_word:array<int,int>,unique:int},
+     *   scatteredPlan: array<string,mixed>
+     * }
+     */
+    protected function computeTokenIndexScope(Builder $baseQuery, array $parsed, bool $withAlVariant): array
+    {
+        $allTokens = array_values($parsed['tokensForAll'] ?? []);
+        $perWordTokens = array_values($parsed['tokensPerWord'] ?? []);
+        $maxPerWord = max(1000, (int) config('document_search.scattered_plan_max_docs', 15000));
+
+        $variantMap = [];
+        foreach ($allTokens as $idx => $token) {
+            foreach ($withAlVariant ? $this->variantsFor($token) : [$token] as $variant) {
+                $variantMap[$variant]['all'][$idx] = true;
+            }
+        }
+        foreach ($perWordTokens as $idx => $token) {
+            foreach ($withAlVariant ? $this->variantsFor($token) : [$token] as $variant) {
+                $variantMap[$variant]['per_word'][$idx] = true;
+            }
         }
 
-        $phraseCount = $this->countPhraseMatches($baseQuery, $parsed, $withAlVariant);
-        $allCount = $this->countAllWordsMatches($baseQuery, $parsed, $withAlVariant);
-        $uniqueCount = $this->countUniqueSearchMatches($baseQuery, $parsed, $withAlVariant);
+        $perWordIdSets = array_fill(0, count($perWordTokens), []);
+        $perWordPlanIds = array_fill(0, count($perWordTokens), []);
+        $allMatchedByDocument = [];
+
+        if ($variantMap !== []) {
+            $table = $baseQuery->getModel()->getTable();
+            $scopeSub = (clone $baseQuery)
+                ->reorder()
+                ->select($table . '.id as document_id');
+
+            $rows = DB::table('document_search_tokens as dst')
+                ->joinSub($scopeSub, 'scoped', 'scoped.document_id', '=', 'dst.document_id')
+                ->whereIn('dst.token', array_keys($variantMap))
+                ->select(['dst.document_id', 'dst.token'])
+                ->orderBy('dst.document_id')
+                ->cursor();
+
+            foreach ($rows as $row) {
+                $documentId = (int) $row->document_id;
+                $matches = $variantMap[(string) $row->token] ?? [];
+
+                foreach (array_keys($matches['all'] ?? []) as $idx) {
+                    $allMatchedByDocument[$documentId][(int) $idx] = true;
+                }
+
+                foreach (array_keys($matches['per_word'] ?? []) as $idx) {
+                    $idx = (int) $idx;
+                    if (isset($perWordIdSets[$idx][$documentId])) {
+                        continue;
+                    }
+
+                    $perWordIdSets[$idx][$documentId] = true;
+                    if (count($perWordPlanIds[$idx]) < $maxPerWord) {
+                        $perWordPlanIds[$idx][] = $documentId;
+                    }
+                }
+            }
+        }
+
+        $allCandidateIds = [];
+        $requiredAllCount = count($allTokens);
+        if ($requiredAllCount > 0) {
+            foreach ($allMatchedByDocument as $documentId => $matchedIndices) {
+                if (count($matchedIndices) === $requiredAllCount) {
+                    $allCandidateIds[] = (int) $documentId;
+                }
+            }
+        }
+
+        $phraseIds = [];
+        if (count($parsed['tokens'] ?? []) === 1) {
+            $phraseIds = $allCandidateIds;
+        } elseif ($allCandidateIds !== []) {
+            $phraseIds = $this->applyPhraseMatchCondition(
+                (clone $baseQuery)->whereIn('documents.id', $allCandidateIds),
+                $parsed,
+                $withAlVariant
+            )
+                ->reorder()
+                ->pluck('documents.id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        $phraseSet = array_fill_keys($phraseIds, true);
+        $allCount = 0;
+        if (count($parsed['tokens'] ?? []) > 1) {
+            foreach ($allCandidateIds as $documentId) {
+                if (!isset($phraseSet[$documentId])) {
+                    $allCount++;
+                }
+            }
+        }
+
+        $perWordCounts = [];
+        $uniqueIds = array_fill_keys($allCandidateIds, true);
+        foreach ($perWordIdSets as $idx => $idSet) {
+            $perWordCounts[$idx] = count($idSet);
+            foreach (array_keys($idSet) as $documentId) {
+                $uniqueIds[(int) $documentId] = true;
+            }
+        }
+
+        $scatteredPlan = count($perWordTokens) > 1
+            ? $this->finalizeScatteredPlan(
+                $perWordTokens,
+                $this->setBucketsFromWordDocIds($perWordPlanIds),
+                $perWordPlanIds
+            )
+            : ['mode' => 'per_word', 'tabs' => [], 'word_doc_ids' => $perWordPlanIds];
 
         return [
-            'phrase' => $phraseCount,
-            'all' => $allCount,
-            'per_word' => $perWordCounts,
-            'unique' => $uniqueCount,
+            'counts' => [
+                'phrase' => count($phraseIds),
+                'all' => $allCount,
+                'per_word' => $perWordCounts,
+                'unique' => count($uniqueIds),
+            ],
+            'scatteredPlan' => $scatteredPlan,
         ];
     }
 
@@ -2234,9 +2439,11 @@ class DocumentSearchService
             ];
         }
 
-        // واجهة النتائج المرتبة فقط — نتخطى بناء صفحات التبويبات القديمة (تكلفة عالية بلا فائدة)
-        $rankedBuckets = $this->buildRankedBuckets(
+        // واجهة النتائج المرتبة فقط — نخزن الحاويات المرتبة لتجنب إعادة كل SQL مع pagination/AJAX.
+        $rankedBuckets = $this->resolveRankedBuckets(
             $baseQuery,
+            $searchTerm,
+            $request,
             $parsed,
             $counts,
             $scatteredPlan,
@@ -2256,7 +2463,12 @@ class DocumentSearchService
         $uniqueTotal = (int) ($rankedResults['unique_total'] ?? $rankedResults['paginator']->total());
         $rankedIds = $this->extractRankedDocumentIds($request, $rankedBuckets);
 
-        $scopeCacheKey = $this->searchScopeCacheKey($baseQuery, $searchTerm, $request) . '|ranked_ids';
+        $scopeCacheKey = $this->rankedDocumentIdsCacheKey(
+            $baseQuery,
+            $searchTerm,
+            $request,
+            $withAlVariant
+        );
         $this->rankedDocumentIdsCache[$scopeCacheKey] = $rankedIds;
 
         $phrasePageName = $this->pageNameForTab('phrase', 0, $includeAnyTab);
@@ -2341,13 +2553,20 @@ class DocumentSearchService
             return [];
         }
 
-        $cacheKey = $this->searchScopeCacheKey($baseQuery, $searchTerm, $request) . '|ranked_ids';
+        $cacheKey = $this->rankedDocumentIdsCacheKey(
+            $baseQuery,
+            $searchTerm,
+            $request,
+            $withAlVariant
+        );
         if (isset($this->rankedDocumentIdsCache[$cacheKey])) {
             return $this->rankedDocumentIdsCache[$cacheKey];
         }
 
-        $rankedBuckets = $this->buildRankedBuckets(
+        $rankedBuckets = $this->resolveRankedBuckets(
             $baseQuery,
+            $searchTerm,
+            $request,
             $parsed,
             $scope['counts'],
             $scope['scatteredPlan'],
@@ -2379,17 +2598,24 @@ class DocumentSearchService
             return ['parsed' => $parsed, 'counts' => null, 'scatteredPlan' => null];
         }
 
-        $cacheKey = $this->searchScopeCacheKey($baseQuery, $searchTerm, $request);
+        $cacheKey = $this->searchScopeCacheKey($baseQuery, $searchTerm, $request)
+            . '|al:' . (int) $withAlVariant;
         if (!isset($this->searchScopeCache[$cacheKey])) {
             $ttl = max(1, (int) config('document_search.scope_cache_minutes', 30));
-            $persistentKey = 'doc_search_scope_v2:' . $cacheKey;
+            $persistentKey = 'doc_search_scope_v3:' . $cacheKey;
 
             $this->searchScopeCache[$cacheKey] = Cache::remember($persistentKey, now()->addMinutes($ttl), function () use ($baseQuery, $parsed, $withAlVariant) {
-                $counts = $this->computeTabCounts(clone $baseQuery, $parsed, $withAlVariant);
-                $multiWord = count($parsed['tokensPerWord']) > 1;
-                $scatteredPlan = $multiWord
-                    ? $this->buildScatteredTabPlan(clone $baseQuery, $parsed, $withAlVariant)
-                    : ['mode' => 'per_word', 'tabs' => [], 'word_doc_ids' => []];
+                if ($this->useTokenIndex()) {
+                    $tokenScope = $this->computeTokenIndexScope(clone $baseQuery, $parsed, $withAlVariant);
+                    $counts = $tokenScope['counts'];
+                    $scatteredPlan = $tokenScope['scatteredPlan'];
+                } else {
+                    $counts = $this->computeTabCountsLegacy(clone $baseQuery, $parsed, $withAlVariant);
+                    $multiWord = count($parsed['tokensPerWord']) > 1;
+                    $scatteredPlan = $multiWord
+                        ? $this->buildScatteredTabPlanLegacy(clone $baseQuery, $parsed, $withAlVariant)
+                        : ['mode' => 'per_word', 'tabs' => [], 'word_doc_ids' => []];
+                }
 
                 return [
                     'counts' => $counts,
@@ -2408,12 +2634,95 @@ class DocumentSearchService
     protected function searchScopeCacheKey(Builder $baseQuery, string $searchTerm, Request $request): string
     {
         $query = clone $baseQuery;
+        $table = $query->getModel()->getTable();
+        $query->setEagerLoads([]);
+        $query->select($table . '.id');
+
+        $bindings = array_map(function ($binding) {
+            if (!$binding instanceof DateTimeInterface) {
+                return $binding;
+            }
+
+            $bucketSeconds = max(10, (int) config('document_search.cache_time_bucket_seconds', 60));
+            $timestamp = $binding->getTimestamp();
+
+            // published() يضيف now() لكل طلب؛ توحيده لدقيقة يمنع مفتاحًا جديدًا كل ثانية.
+            if (abs(time() - $timestamp) <= 300) {
+                return 'now-bucket:' . (int) floor($timestamp / $bucketSeconds);
+            }
+
+            return $binding->format('Y-m-d H:i:s.u');
+        }, $query->getBindings());
+
+        $parsed = $this->parseSearchQuery($searchTerm);
 
         return md5(
-            $query->toSql()
-            . '|' . json_encode($query->getBindings())
-            . '|' . $searchTerm
-            . '|' . (string) $request->input('match_group', '')
+            'v' . $this->searchCacheVersion()
+            . '|' . $query->toSql()
+            . '|' . json_encode($bindings)
+            . '|' . $parsed['normalizedPhrase']
+        );
+    }
+
+    protected function rankedDocumentIdsCacheKey(
+        Builder $baseQuery,
+        string $searchTerm,
+        Request $request,
+        bool $withAlVariant
+    ): string {
+        return $this->searchScopeCacheKey($baseQuery, $searchTerm, $request)
+            . '|ranked_ids'
+            . '|sort:' . (string) $request->input('sort', 'latest')
+            . '|group:' . (string) $request->input('match_group', '')
+            . '|al:' . (int) $withAlVariant;
+    }
+
+    /**
+     * الحاويات لا تتأثر بـ match_group أو رقم الصفحة؛ فقط بنطاق البحث والترتيب.
+     *
+     * @param array{phrase:int,all:int,per_word:array<int,int>,unique:int} $counts
+     * @param array<string, mixed> $scatteredPlan
+     * @return array<int, array<string, mixed>>
+     */
+    protected function resolveRankedBuckets(
+        Builder $baseQuery,
+        string $searchTerm,
+        Request $request,
+        array $parsed,
+        array $counts,
+        array $scatteredPlan,
+        callable $applySort,
+        bool $withAlVariant
+    ): array {
+        $scopeKey = $this->searchScopeCacheKey($baseQuery, $searchTerm, $request);
+        $sort = (string) $request->input('sort', 'latest');
+        $cacheKey = $scopeKey . '|sort:' . $sort . '|al:' . (int) $withAlVariant;
+
+        if (isset($this->rankedDocumentIdsCache[$cacheKey])) {
+            return $this->rankedDocumentIdsCache[$cacheKey];
+        }
+
+        $build = fn () => $this->buildRankedBuckets(
+            $baseQuery,
+            $parsed,
+            $counts,
+            $scatteredPlan,
+            $applySort,
+            $withAlVariant
+        );
+
+        // ترتيب المشاهدات يتغير باستمرار؛ نبقيه داخل الطلب فقط حتى لا يعرض ترتيبًا قديمًا.
+        if ($sort === 'views') {
+            return $this->rankedDocumentIdsCache[$cacheKey] = $build();
+        }
+
+        $ttl = max(1, (int) config('document_search.ranked_cache_minutes', 15));
+        $persistentKey = 'doc_search_ranked_v1:' . md5($cacheKey);
+
+        return $this->rankedDocumentIdsCache[$cacheKey] = Cache::remember(
+            $persistentKey,
+            now()->addMinutes($ttl),
+            $build
         );
     }
 

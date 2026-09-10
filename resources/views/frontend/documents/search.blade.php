@@ -47,7 +47,7 @@
                         <div class="row g-3 align-items-end">
                             <div class="col-lg-6">
                                 <label for="search" class="form-label">كلمة/عبارة البحث</label>
-                                <input type="text" id="search" name="search" class="form-control" value="{{ old('search', $searchTerm ?? request('search')) }}" placeholder="اكتب عبارة أو كلمات...">
+                                <input type="text" id="search" name="search" class="form-control" value="{{ old('search', $searchTerm ?? request('search')) }}" placeholder="اكتب عبارة أو كلمات..." maxlength="{{ (int) config('document_search.max_query_chars', 150) }}" title="حد أقصى {{ (int) config('document_search.max_query_words', 5) }} كلمات">
                             </div>
                             <div class="col-lg-4">
                                 <label for="section" class="form-label">القسم</label>

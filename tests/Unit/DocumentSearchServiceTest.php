@@ -55,6 +55,29 @@ class DocumentSearchServiceTest extends TestCase
     }
 
     #[Test]
+    public function query_limit_counts_content_words_after_removing_stop_words(): void
+    {
+        $parsed = $this->search->parseSearchQuery(
+            'حساب على قانون من احداثيات المفاهيم هل يؤثر على حرية الصحافة'
+        );
+
+        $this->assertSame(
+            ['حساب', 'احداثيات', 'المفاهيم', 'يوثر', 'حريه'],
+            $parsed['tokens']
+        );
+        $this->assertNotContains('علي', $parsed['tokens']);
+        $this->assertNotContains('قانون', $parsed['tokens']);
+    }
+
+    #[Test]
+    public function normalized_stop_words_are_removed_consistently(): void
+    {
+        $parsed = $this->search->parseSearchQuery('على إلى حرية الصحافة');
+
+        $this->assertSame(['حريه', 'الصحافه'], $parsed['tokens']);
+    }
+
+    #[Test]
     public function finalize_scattered_plan_groups_two_word_cooccurrence_first(): void
     {
         $method = new \ReflectionMethod(DocumentSearchService::class, 'finalizeScatteredPlan');
