@@ -65,10 +65,10 @@
                 <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <div>
                         <h3 class="card-title mb-0">سجل النشاط</h3>
-                        <small class="text-muted">يبدأ من تفعيل السجل ولا يشمل الأحداث السابقة. يُسجَّل الدخول والخروج والإضافة والتعديل والحذف والنشر، وليس تصفّح الصفحات.</small>
+                        
                     </div>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
-                    @if(auth()->user()?->isAdmin())
+                    @if(auth()->user()?->isAdmin() && \Illuminate\Support\Facades\Route::has('admin.users.activity-logs.clear'))
                         <form method="POST" action="{{ route('admin.users.activity-logs.clear', $user) }}" onsubmit="return confirm('مسح كل سجل نشاط هذا المستخدم؟ لا يمكن التراجع عن ذلك.');">
                             @csrf
                             @method('DELETE')
