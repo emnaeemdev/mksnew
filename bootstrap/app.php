@@ -73,6 +73,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'setlocale' => \App\Http\Middleware\SetLocale::class,
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'log.activity' => \App\Http\Middleware\LogAdminActivity::class,
         ]);
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,

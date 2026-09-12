@@ -142,7 +142,7 @@ Route::post("/{$adminPath}/login", [AuthController::class, 'login'])->middleware
 Route::post("/{$adminPath}/logout", [AuthController::class, 'logout'])->name('admin.logout');
 
 // Admin Routes (Protected) — staff only (admin | editor)
-Route::prefix($adminPath)->name('admin.')->middleware(['auth', 'role:admin,editor'])->group(function () {
+    Route::prefix($adminPath)->name('admin.')->middleware(['auth', 'role:admin,editor', 'log.activity'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
@@ -218,6 +218,8 @@ Route::prefix($adminPath)->name('admin.')->middleware(['auth', 'role:admin,edito
     
     // Users Management — admins only
     Route::middleware('role:admin')->group(function () {
+        Route::delete('users/{user}/activity-logs', [\App\Http\Controllers\Admin\UserController::class, 'clearActivityLogs'])
+            ->name('users.activity-logs.clear');
         Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
     });
     

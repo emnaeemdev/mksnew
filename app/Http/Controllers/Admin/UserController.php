@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ActivityLog;
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -46,9 +48,33 @@ class UserController extends Controller
             ->with('success', 'تم إنشاء المستخدم بنجاح');
     }
 
-    public function show(User $user)
+    public function show(User $user, Request $request, ActivityLogger $activityLogger)
     {
-        return view('admin.users.show', compact('user'));
+        $action = (string) $request->query('action', '');
+        $allowed = ['login', 'login_failed', 'logout', 'created', 'updated', 'deleted', 'published', 'unpublished', 'exported', 'downloaded'];
+
+        $logs = ActivityLog::query()
+            ->where('user_id', $user->id)
+            ->when(in_array($action, $allowed, true), fn ($query) => $query->where('action', $action))
+            ->latest('created_at')
+            ->latest('id')
+            ->paginate(25)
+            ->withQueryString();
+
+        return view('admin.users.show', compact('user', 'logs', 'action', 'activityLogger'));
+    }
+
+    public function clearActivityLogs(User $user)
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+
+        $count = ActivityLog::query()->where('user_id', $user->id)->delete();
+
+        return redirect()
+            ->route('admin.users.show', $user)
+            ->with('success', $count > 0
+                ? "تم مسح {$count} حدث من سجل هذا المستخدم."
+                : 'سجل هذا المستخدم فارغ بالفعل.');
     }
 
     public function edit(User $user)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -61,6 +62,16 @@ class AuthController extends Controller
             RateLimiter::clear($throttleKey);
             $request->session()->regenerate();
 
+            app(ActivityLogger::class)->record($user, 'login', 'سجّل الدخول إلى لوحة التحكم', [
+                'route_name' => 'admin.login',
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'status_code' => 302,
+                'properties' => ['actor_name' => $user->name],
+            ]);
+
             return redirect()->intended(route('admin.dashboard'));
         }
 
@@ -68,6 +79,18 @@ class AuthController extends Controller
 
         if ($user) {
             $user->registerFailedLogin();
+            app(ActivityLogger::class)->record($user, 'login_failed', 'محاولة دخول فاشلة', [
+                'route_name' => 'admin.login',
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'status_code' => 422,
+                'properties' => [
+                    'actor_name' => $user->name,
+                    'login' => $login,
+                ],
+            ]);
         }
 
         throw ValidationException::withMessages([
@@ -77,6 +100,19 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $user = $request->user();
+        if ($user instanceof User) {
+            app(ActivityLogger::class)->record($user, 'logout', 'سجّل الخروج من لوحة التحكم', [
+                'route_name' => 'admin.logout',
+                'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'ip_address' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'status_code' => 302,
+                'properties' => ['actor_name' => $user->name],
+            ]);
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
