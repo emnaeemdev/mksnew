@@ -174,6 +174,14 @@ class Document extends Model
     }
 
     /**
+     * Scope for unpublished / draft documents.
+     */
+    public function scopeDraft($query)
+    {
+        return $query->where('is_published', false);
+    }
+
+    /**
      * Scope for featured documents.
      */
     public function scopeFeatured($query)
