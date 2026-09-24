@@ -336,7 +336,13 @@
                                                 </span>
                                             </td>
                                             <td>
-                                                <small>{{ $document->published_at->format('Y-m-d') }}</small>
+                                                <small>
+                                                    @if($document->published_at)
+                                                        {{ $document->published_at->format('Y-m-d') }}
+                                                    @else
+                                                        —
+                                                    @endif
+                                                </small>
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm" role="group">
