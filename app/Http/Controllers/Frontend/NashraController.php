@@ -15,7 +15,7 @@ class NashraController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Nashra::where('status', 1);
+        $query = Nashra::where('status', 1)->forCurrentLocale();
         if ($request->filled('year')) {
             $query->whereYear('published_at', $request->year);
         }
@@ -23,8 +23,11 @@ class NashraController extends Controller
             $searchTerm = $request->search;
             $query->where(function($q) use ($searchTerm) {
                 $q->where('title_ar', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('title_en', 'LIKE', "%{$searchTerm}%")
                   ->orWhere('subtitle_ar', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('content_ar', 'LIKE', "%{$searchTerm}%");
+                  ->orWhere('subtitle_en', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('content_ar', 'LIKE', "%{$searchTerm}%")
+                  ->orWhere('content_en', 'LIKE', "%{$searchTerm}%");
             });
         }
         $sort = $request->get('sort', 'latest');
@@ -37,6 +40,7 @@ class NashraController extends Controller
         $nashras = $query->paginate(12);
 
         $years = Nashra::where('status', 1)
+                      ->forCurrentLocale()
                       ->selectRaw('YEAR(published_at) as year')
                       ->distinct()
                       ->orderBy('year', 'desc')
@@ -55,20 +59,22 @@ class NashraController extends Controller
         $nashra = Nashra::findOrFail($nashra);
 
         $sheetPayload = null;
-        if ($nashra->google_sheet_id) {
+        $sheetId = $nashra->localizedGoogleSheetId();
+        if ($sheetId) {
             try {
                 $sheetPayload = app(GoogleSheetsService::class)
-                    ->getCachedSheetPayload($nashra->google_sheet_id);
+                    ->getCachedSheetPayload($sheetId);
             } catch (\Throwable $e) {
                 Log::error('Google Sheets fetch failed', [
                     'nashra_id' => $nashra->id,
-                    'sheet_id' => $nashra->google_sheet_id,
+                    'sheet_id' => $sheetId,
                     'message' => $e->getMessage(),
                 ]);
             }
         }
 
         $relatedNashras = Nashra::published()
+            ->forCurrentLocale()
             ->where('id', '!=', $nashra->id)
             ->orderByPublished()
             ->orderBySortOrder()
@@ -101,7 +107,7 @@ class NashraController extends Controller
             session()->put($sessionKey, $downloaded);
         }
 
-        return response()->download($filePath, ($nashra->title_ar ?: 'nashra') . '.pdf');
+        return response()->download($filePath, ($nashra->title ?: 'nashra') . '.pdf');
     }
 
     /**
@@ -113,8 +119,11 @@ class NashraController extends Controller
         $nashras = Nashra::published()
                         ->where(function($q) use ($query) {
                             $q->where('title_ar', 'LIKE', "%{$query}%")
+                              ->orWhere('title_en', 'LIKE', "%{$query}%")
                               ->orWhere('subtitle_ar', 'LIKE', "%{$query}%")
-                              ->orWhere('content_ar', 'LIKE', "%{$query}%");
+                              ->orWhere('subtitle_en', 'LIKE', "%{$query}%")
+                              ->orWhere('content_ar', 'LIKE', "%{$query}%")
+                              ->orWhere('content_en', 'LIKE', "%{$query}%");
                         })
                         ->orderByPublished()
                         ->orderBySortOrder()
@@ -156,7 +165,8 @@ class NashraController extends Controller
         $nashra = Nashra::published()->findOrFail($nashra);
 
         try {
-            if (!$nashra->google_sheet_id) {
+            $sheetId = $nashra->localizedGoogleSheetId();
+            if (!$sheetId) {
                 return response()->json([
                     'success' => false,
                     'message' => 'معرف Google Sheet غير متوفر',
@@ -165,7 +175,7 @@ class NashraController extends Controller
 
             $forceRefresh = $request->boolean('refresh') && auth()->check();
             $googleSheetsService = app(GoogleSheetsService::class);
-            $payload = $googleSheetsService->getCachedSheetPayload($nashra->google_sheet_id, $forceRefresh);
+            $payload = $googleSheetsService->getCachedSheetPayload($sheetId, $forceRefresh);
 
             $response = [
                 'success' => true,

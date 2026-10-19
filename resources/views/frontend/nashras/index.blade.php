@@ -18,7 +18,9 @@
                             @endif
                         </a>
                     </li>
-                    <li class="breadcrumb-item active">نشرة الذاكرة القانونية</li>
+                    <li class="breadcrumb-item active">
+                        {{ app()->getLocale() == 'ar' ? 'نشرة الذاكرة القانونية' : 'Legal Memory Bulletin' }}
+                    </li>
                 </ol>
             </nav>
         </div>
@@ -36,13 +38,13 @@
                                 @if($nashra->featured_image)
                                     <img src="{{ $nashra->featured_image_url }}"
                                          class="post-image post-image-hover"
-                                         alt="{{ $nashra->title_ar }}"
+                                         alt="{{ $nashra->title }}"
                                          loading="lazy"
                                          decoding="async">
                                 @else
                                     <img src="{{ asset('images/placeholder.jpg') }}"
                                          class="post-image post-image-hover"
-                                         alt="{{ $nashra->title_ar }}"
+                                         alt="{{ $nashra->title }}"
                                          loading="lazy"
                                          decoding="async">
                                 @endif
@@ -52,11 +54,11 @@
                                 <h6 class="nashra-card-title text-center mb-1">
                                     <a href="{{ route('frontend.nashras.show', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}"
                                        class="text-decoration-none text-dark">
-                                        {{ $nashra->title_ar }}
+                                        {{ $nashra->title }}
                                     </a>
                                 </h6>
-                                @if($nashra->subtitle_ar)
-                                    <p class="nashra-card-subtitle text-center mb-2 px-2">{{ $nashra->subtitle_ar }}</p>
+                                @if($nashra->subtitle)
+                                    <p class="nashra-card-subtitle text-center mb-2 px-2">{{ $nashra->subtitle }}</p>
                                 @endif
                             </div>
                         </div>
@@ -72,11 +74,15 @@
         @else
             <div class="no-posts">
                 <i class="fas fa-search"></i>
-                <h4>لا توجد نشرات</h4>
-                <p class="text-muted">لم يتم العثور على أي نشرات تطابق معايير البحث الخاصة بك.</p>
-                <a href="{{ route('frontend.nashras.index') }}" class="btn btn-primary">
+                <h4>{{ app()->getLocale() == 'ar' ? 'لا توجد نشرات' : 'No bulletins found' }}</h4>
+                <p class="text-muted">
+                    {{ app()->getLocale() == 'ar'
+                        ? 'لم يتم العثور على أي نشرات تطابق معايير البحث الخاصة بك.'
+                        : 'No bulletins match your search criteria.' }}
+                </p>
+                <a href="{{ route('frontend.nashras.index', ['locale' => app()->getLocale()]) }}" class="btn btn-primary">
                     <i class="fas fa-refresh me-1"></i>
-                    عرض جميع النشرات
+                    {{ app()->getLocale() == 'ar' ? 'عرض جميع النشرات' : 'View all bulletins' }}
                 </a>
             </div>
         @endif

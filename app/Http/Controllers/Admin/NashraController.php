@@ -37,10 +37,14 @@ class NashraController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title_ar' => 'required|string|max:255',
+            'title_en' => 'nullable|string|max:255',
             'subtitle_ar' => 'nullable|string|max:255',
+            'subtitle_en' => 'nullable|string|max:255',
             'google_drive_url' => 'required|url',
+            'google_drive_url_en' => 'nullable|url',
             'published_at' => 'nullable|date',
             'content_ar' => 'nullable|string',
+            'content_en' => 'nullable|string',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
             'pdf_file' => 'nullable|mimes:pdf|max:51200',
             'status' => 'required|in:0,1',
@@ -55,6 +59,7 @@ class NashraController extends Controller
 
         $data = $request->all();
         $data['content_ar'] = app(\App\Services\HtmlSanitizer::class)->clean($data['content_ar'] ?? null);
+        $data['content_en'] = app(\App\Services\HtmlSanitizer::class)->clean($data['content_en'] ?? null);
         
         // رفع الصورة المميزة
         if ($request->hasFile('featured_image')) {
@@ -83,6 +88,9 @@ class NashraController extends Controller
     app(\App\Services\GoogleSheetsService::class)
         ->clearSheetCache($nashra->google_sheet_id);
 }
+        if ($nashra->google_sheet_id_en) {
+            app(\App\Services\GoogleSheetsService::class)->clearSheetCache($nashra->google_sheet_id_en);
+        }
         $nashra->syncKeywordNames($request->input('keywords'));
         
         return redirect()->route('admin.nashras.edit', $nashra)
@@ -113,10 +121,14 @@ class NashraController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'title_ar' => 'required|string|max:255',
+            'title_en' => 'nullable|string|max:255',
             'subtitle_ar' => 'nullable|string|max:255',
+            'subtitle_en' => 'nullable|string|max:255',
             'google_drive_url' => 'required|url',
+            'google_drive_url_en' => 'nullable|url',
             'published_at' => 'nullable|date',
             'content_ar' => 'nullable|string',
+            'content_en' => 'nullable|string',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
             'pdf_file' => 'nullable|mimes:pdf|max:51200',
             'status' => 'boolean',
@@ -131,6 +143,7 @@ class NashraController extends Controller
 
         $data = $request->all();
         $data['content_ar'] = app(\App\Services\HtmlSanitizer::class)->clean($data['content_ar'] ?? null);
+        $data['content_en'] = app(\App\Services\HtmlSanitizer::class)->clean($data['content_en'] ?? null);
         
         // رفع الصورة المميزة الجديدة
         if ($request->hasFile('featured_image')) {
@@ -165,6 +178,9 @@ class NashraController extends Controller
         $nashra->update($data);
         if ($nashra->google_sheet_id) {
             app(\App\Services\GoogleSheetsService::class)->clearSheetCache($nashra->google_sheet_id);
+        }
+        if ($nashra->google_sheet_id_en) {
+            app(\App\Services\GoogleSheetsService::class)->clearSheetCache($nashra->google_sheet_id_en);
         }
         $nashra->syncKeywordNames($request->input('keywords'));
         

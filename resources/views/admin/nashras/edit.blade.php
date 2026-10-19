@@ -70,6 +70,36 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <!-- العنوان الإنجليزي -->
+                            <div class="col-md-6 mb-3">
+                                <label for="title_en" class="form-label">العنوان الإنجليزي (English Title)</label>
+                                <input type="text" 
+                                       class="form-control @error('title_en') is-invalid @enderror" 
+                                       id="title_en" 
+                                       name="title_en" 
+                                       dir="ltr"
+                                       value="{{ old('title_en', $nashra->title_en) }}">
+                                @error('title_en')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- العنوان الفرعي الإنجليزي -->
+                            <div class="col-md-6 mb-3">
+                                <label for="subtitle_en" class="form-label">العنوان الفرعي الإنجليزي (English Subtitle)</label>
+                                <input type="text" 
+                                       class="form-control @error('subtitle_en') is-invalid @enderror" 
+                                       id="subtitle_en" 
+                                       name="subtitle_en" 
+                                       dir="ltr"
+                                       value="{{ old('subtitle_en', $nashra->subtitle_en) }}">
+                                @error('subtitle_en')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             @include('admin.partials.keyword-picker', [
                                 'keywordScope' => 'nashra',
@@ -112,6 +142,29 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="row">
+                            <!-- رابط Google Drive الإنجليزي -->
+                            <div class="col-md-12 mb-3">
+                                <label for="google_drive_url_en" class="form-label">رابط Google Drive الإنجليزي (English Google Drive URL)</label>
+                                <input type="url" 
+                                       class="form-control @error('google_drive_url_en') is-invalid @enderror" 
+                                       id="google_drive_url_en" 
+                                       name="google_drive_url_en" 
+                                       dir="ltr"
+                                       value="{{ old('google_drive_url_en', $nashra->google_drive_url_en) }}"
+                                       placeholder="https://docs.google.com/spreadsheets/d/...">
+                                @error('google_drive_url_en')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">
+                                    اختياري — إذا تُرك فارغاً سيُعرض الجدول العربي أيضاً في النسخة الإنجليزية. سيتم استخراج معرف Google Sheet تلقائياً من الرابط
+                                    @if($nashra->google_sheet_id_en)
+                                        <br><strong>المعرف الإنجليزي الحالي:</strong> {{ $nashra->google_sheet_id_en }}
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="row">
                             <!-- الحالة -->
@@ -152,6 +205,19 @@
                                       name="content_ar" 
                                       rows="6">{{ old('content_ar', $nashra->content_ar) }}</textarea>
                             @error('content_ar')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- المحتوى الإنجليزي -->
+                        <div class="mb-3">
+                            <label for="content_en" class="form-label">المحتوى الإنجليزي (English Content)</label>
+                            <textarea class="form-control tinymce-editor @error('content_en') is-invalid @enderror" 
+                                      id="content_en" 
+                                      name="content_en" 
+                                      dir="ltr"
+                                      rows="6">{{ old('content_en', $nashra->content_en) }}</textarea>
+                            @error('content_en')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -364,6 +430,7 @@ $(document).ready(function() {
 
     if (typeof initAdminTinyMCE === 'function') {
         initAdminTinyMCE('#content_ar', { directionality: 'rtl' });
+        initAdminTinyMCE('#content_en', { directionality: 'ltr' });
     }
 });
 </script>

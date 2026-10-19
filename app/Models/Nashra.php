@@ -12,11 +12,16 @@ class Nashra extends Model
     use HasKeywords;
     protected $fillable = [
         'title_ar',
+        'title_en',
         'subtitle_ar',
+        'subtitle_en',
         'google_drive_url',
+        'google_drive_url_en',
         'google_sheet_id',
+        'google_sheet_id_en',
         'published_at',
         'content_ar',
+        'content_en',
         'featured_image',
         'pdf_file',
         'status',
@@ -114,13 +119,19 @@ class Nashra extends Model
         parent::boot();
 
         static::saving(function ($nashra) {
-            if (! $nashra->google_drive_url) {
-                return;
+            if ($nashra->google_drive_url) {
+                $parsed = self::parseGoogleSheetReference($nashra->google_drive_url);
+                $nashra->google_drive_url = $parsed['url'];
+                $nashra->google_sheet_id = $parsed['id'];
             }
 
-            $parsed = self::parseGoogleSheetReference($nashra->google_drive_url);
-            $nashra->google_drive_url = $parsed['url'];
-            $nashra->google_sheet_id = $parsed['id'];
+            if ($nashra->google_drive_url_en) {
+                $parsed = self::parseGoogleSheetReference($nashra->google_drive_url_en);
+                $nashra->google_drive_url_en = $parsed['url'];
+                $nashra->google_sheet_id_en = $parsed['id'];
+            } else {
+                $nashra->google_sheet_id_en = null;
+            }
         });
     }
 
@@ -130,6 +141,19 @@ class Nashra extends Model
     public function scopePublished($query)
     {
         return $query->where('status', true);
+    }
+
+    /**
+     * حصر النشرات التي تحتوي على محتوى باللغة الحالية
+     * (في الإنجليزية: النشرات التي لها عنوان إنجليزي فقط)
+     */
+    public function scopeForCurrentLocale($query)
+    {
+        if (app()->getLocale() === 'en') {
+            $query->whereNotNull('title_en')->where('title_en', '!=', '');
+        }
+
+        return $query;
     }
 
     /**
@@ -179,5 +203,65 @@ class Nashra extends Model
             return $this->published_at->format('Y-m-d');
         }
         return null;
+    }
+
+    /**
+     * العنوان حسب اللغة الحالية (مع الرجوع للعربية عند عدم توفر الإنجليزية)
+     */
+    public function getTitleAttribute()
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->title_ar;
+        }
+
+        return $this->title_en ?: $this->title_ar;
+    }
+
+    /**
+     * العنوان الفرعي حسب اللغة الحالية
+     */
+    public function getSubtitleAttribute()
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->subtitle_ar;
+        }
+
+        return $this->subtitle_en ?: $this->subtitle_ar;
+    }
+
+    /**
+     * المحتوى حسب اللغة الحالية
+     */
+    public function getContentAttribute()
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->content_ar;
+        }
+
+        return $this->content_en ?: $this->content_ar;
+    }
+
+    /**
+     * رابط Google Sheets حسب اللغة الحالية (مع الرجوع للعربية عند عدم توفر الإنجليزية)
+     */
+    public function localizedGoogleDriveUrl(): ?string
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->google_drive_url;
+        }
+
+        return $this->google_drive_url_en ?: $this->google_drive_url;
+    }
+
+    /**
+     * معرف Google Sheet حسب اللغة الحالية
+     */
+    public function localizedGoogleSheetId(): ?string
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->google_sheet_id;
+        }
+
+        return $this->google_sheet_id_en ?: $this->google_sheet_id;
     }
 }

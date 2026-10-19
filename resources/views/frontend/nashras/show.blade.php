@@ -1,6 +1,6 @@
 @extends('frontend.layouts.app')
 
-@section('title', $nashra->title_ar)
+@section('title', $nashra->title)
 
 @section('content')
 <div class="container-fluid py-4">
@@ -9,19 +9,19 @@
         <div class="card-body">
             <!-- العنوان والتاريخ -->
             <div class="mb-4">
-                <h1 class="display-5 text-primary mb-2">{{ $nashra->title_ar }}</h1>
-                @if($nashra->subtitle_ar)
-                    <h2 class="h4 text-muted mb-3">{{ $nashra->subtitle_ar }}</h2>
+                <h1 class="display-5 text-primary mb-2">{{ $nashra->title }}</h1>
+                @if($nashra->subtitle)
+                    <h2 class="h4 text-muted mb-3">{{ $nashra->subtitle }}</h2>
                 @endif
                 
                 <div class="d-flex flex-wrap align-items-center text-muted mb-3">
                     <span class="me-3">
                         <i class="fas fa-calendar"></i>
-                        تاريخ النشر: {{ $nashra->formatted_published_date }}
+                        {{ app()->getLocale() == 'ar' ? 'تاريخ النشر' : 'Published on' }}: {{ $nashra->formatted_published_date }}
                     </span>
                     <span class="me-3">
                         <i class="fas fa-clock"></i>
-                        آخر تحديث: {{ $nashra->updated_at->diffForHumans() }}
+                        {{ app()->getLocale() == 'ar' ? 'آخر تحديث' : 'Last updated' }}: {{ $nashra->updated_at->diffForHumans() }}
                     </span>
                 </div>
                 
@@ -32,7 +32,7 @@
     <div class="row mb-4">
         <!-- يمين: عرض Google Sheets (3/4 من العرض) -->
         <div class="col-lg-9">
-            @if($nashra->google_drive_url)
+            @if($nashra->localizedGoogleDriveUrl())
                 <div class="card shadow-sm mb-0">
                     <div class="card-body p-0">
                         <div id="sheets-data-container" class="w-100">
@@ -56,7 +56,8 @@
             <div class="d-grid gap-2 mb-3">
                 <a href="{{ route('frontend.nashras.index', ['locale' => app()->getLocale()]) }}" 
                    class="btn btn-outline-primary w-100">
-                    <i class="fas fa-arrow-right"></i> العودة لقائمة النشرات
+                    <i class="fas fa-arrow-right"></i>
+                    {{ app()->getLocale() == 'ar' ? 'العودة لقائمة النشرات' : 'Back to bulletins' }}
                 </a>
             </div>
 
@@ -65,12 +66,14 @@
                 <div class="d-grid gap-2 mb-4">
                     <a href="{{ route('frontend.nashras.download', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}" 
                        class="btn btn-danger w-100">
-                        <i class="fas fa-file-pdf"></i> تحميل ملف PDF
+                        <i class="fas fa-file-pdf"></i>
+                        {{ app()->getLocale() == 'ar' ? 'تحميل ملف PDF' : 'Download PDF' }}
                     </a>
                     <a href="{{ $nashra->pdf_file_url }}" 
                        target="_blank" 
                        class="btn btn-outline-danger w-100">
-                        <i class="fas fa-eye"></i> عرض ملف PDF
+                        <i class="fas fa-eye"></i>
+                        {{ app()->getLocale() == 'ar' ? 'عرض ملف PDF' : 'View PDF' }}
                     </a>
                 </div>
             @endif
@@ -80,7 +83,7 @@
                 <div class="related-posts mt-4">
                     <h4 class="mb-4">
                         <i class="fas fa-newspaper me-2"></i>
-                        نشرات ذات صلة
+                        {{ app()->getLocale() == 'ar' ? 'نشرات ذات صلة' : 'Related bulletins' }}
                     </h4>
 
                     @foreach($relatedNashras as $related)
@@ -88,9 +91,9 @@
                            class="related-post-card">
                             <img class="related-thumb"
                                  src="{{ $related->featured_image ? $related->featured_image_url : 'https://via.placeholder.com/120x80?text=No+Image' }}"
-                                 alt="{{ $related->title_ar }}">
+                                 alt="{{ $related->title }}">
                             <div class="related-post-body">
-                                <div class="related-post-title">{{ Str::limit($related->title_ar, 60) }}</div>
+                                <div class="related-post-title">{{ Str::limit($related->title, 60) }}</div>
                                 <div class="related-post-meta">
                                     <i class="fas fa-calendar-alt me-1"></i>
                                     {{ $related->formatted_published_date }}
@@ -114,14 +117,15 @@
         </div>
     @endif --}}
 
-    @if($nashra->content_ar)
+    @if($nashra->content)
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <h3 class="h5 text-primary mb-3">
-                    <i class="fas fa-align-left"></i> المحتوى
+                    <i class="fas fa-align-left"></i>
+                    {{ app()->getLocale() == 'ar' ? 'المحتوى' : 'Content' }}
                 </h3>
                 <div class="content-text rich-content">
-                    {!! safe_html($nashra->content_ar) !!}
+                    {!! safe_html($nashra->content) !!}
                 </div>
             </div>
         </div>
@@ -160,7 +164,8 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h5 class="card-title">
-                <i class="fas fa-share-alt"></i> مشاركة النشرة
+                <i class="fas fa-share-alt"></i>
+                {{ app()->getLocale() == 'ar' ? 'مشاركة النشرة' : 'Share this bulletin' }}
             </h5>
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-outline-primary" onclick="shareOnFacebook()">
@@ -173,7 +178,8 @@
                     <i class="fab fa-whatsapp"></i> WhatsApp
                 </button>
                 <button type="button" class="btn btn-outline-secondary" onclick="copyLink()">
-                    <i class="fas fa-link"></i> نسخ الرابط
+                    <i class="fas fa-link"></i>
+                    {{ app()->getLocale() == 'ar' ? 'نسخ الرابط' : 'Copy link' }}
                 </button>
             </div>
         </div>
@@ -357,7 +363,7 @@ $(document).ready(function() {
         `);
     }
     
-    @if($nashra->google_drive_url)
+    @if($nashra->localizedGoogleDriveUrl())
         loadSheetsData();
     @endif
 });
@@ -365,19 +371,19 @@ $(document).ready(function() {
 // وظائف المشاركة
 function shareOnFacebook() {
     const url = encodeURIComponent(window.location.href);
-    const title = encodeURIComponent('{{ $nashra->title_ar }}');
+    const title = encodeURIComponent('{{ $nashra->title }}');
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
 }
 
 function shareOnTwitter() {
     const url = encodeURIComponent(window.location.href);
-    const title = encodeURIComponent('{{ $nashra->title_ar }}');
+    const title = encodeURIComponent('{{ $nashra->title }}');
     window.open(`https://twitter.com/intent/tweet?url=${url}&text=${title}`, '_blank', 'width=600,height=400');
 }
 
 function shareOnWhatsApp() {
     const url = encodeURIComponent(window.location.href);
-    const title = encodeURIComponent('{{ $nashra->title_ar }}');
+    const title = encodeURIComponent('{{ $nashra->title }}');
     window.open(`https://wa.me/?text=${title}%20${url}`, '_blank');
 }
 
@@ -426,7 +432,7 @@ function exportAllSheetsToExcel() {
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
         });
         
-        XLSX.writeFile(wb, '{{ $nashra->title_ar }}.xlsx');
+        XLSX.writeFile(wb, '{{ $nashra->title }}.xlsx');
     }
 }
 </script>
