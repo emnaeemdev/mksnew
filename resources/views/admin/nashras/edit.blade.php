@@ -272,6 +272,57 @@
                                 <div class="form-text">ملف PDF للنشرة (الحد الأقصى: 10MB) - اتركه فارغاً للاحتفاظ بالملف الحالي</div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <!-- الصورة المميزة الإنجليزية -->
+                            <div class="col-md-6 mb-3">
+                                <label for="featured_image_en" class="form-label">الصورة المميزة الإنجليزية (English Featured Image)</label>
+                                @if($nashra->featured_image_en)
+                                    <div class="mb-2">
+                                        <img src="{{ $nashra->featured_image_url_en }}" 
+                                             alt="{{ $nashra->title_en }}" 
+                                             class="img-thumbnail" 
+                                             style="max-width: 200px; max-height: 150px;">
+                                        <div class="form-text">الصورة الإنجليزية الحالية</div>
+                                    </div>
+                                @endif
+                                <input type="file" 
+                                       class="form-control @error('featured_image_en') is-invalid @enderror" 
+                                       id="featured_image_en" 
+                                       name="featured_image_en" 
+                                       accept="image/*">
+                                @error('featured_image_en')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">اختياري — إذا تُركت فارغة سيُعرض نفس الصورة العربية في النسخة الإنجليزية
+                                    <br>المقاس المقترح: <strong>500×600</strong> بكسل
+                                </div>
+                            </div>
+
+                            <!-- ملف PDF الإنجليزي -->
+                            <div class="col-md-6 mb-3">
+                                <label for="pdf_file_en" class="form-label">ملف PDF الإنجليزي (English PDF)</label>
+                                @if($nashra->pdf_file_en)
+                                    <div class="mb-2">
+                                        <a href="{{ $nashra->pdf_file_url_en }}" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-file-pdf"></i> عرض الملف الإنجليزي الحالي
+                                        </a>
+                                        <div class="form-text">الملف الحالي: {{ basename($nashra->pdf_file_en) }}</div>
+                                    </div>
+                                @endif
+                                <input type="file" 
+                                       class="form-control @error('pdf_file_en') is-invalid @enderror" 
+                                       id="pdf_file_en" 
+                                       name="pdf_file_en" 
+                                       accept=".pdf">
+                                @error('pdf_file_en')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <div class="form-text">اختياري — إذا تُرك فارغاً سيُعرض نفس الملف العربي في النسخة الإنجليزية</div>
+                            </div>
+                        </div>
                         
                         <!-- معاينة Google Sheets -->
                         <div class="mb-3">

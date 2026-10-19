@@ -46,7 +46,9 @@ class NashraController extends Controller
             'content_ar' => 'nullable|string',
             'content_en' => 'nullable|string',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
             'pdf_file' => 'nullable|mimes:pdf|max:51200',
+            'pdf_file_en' => 'nullable|mimes:pdf|max:51200',
             'status' => 'required|in:0,1',
             'sort_order' => 'integer|min:0'
         ]);
@@ -66,11 +68,23 @@ class NashraController extends Controller
             $data['featured_image'] = $request->file('featured_image')
                                              ->store('nashras/images', 'public');
         }
+
+        // رفع الصورة المميزة الإنجليزية
+        if ($request->hasFile('featured_image_en')) {
+            $data['featured_image_en'] = $request->file('featured_image_en')
+                                                ->store('nashras/images', 'public');
+        }
         
         // رفع ملف PDF
         if ($request->hasFile('pdf_file')) {
             $data['pdf_file'] = $request->file('pdf_file')
                                       ->store('nashras/pdfs', 'public');
+        }
+
+        // رفع ملف PDF الإنجليزي
+        if ($request->hasFile('pdf_file_en')) {
+            $data['pdf_file_en'] = $request->file('pdf_file_en')
+                                         ->store('nashras/pdfs', 'public');
         }
         
         // تعيين القيم الافتراضية
@@ -130,7 +144,9 @@ class NashraController extends Controller
             'content_ar' => 'nullable|string',
             'content_en' => 'nullable|string',
             'featured_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
+            'featured_image_en' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:51200',
             'pdf_file' => 'nullable|mimes:pdf|max:51200',
+            'pdf_file_en' => 'nullable|mimes:pdf|max:51200',
             'status' => 'boolean',
             'sort_order' => 'integer|min:0'
         ]);
@@ -154,6 +170,16 @@ class NashraController extends Controller
             $data['featured_image'] = $request->file('featured_image')
                                              ->store('nashras/images', 'public');
         }
+
+        // رفع الصورة المميزة الإنجليزية الجديدة
+        if ($request->hasFile('featured_image_en')) {
+            // حذف الصورة القديمة
+            if ($nashra->featured_image_en) {
+                Storage::disk('public')->delete($nashra->featured_image_en);
+            }
+            $data['featured_image_en'] = $request->file('featured_image_en')
+                                                ->store('nashras/images', 'public');
+        }
         
         // رفع ملف PDF الجديد
         if ($request->hasFile('pdf_file')) {
@@ -163,6 +189,16 @@ class NashraController extends Controller
             }
             $data['pdf_file'] = $request->file('pdf_file')
                                       ->store('nashras/pdfs', 'public');
+        }
+
+        // رفع ملف PDF الإنجليزي الجديد
+        if ($request->hasFile('pdf_file_en')) {
+            // حذف الملف القديم
+            if ($nashra->pdf_file_en) {
+                Storage::disk('public')->delete($nashra->pdf_file_en);
+            }
+            $data['pdf_file_en'] = $request->file('pdf_file_en')
+                                         ->store('nashras/pdfs', 'public');
         }
         
         // تعيين القيم

@@ -90,10 +90,11 @@ class NashraController extends Controller
     public function downloadPdf($locale, $nashra)
     {
         $nashra = Nashra::where('status', 1)->findOrFail($nashra);
-        if (!$nashra->pdf_file) {
+        $pdfFile = $nashra->localizedPdfFile();
+        if (!$pdfFile) {
             abort(404, 'ملف PDF غير متوفر');
         }
-        $filePath = storage_path('app/public/' . $nashra->pdf_file);
+        $filePath = storage_path('app/public/' . $pdfFile);
         if (!file_exists($filePath)) {
             abort(404, 'الملف غير موجود');
         }
@@ -107,7 +108,11 @@ class NashraController extends Controller
             session()->put($sessionKey, $downloaded);
         }
 
-        return response()->download($filePath, ($nashra->title ?: 'nashra') . '.pdf');
+        // منع الكاش حتى لا يعرض المتصفح نسخة لغة أخرى محفوظة مسبقاً لنفس الرابط
+        return response()->download($filePath, ($nashra->title ?: 'nashra') . '.pdf', [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**

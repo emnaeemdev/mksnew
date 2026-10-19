@@ -62,14 +62,14 @@
             </div>
 
             <!-- زرين فقط: تحميل PDF و عرض PDF -->
-            @if($nashra->pdf_file)
+            @if($nashra->localizedPdfFile())
                 <div class="d-grid gap-2 mb-4">
                     <a href="{{ route('frontend.nashras.download', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}" 
                        class="btn btn-danger w-100">
                         <i class="fas fa-file-pdf"></i>
                         {{ app()->getLocale() == 'ar' ? 'تحميل ملف PDF' : 'Download PDF' }}
                     </a>
-                    <a href="{{ $nashra->pdf_file_url }}" 
+                    <a href="{{ $nashra->localizedPdfFileUrl() }}" 
                        target="_blank" 
                        class="btn btn-outline-danger w-100">
                         <i class="fas fa-eye"></i>
@@ -90,7 +90,7 @@
                         <a href="{{ route('frontend.nashras.show', ['locale' => app()->getLocale(), 'nashra' => $related->id]) }}"
                            class="related-post-card">
                             <img class="related-thumb"
-                                 src="{{ $related->featured_image ? $related->featured_image_url : 'https://via.placeholder.com/120x80?text=No+Image' }}"
+                                 src="{{ $related->localizedFeaturedImageUrl() ?: 'https://via.placeholder.com/120x80?text=No+Image' }}"
                                  alt="{{ $related->title }}">
                             <div class="related-post-body">
                                 <div class="related-post-title">{{ Str::limit($related->title, 60) }}</div>

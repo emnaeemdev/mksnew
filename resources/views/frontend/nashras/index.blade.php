@@ -35,14 +35,14 @@
                         <div class="post-card">
                             <a href="{{ route('frontend.nashras.show', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}"
                                class="text-decoration-none">
-                                @if($nashra->featured_image)
-                                    <img src="{{ $nashra->featured_image_url }}"
+                                @if($nashra->localizedFeaturedImageUrl())
+                                    <img src="{{ $nashra->localizedFeaturedImageUrl() }}"
                                          class="post-image post-image-hover"
                                          alt="{{ $nashra->title }}"
                                          loading="lazy"
                                          decoding="async">
                                 @else
-                                    <img src="{{ asset('images/placeholder.jpg') }}"
+                                    <img src="https://via.placeholder.com/500x600?text=No+Image"
                                          class="post-image post-image-hover"
                                          alt="{{ $nashra->title }}"
                                          loading="lazy"

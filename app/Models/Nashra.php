@@ -23,7 +23,9 @@ class Nashra extends Model
         'content_ar',
         'content_en',
         'featured_image',
+        'featured_image_en',
         'pdf_file',
+        'pdf_file_en',
         'status',
         'sort_order',
         'download_count'
@@ -184,6 +186,29 @@ class Nashra extends Model
     }
 
     /**
+     * الحصول على رابط الصورة المميزة الإنجليزية
+     */
+    public function getFeaturedImageUrlEnAttribute()
+    {
+        if ($this->featured_image_en) {
+            return Storage::url($this->featured_image_en);
+        }
+        return null;
+    }
+
+    /**
+     * الصورة المميزة حسب اللغة الحالية (مع الرجوع للعربية عند عدم توفر الإنجليزية)
+     */
+    public function localizedFeaturedImageUrl(): ?string
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->featured_image_url;
+        }
+
+        return $this->featured_image_url_en ?: $this->featured_image_url;
+    }
+
+    /**
      * الحصول على رابط ملف PDF
      */
     public function getPdfFileUrlAttribute()
@@ -192,6 +217,41 @@ class Nashra extends Model
             return Storage::url($this->pdf_file);
         }
         return null;
+    }
+
+    /**
+     * الحصول على رابط ملف PDF الإنجليزي
+     */
+    public function getPdfFileUrlEnAttribute()
+    {
+        if ($this->pdf_file_en) {
+            return Storage::url($this->pdf_file_en);
+        }
+        return null;
+    }
+
+    /**
+     * ملف PDF حسب اللغة الحالية (مع الرجوع للعربية عند عدم توفر الإنجليزية)
+     */
+    public function localizedPdfFile(): ?string
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->pdf_file;
+        }
+
+        return $this->pdf_file_en ?: $this->pdf_file;
+    }
+
+    /**
+     * رابط ملف PDF حسب اللغة الحالية (مع الرجوع للعربية عند عدم توفر الإنجليزية)
+     */
+    public function localizedPdfFileUrl(): ?string
+    {
+        if (app()->getLocale() === 'ar') {
+            return $this->pdf_file_url;
+        }
+
+        return $this->pdf_file_url_en ?: $this->pdf_file_url;
     }
 
     /**
