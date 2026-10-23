@@ -458,7 +458,7 @@
         <div class="row g-4 mb-5">
     @foreach($documents as $document)
         <div class="col-lg-4 col-md-6">
-            <a href="{{ route('content.show', [app()->getLocale(), $section->slug, $document->id]) }}" class="text-decoration-none">
+            <a href="{{ route('content.show', [app()->getLocale(), optional($document->section)->slug ?? $section->slug, $document->publicId()]) }}" class="text-decoration-none">
                 <div class="card h-100 doc-card">
 
                     <div class="card-body d-flex flex-column">
