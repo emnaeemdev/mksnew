@@ -760,6 +760,7 @@ li {
         
         .post-content p {
             margin-bottom: 20px;
+            text-align: justify;
         }
         
         .post-content ul, .post-content ol {

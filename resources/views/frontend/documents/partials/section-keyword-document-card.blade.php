@@ -10,13 +10,14 @@
 
     $displayFields = collect($document->plainFieldValues ?? [])
         ->filter(function ($fieldValue) {
-            if (!$fieldValue->field || $fieldValue->value === null || trim((string) $fieldValue->value) === '') {
+            if (!$fieldValue->field) {
                 return false;
             }
 
-            return in_array($fieldValue->field->type, ['text', 'textarea', 'select', 'radio', 'number', 'date', 'datetime'], true);
+            return !$fieldValue->isEmpty();
         })
-        ->take(8);
+        ->sortBy(fn ($fieldValue) => $fieldValue->field->sort_order ?? 999)
+        ->values();
 @endphp
 
 <a href="{{ $documentShowUrl }}" class="text-decoration-none section-kw-doc-link">
@@ -35,13 +36,7 @@
                 @foreach($displayFields as $fieldValue)
                     <div class="section-kw-doc-field">
                         <dt>{{ $fieldValue->field->label }}</dt>
-                        <dd>
-                            @if(in_array($fieldValue->field->type, ['date', 'datetime'], true))
-                                {{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}
-                            @else
-                                {{ Str::limit(strip_tags((string) $fieldValue->value), 120) }}
-                            @endif
-                        </dd>
+                        <dd>{{ Str::limit(strip_tags((string) $fieldValue->getDisplayValue()), 120) }}</dd>
                     </div>
                 @endforeach
             </dl>

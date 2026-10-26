@@ -4,10 +4,10 @@
 
 @section('content')
 <div class="container-fluid py-4">
-    <!-- معلومات النشرة الأساسية -->
+    
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <!-- العنوان والتاريخ -->
+            
             <div class="mb-4">
                 <h1 class="display-5 text-primary mb-2">{{ $nashra->title }}</h1>
                 @if($nashra->subtitle)
@@ -30,7 +30,7 @@
         </div>
     </div>
     <div class="row mb-4">
-        <!-- يمين: عرض Google Sheets (3/4 من العرض) -->
+       
         <div class="col-lg-9">
             @if($nashra->localizedGoogleDriveUrl())
                 <div class="card shadow-sm mb-0">
@@ -48,11 +48,26 @@
                     </div>
                 </div>
             @endif
+            <br>
+            <hr>
+                @if($nashra->content)
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h3 class="h5 text-primary mb-3">
+                    <i class="fas fa-align-left"></i>
+                    {{ app()->getLocale() == 'ar' ? 'المحتوى' : 'Content' }}
+                </h3>
+                <div class="content-text rich-content">
+                    {!! safe_html($nashra->content) !!}
+                </div>
+            </div>
+        </div>
+    @endif
         </div>
 
-        <!-- يسار: أزرار العودة وملف PDF والنشرات ذات الصلة (1/4 من العرض) -->
+        
         <div class="col-lg-3">
-            <!-- زر العودة لقائمة النشرات -->
+           
             <div class="d-grid gap-2 mb-3">
                 <a href="{{ route('frontend.nashras.index', ['locale' => app()->getLocale()]) }}" 
                    class="btn btn-outline-primary w-100">
@@ -61,13 +76,13 @@
                 </a>
             </div>
 
-            <!-- زرين فقط: تحميل PDF و عرض PDF -->
+           
             @if($nashra->localizedPdfFile())
                 <div class="d-grid gap-2 mb-4">
                     <a href="{{ route('frontend.nashras.download', ['locale' => app()->getLocale(), 'nashra' => $nashra->id]) }}" 
                        class="btn btn-danger w-100">
                         <i class="fas fa-file-pdf"></i>
-                        {{ app()->getLocale() == 'ar' ? 'تحميل ملف PDF' : 'Download PDF' }}
+                        {{ app()->getLocale() == 'ar' ? 'تحميل ملف PDF' : 'Download PDF' }} 
                     </a>
                     <a href="{{ $nashra->localizedPdfFileUrl() }}" 
                        target="_blank" 
@@ -78,7 +93,7 @@
                 </div>
             @endif
 
-            <!-- نشرات ذات صلة -->
+            
             @if($relatedNashras->count() > 0)
                 <div class="related-posts mt-4">
                     <h4 class="mb-4">
@@ -117,21 +132,9 @@
         </div>
     @endif --}}
 
-    @if($nashra->content)
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <h3 class="h5 text-primary mb-3">
-                    <i class="fas fa-align-left"></i>
-                    {{ app()->getLocale() == 'ar' ? 'المحتوى' : 'Content' }}
-                </h3>
-                <div class="content-text rich-content">
-                    {!! safe_html($nashra->content) !!}
-                </div>
-            </div>
-        </div>
-    @endif
 
-    <!-- معلومات إضافية -->
+
+    
     {{-- <div class="card shadow-sm mb-4">
         <div class="card-header bg-info text-white">
             <h5 class="card-title mb-0">
@@ -160,7 +163,7 @@
         </div>
     </div> --}}
 
-    <!-- أزرار المشاركة -->
+   
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <h5 class="card-title">
@@ -263,7 +266,7 @@ $(document).ready(function() {
         let html = '';
         
         if (Object.keys(data).length > 0) {
-            // شريط التنقل الأفقي
+           
             html += '<div class="p-3"><nav><div class="nav nav-tabs" id="nav-tab" role="tablist">';
             
             Object.keys(data).forEach((sheetName, index) => {
@@ -284,7 +287,7 @@ $(document).ready(function() {
             
             html += '</div></nav>';
             
-            // محتوى التبويبات
+            
             html += '<div class="tab-content" id="nav-tabContent">';
             
             Object.keys(data).forEach((sheetName, index) => {
@@ -297,10 +300,10 @@ $(document).ready(function() {
                             <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                                 <table class="table table-sm table-bordered table-striped table-hover mb-0">`;
                 
-                // عرض البيانات مع فلترة الصفوف الفارغة
+                
                 sheetData.forEach((row, rowIndex) => {
                     if (rowIndex === 0) {
-                        // عرض رأس الجدول دائماً
+                        
                         html += `<thead class="table-dark"><tr>`;
                         if (row) {
                             row.forEach(cell => {
@@ -309,13 +312,13 @@ $(document).ready(function() {
                         }
                         html += '</tr></thead><tbody>';
                     } else {
-                        // فلترة الصفوف الفارغة والنقط
+                       
                         if (row && Array.isArray(row)) {
-                            // فحص إذا كان الصف يحتوي على بيانات حقيقية
+                            
                             const hasRealData = row.some(cell => {
                                 if (!cell) return false;
                                 const cellStr = String(cell).trim();
-                                // تجاهل الخلايا الفارغة أو التي تحتوي على نقط فقط أو مسافات
+                                
                                 return cellStr !== '' && cellStr !== '.' && !cellStr.match(/^[.\s]+$/);
                             });
                             
@@ -327,7 +330,7 @@ $(document).ready(function() {
                                 html += '</tr>';
                             }
                         } else if (typeof row === 'string') {
-                            // التعامل مع الصفوف النصية
+                           
                             const rowStr = row.trim();
                             if (rowStr !== '' && rowStr !== '.' && !rowStr.match(/^[.\s]+$/)) {
                                 html += `<tr><td colspan="8">${row}</td></tr>`;
@@ -346,7 +349,7 @@ $(document).ready(function() {
             
             html += '</div>';
             
-            // إضافة زر تصدير جميع الجداول
+           
             html += `</div>`;
         } else {
             html = '<div class="alert alert-warning m-3"><i class="fas fa-exclamation-triangle"></i> لا توجد بيانات في الجدول</div>';
@@ -368,7 +371,7 @@ $(document).ready(function() {
     @endif
 });
 
-// وظائف المشاركة
+
 function shareOnFacebook() {
     const url = encodeURIComponent(window.location.href);
     const title = encodeURIComponent('{{ $nashra->title }}');
@@ -389,7 +392,7 @@ function shareOnWhatsApp() {
 
 function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(function() {
-        // إظهار رسالة نجاح
+        
         const toast = document.createElement('div');
         toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
         toast.style.zIndex = '9999';
@@ -405,14 +408,14 @@ function copyLink() {
         const bsToast = new bootstrap.Toast(toast);
         bsToast.show();
         
-        // إزالة العنصر بعد إخفاؤه
+        
         toast.addEventListener('hidden.bs.toast', function() {
             document.body.removeChild(toast);
         });
     });
 }
 
-// وظائف التصدير
+
 function exportSheetToExcel(sheetName, index) {
     const table = document.querySelector(`#collapse${index} table`);
     if (table) {
@@ -437,6 +440,6 @@ function exportAllSheetsToExcel() {
 }
 </script>
 
-<!-- مكتبة XLSX للتصدير -->
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 @endpush

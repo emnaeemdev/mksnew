@@ -133,23 +133,12 @@
                                                             @break
                                                             
                                                         @case('multiselect')
-                                                            @php
-                                                                $selectedValues = is_array($currentValue) ? $currentValue : json_decode($currentValue, true) ?? [];
-                                                            @endphp
-                                                            <select class="form-select" 
-                                                                    id="custom_field_{{ $field->id }}" 
-                                                                    name="custom_fields[{{ $field->id }}][]" 
-                                                                    multiple 
-                                                                    {{ $field->is_required ? 'required' : '' }}>
-                                                                @if($field->options)
-                                                                    @foreach($field->options as $option)
-                                                                        <option value="{{ $option }}" 
-                                                                                {{ in_array($option, $selectedValues) ? 'selected' : '' }}>
-                                                                            {{ $option }}
-                                                                        </option>
-                                                                    @endforeach
-                                                                @endif
-                                                            </select>
+                                                            @include('admin.partials.multiselect-dropdown', [
+                                                                'fieldId' => $field->id,
+                                                                'name' => 'custom_fields[' . $field->id . ']',
+                                                                'options' => $field->options ?? [],
+                                                                'selectedValues' => \App\Models\DocumentFieldValue::normalizeMultiValue($currentValue),
+                                                            ])
                                                             @break
 
                                                         @case('file')
@@ -611,17 +600,27 @@ function generateFieldHtml(field) {
             break;
             
         case 'multiselect':
-            fieldHtml += `<select class="form-select" 
-                id="custom_field_${field.id}" 
-                name="custom_fields[${field.id}][]" 
-                multiple 
-                ${field.is_required ? 'required' : ''}>`;
+            fieldHtml += `<div class="dropdown admin-multiselect w-100" data-multiselect>
+                <button class="btn btn-outline-secondary w-100 d-flex justify-content-between align-items-center text-start"
+                        type="button"
+                        id="custom_field_${field.id}"
+                        data-multiselect-toggle
+                        aria-expanded="false">
+                    <span class="admin-multiselect-label text-truncate">اختر...</span>
+                    <i class="fas fa-chevron-down ms-2"></i>
+                </button>
+                <ul class="dropdown-menu w-100 p-2 admin-multiselect-menu" style="max-height: 260px; overflow-y: auto;">`;
             if (field.options && field.options.length > 0) {
                 field.options.forEach(function(option) {
-                    fieldHtml += `<option value="${option}">${option}</option>`;
+                    fieldHtml += `<li><label class="dropdown-item rounded d-flex align-items-center gap-2 mb-0">
+                        <input type="checkbox" class="form-check-input m-0 admin-multiselect-checkbox" name="custom_fields[${field.id}][]" value="${option}">
+                        <span>${option}</span>
+                    </label></li>`;
                 });
+            } else {
+                fieldHtml += '<li class="text-muted small px-2">لا توجد خيارات</li>';
             }
-            fieldHtml += '</select>';
+            fieldHtml += '</ul></div>';
             break;
 
         case 'file':
@@ -660,6 +659,77 @@ function formatFileSize(bytes) {
 @endpush
 
 @push('scripts')
+<script>
+(function () {
+    function isElement(node) {
+        return node && node.nodeType === 1;
+    }
+
+    function closeMultiselects(except) {
+        document.querySelectorAll('[data-multiselect].is-open').forEach(function (el) {
+            if (el !== except) {
+                el.classList.remove('is-open');
+            }
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        if (!isElement(event.target)) {
+            return;
+        }
+
+        const container = event.target.closest('[data-multiselect]');
+        closeMultiselects(container);
+
+        if (!container) {
+            return;
+        }
+
+        // لا تغلق القائمة أثناء التفاعل مع الخيارات
+        if (event.target.closest('.admin-multiselect-menu')) {
+            return;
+        }
+
+        if (!event.target.closest('[data-multiselect-toggle]')) {
+            return;
+        }
+
+        container.classList.toggle('is-open');
+        const button = container.querySelector('[data-multiselect-toggle]');
+        if (button) {
+            button.setAttribute('aria-expanded', container.classList.contains('is-open') ? 'true' : 'false');
+        }
+    });
+
+    document.addEventListener('change', function (event) {
+        const checkbox = event.target;
+
+        if (!checkbox.classList || !checkbox.classList.contains('admin-multiselect-checkbox')) {
+            return;
+        }
+
+        const container = checkbox.closest('[data-multiselect]');
+        if (!container) {
+            return;
+        }
+
+        const checked = Array.prototype.map.call(
+            container.querySelectorAll('.admin-multiselect-checkbox:checked'),
+            function (input) { return input.value; }
+        );
+
+        const label = container.querySelector('.admin-multiselect-label');
+        if (label) {
+            label.textContent = checked.length
+                ? checked.join('، ')
+                : (container.getAttribute('data-placeholder') || 'اختر...');
+        }
+    });
+})();
+</script>
+@endpush
+
+@push('scripts')
 <script src="{{ asset('js/admin-date-selects.js') }}"></script>
 <script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
 <script src="{{ asset('js/admin-tinymce.js') }}"></script>
@@ -675,6 +745,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
 @push('styles')
 <style>
+.admin-multiselect {
+    position: relative;
+}
+
+.admin-multiselect .admin-multiselect-menu {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 1050;
+    min-width: 100%;
+    margin-top: 0.125rem;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+}
+
+.admin-multiselect.is-open > .admin-multiselect-menu {
+    display: block;
+}
+
+.admin-multiselect .dropdown-item {
+    cursor: pointer;
+}
+
+.admin-multiselect .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.admin-multiselect .admin-multiselect-label {
+    max-width: 100%;
+}
+
 .ck-editor__editable {
     min-height: 300px;
 }

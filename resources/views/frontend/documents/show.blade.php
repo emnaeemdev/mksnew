@@ -244,7 +244,7 @@
                                                         @break
                                                     @case('multiselect')
                                                         @php
-                                                            $values = is_array($fieldValue->value) ? $fieldValue->value : (json_decode($fieldValue->value, true) ?: []);
+                                                            $values = \App\Models\DocumentFieldValue::normalizeMultiValue($fieldValue->value);
                                                             $baseUrl = ($document->section && $document->section->slug)
                                                                 ? route('frontend.documents.section', [app()->getLocale(), $document->section->slug])
                                                                 : route('frontend.documents.index');

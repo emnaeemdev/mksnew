@@ -36,6 +36,40 @@ class DocumentFieldValue extends Model
     }
 
     /**
+     * تحويل قيمة حقل متعدد القيم إلى مصفوفة نصية، متوافق مع البيانات القديمة
+     * التي قد تكون مخزّنة كنص عادي بدلاً من مصفوفة JSON.
+     *
+     * @return array<int, string>
+     */
+    public static function normalizeMultiValue(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        if (is_array($value)) {
+            return array_values(array_filter($value, fn ($item) => $item !== null && $item !== ''));
+        }
+
+        $decoded = json_decode((string) $value, true);
+        if (is_array($decoded)) {
+            return array_values(array_filter($decoded, fn ($item) => $item !== null && $item !== ''));
+        }
+
+        return [(string) $value];
+    }
+
+    /**
+     * القيم المتعددة لهذا الحقل كمصفوفة نصية.
+     *
+     * @return array<int, string>
+     */
+    public function getMultiValues(): array
+    {
+        return self::normalizeMultiValue($this->value);
+    }
+
+    /**
      * Get formatted value based on field type.
      */
     public function getFormattedValue()
@@ -58,9 +92,10 @@ class DocumentFieldValue extends Model
                 break;
 
             case 'checkbox':
-                if ($this->value) {
-                    $values = is_array($this->value) ? $this->value : json_decode($this->value, true);
-                    return is_array($values) ? implode(', ', $values) : $this->value;
+            case 'multiselect':
+                $values = self::normalizeMultiValue($this->value);
+                if (!empty($values)) {
+                    return implode(', ', $values);
                 }
                 break;
 
@@ -118,9 +153,10 @@ class DocumentFieldValue extends Model
                 break;
 
             case 'checkbox':
-                if ($this->value) {
-                    $values = is_array($this->value) ? $this->value : json_decode($this->value, true);
-                    return is_array($values) ? implode('، ', $values) : $this->value;
+            case 'multiselect':
+                $values = self::normalizeMultiValue($this->value);
+                if (!empty($values)) {
+                    return implode('، ', $values);
                 }
                 break;
 

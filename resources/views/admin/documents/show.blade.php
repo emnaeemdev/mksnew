@@ -175,7 +175,7 @@
                                                         
                                                     @case('multiselect')
                                                         @php
-                                                            $values = is_array($fieldValue->value) ? $fieldValue->value : (json_decode($fieldValue->value, true) ?: []);
+                                                            $values = \App\Models\DocumentFieldValue::normalizeMultiValue($fieldValue->value);
                                                         @endphp
                                                         <div>
                                                             @foreach($values as $value)

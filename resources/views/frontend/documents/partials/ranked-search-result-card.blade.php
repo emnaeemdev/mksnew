@@ -54,7 +54,7 @@
 
     $displayFieldValues = collect($document->plainFieldValues ?? [])
         ->filter(function ($fieldValue) {
-            if (!$fieldValue->relationLoaded('field') || !$fieldValue->field) {
+            if (!$fieldValue->field) {
                 return false;
             }
 
@@ -62,14 +62,9 @@
                 return false;
             }
 
-            if ($fieldValue->value === null || trim((string) $fieldValue->value) === '') {
-                return false;
-            }
-
-            return in_array($fieldValue->field->type, ['select', 'date', 'text'], true);
+            return !$fieldValue->isEmpty();
         })
         ->sortBy(fn ($fieldValue) => $fieldValue->field->sort_order ?? 999)
-        ->take(5)
         ->values();
 @endphp
 
@@ -111,11 +106,7 @@
                     @foreach($displayFieldValues as $fieldValue)
                         <span class="ranked-result-footer-tag">
                             <strong>{{ $fieldValue->field->label }}:</strong>
-                            @if($fieldValue->field->type === 'date')
-                                {{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}
-                            @else
-                                {{ $fieldValue->value }}
-                            @endif
+                            {{ Str::limit(strip_tags((string) $fieldValue->getDisplayValue()), 60) }}
                         </span>
                     @endforeach
                 </div>

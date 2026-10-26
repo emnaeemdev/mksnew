@@ -102,7 +102,7 @@
         .ranked-result-footer{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid #f1f3f5;color:#6c757d;font-size:.9rem}
         .ranked-result-open{color:#2b4596;font-weight:700;flex-shrink:0;white-space:nowrap}
         .ranked-result-footer-tags{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
-        .ranked-result-footer-tag{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:#f6f8fb;border:1px solid #d8e2ef;color:#4f5d73;font-size:.8rem;line-height:1.35;max-width:100%}
+        .ranked-result-footer-tag{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;background:#f6f8fb;border:1px solid #d8e2ef;color:#4f5d73;font-size:.7rem;line-height:1.35;max-width:100%}
         .ranked-result-footer-tag strong{color:#2b4596;font-weight:700;white-space:nowrap}
         .ranked-result-card mark{background:#fff3b0;color:#6b4d00;padding:0 .15rem;border-radius:3px}
         @media (max-width: 768px) {

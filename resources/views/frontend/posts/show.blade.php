@@ -143,9 +143,9 @@
                             <div class="file-item mb-3 p-3 border rounded">
                                 <div class="row align-items-center">
                                     <div class="col-md-8">
-                                        <h6 class="mb-1">{{ $file->display_name ?: $file->original_name }}</h6>
+                                        <h6 class="mb-1">{{ $file->display_name ?: $file->original_name }} • {{ $file->formattedSize }}</h6>
                                         <small class="text-muted">
-                                            {{ $file->original_name }} • {{ $file->formattedSize }}
+                                            <!-- {{ $file->original_name }} • {{ $file->formattedSize }} -->
                                         </small>
                                     </div>
                                     <div class="col-md-4 text-end">

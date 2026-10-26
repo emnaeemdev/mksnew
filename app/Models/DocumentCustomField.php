@@ -100,6 +100,34 @@ class DocumentCustomField extends Model
     }
 
     /**
+     * أنماط LIKE لمطابقة قيمة خيار داخل حقل متعدد القيم، بغض النظر عمّا إذا
+     * كانت القيمة مخزّنة كنص عادي أو كمصفوفة JSON (بأحرف يونيكود مُهرّبة).
+     *
+     * @return array<int, string>
+     */
+    public static function optionLikePatterns(string $option): array
+    {
+        if ($option === '') {
+            return [];
+        }
+
+        $patterns = [];
+
+        $raw = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $option);
+        if ($raw !== '') {
+            $patterns[] = '%' . $raw . '%';
+        }
+
+        $escaped = trim((string) json_encode($option), '"');
+        if ($escaped !== '' && $escaped !== $option) {
+            $escaped = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $escaped);
+            $patterns[] = '%' . $escaped . '%';
+        }
+
+        return array_values(array_unique($patterns));
+    }
+
+    /**
      * Scope for active fields.
      */
     public function scopeActive($query)

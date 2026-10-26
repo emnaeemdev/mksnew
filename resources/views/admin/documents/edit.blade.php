@@ -135,23 +135,12 @@
                                                             @break
                                                             
                                                         @case('multiselect')
-                                                            @php
-                                                                $selectedValues = is_array($currentValue) ? $currentValue : (json_decode($currentValue, true) ?: []);
-                                                            @endphp
-                                                            <select class="form-select" 
-                                                                    id="custom_field_{{ $field->id }}" 
-                                                                    name="custom_fields[{{ $field->id }}][]" 
-                                                                    multiple 
-                                                                    {{ $field->is_required ? 'required' : '' }}>
-                                                                @if($field->options)
-                                                                    @foreach($field->options as $option)
-                                                                        <option value="{{ $option }}" 
-                                                                                {{ in_array($option, $selectedValues) ? 'selected' : '' }}>
-                                                                            {{ $option }}
-                                                                        </option>
-                                                                    @endforeach
-                                                                @endif
-                                                            </select>
+                                                            @include('admin.partials.multiselect-dropdown', [
+                                                                'fieldId' => $field->id,
+                                                                'name' => 'custom_fields[' . $field->id . ']',
+                                                                'options' => $field->options ?? [],
+                                                                'selectedValues' => \App\Models\DocumentFieldValue::normalizeMultiValue($currentValue),
+                                                            ])
                                                             @break
 
                                                         @case('file')
@@ -627,6 +616,77 @@ function deleteFile(fileId) {
 @endpush
 
 @push('scripts')
+<script>
+(function () {
+    function isElement(node) {
+        return node && node.nodeType === 1;
+    }
+
+    function closeMultiselects(except) {
+        document.querySelectorAll('[data-multiselect].is-open').forEach(function (el) {
+            if (el !== except) {
+                el.classList.remove('is-open');
+            }
+        });
+    }
+
+    document.addEventListener('click', function (event) {
+        if (!isElement(event.target)) {
+            return;
+        }
+
+        const container = event.target.closest('[data-multiselect]');
+        closeMultiselects(container);
+
+        if (!container) {
+            return;
+        }
+
+        // لا تغلق القائمة أثناء التفاعل مع الخيارات
+        if (event.target.closest('.admin-multiselect-menu')) {
+            return;
+        }
+
+        if (!event.target.closest('[data-multiselect-toggle]')) {
+            return;
+        }
+
+        container.classList.toggle('is-open');
+        const button = container.querySelector('[data-multiselect-toggle]');
+        if (button) {
+            button.setAttribute('aria-expanded', container.classList.contains('is-open') ? 'true' : 'false');
+        }
+    });
+
+    document.addEventListener('change', function (event) {
+        const checkbox = event.target;
+
+        if (!checkbox.classList || !checkbox.classList.contains('admin-multiselect-checkbox')) {
+            return;
+        }
+
+        const container = checkbox.closest('[data-multiselect]');
+        if (!container) {
+            return;
+        }
+
+        const checked = Array.prototype.map.call(
+            container.querySelectorAll('.admin-multiselect-checkbox:checked'),
+            function (input) { return input.value; }
+        );
+
+        const label = container.querySelector('.admin-multiselect-label');
+        if (label) {
+            label.textContent = checked.length
+                ? checked.join('، ')
+                : (container.getAttribute('data-placeholder') || 'اختر...');
+        }
+    });
+})();
+</script>
+@endpush
+
+@push('scripts')
 <script src="{{ asset('js/admin-date-selects.js') }}"></script>
 <script src="{{ asset('dashboard/tinymce/tinymce.min.js') }}"></script>
 <script src="{{ asset('js/admin-tinymce.js') }}"></script>
@@ -642,6 +702,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
 @push('styles')
 <style>
+.admin-multiselect {
+    position: relative;
+}
+
+.admin-multiselect .admin-multiselect-menu {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 1050;
+    min-width: 100%;
+    margin-top: 0.125rem;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.175);
+}
+
+.admin-multiselect.is-open > .admin-multiselect-menu {
+    display: block;
+}
+
+.admin-multiselect .dropdown-item {
+    cursor: pointer;
+}
+
+.admin-multiselect .dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.admin-multiselect .admin-multiselect-label {
+    max-width: 100%;
+}
+
 .ck-editor__editable {
     min-height: 300px;
 }

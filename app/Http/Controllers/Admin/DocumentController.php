@@ -195,7 +195,7 @@ class DocumentController extends Controller
         $document = Document::create([
             'section_id' => $request->section_id,
             'title' => $request->title,
-            'slug' => Str::slug($request->title),
+            'slug' => $this->makeUniqueSlug($request->title),
             'content' => app(HtmlSanitizer::class)->clean($request->content),
             'excerpt' => $request->excerpt,
             'featured_image' => $featuredImagePath,
@@ -369,7 +369,7 @@ class DocumentController extends Controller
         $document->update([
             'section_id' => $request->section_id,
             'title' => $request->title,
-            'slug' => Str::slug($request->title),
+            'slug' => $this->makeUniqueSlug($request->title, $document->id),
             'content' => app(HtmlSanitizer::class)->clean($request->content),
             'excerpt' => $request->excerpt,
             'featured_image' => $featuredImagePath,
@@ -672,6 +672,34 @@ class DocumentController extends Controller
         ]);
     }
 
+    /**
+     * توليد slug فريد بدون أي تعديل على قاعدة البيانات.
+     * لو العنوان مكرر نضيف لاحقة رقمية (-2، -3 ...) بدل ما الحفظ يفشل بسبب قيد الـ unique.
+     */
+    protected function makeUniqueSlug(?string $title, ?int $ignoreId = null): string
+    {
+        $base = Str::slug((string) $title);
+
+        if ($base === '') {
+            $base = 'document-' . Str::random(6);
+        }
+
+        $slug = $base;
+        $candidate = 2;
+
+        while (
+            Document::withTrashed()
+                ->where('slug', $slug)
+                ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $base . '-' . $candidate;
+            $candidate++;
+        }
+
+        return $slug;
+    }
+
     protected function resolveAdminSectionId(Request $request): ?int
     {
         $sectionId = $request->filled('section_id') ? $request->section_id : $request->section;
@@ -746,6 +774,20 @@ class DocumentController extends Controller
             return;
         }
 
+        if ($field?->type === 'multiselect') {
+            $patterns = DocumentCustomField::optionLikePatterns((string) $value);
+
+            $query->whereHas('fieldValues', function ($q) use ($fieldId, $patterns) {
+                $q->where('field_id', $fieldId)->where(function ($inner) use ($patterns) {
+                    foreach ($patterns as $pattern) {
+                        $inner->orWhere('value', 'like', $pattern);
+                    }
+                });
+            });
+
+            return;
+        }
+
         $query->whereHas('fieldValues', function ($q) use ($fieldId, $value) {
             $q->where('field_id', $fieldId)->where('value', 'like', '%' . $value . '%');
         });
@@ -797,10 +839,16 @@ class DocumentController extends Controller
                         continue;
                     }
 
+                    $patterns = DocumentCustomField::optionLikePatterns($optionValue);
+
                     $rows[$optionValue] = (clone $fieldQuery)
-                        ->whereHas('fieldValues', function ($q) use ($field, $optionValue) {
+                        ->whereHas('fieldValues', function ($q) use ($field, $patterns) {
                             $q->where('field_id', $field->id)
-                                ->where('value', 'like', '%' . $optionValue . '%');
+                                ->where(function ($inner) use ($patterns) {
+                                    foreach ($patterns as $pattern) {
+                                        $inner->orWhere('value', 'like', $pattern);
+                                    }
+                                });
                         })
                         ->count();
                 }

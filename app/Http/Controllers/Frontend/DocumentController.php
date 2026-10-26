@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\DocumentSection;
 use App\Models\DocumentCustomField;
+use App\Models\DocumentFieldValue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -427,15 +428,50 @@ class DocumentController extends Controller
      */
     protected function processMultiSelectField($field, $values, $query)
     {
-        if (!empty($values) && is_array($values)) {
-            $query->whereHas('fieldValues', function($q) use ($field, $values) {
-                $q->where('field_id', $field->id);
-                foreach ($values as $value) {
-                    $q->where('value', 'like', "%{$value}%");
-                }
-            });
+        $values = is_array($values) ? $values : [$values];
+        $values = array_values(array_filter($values, fn ($value) => $value !== null && $value !== ''));
+
+        if (empty($values)) {
+            return $query;
         }
+
+        $query->whereHas('fieldValues', function ($q) use ($field, $values) {
+            $q->where('field_id', $field->id);
+
+            foreach ($values as $value) {
+                $patterns = DocumentCustomField::optionLikePatterns((string) $value);
+
+                $q->where(function ($inner) use ($patterns) {
+                    foreach ($patterns as $pattern) {
+                        $inner->orWhere('value', 'like', $pattern);
+                    }
+                });
+            }
+        });
+
         return $query;
+    }
+
+    /**
+     * تحويل أعداد الحقل المتعدد إلى عدد لكل خيار، حيث قد تكون القيمة مخزّنة
+     * كنص عادي أو كمصفوفة JSON تحتوي أكثر من خيار.
+     *
+     * @param  array<string|int, int|string>  $rows
+     * @return array<string, int>
+     */
+    protected function expandMultiSelectCounts(array $rows): array
+    {
+        $counts = [];
+
+        foreach ($rows as $value => $count) {
+            $count = (int) $count;
+
+            foreach (DocumentFieldValue::normalizeMultiValue($value) as $option) {
+                $counts[$option] = ($counts[$option] ?? 0) + $count;
+            }
+        }
+
+        return $counts;
     }
 
     /**
@@ -507,16 +543,29 @@ class DocumentController extends Controller
         $cacheKey = 'doc_field_options_v1:' . $section->id . ':' . $field->id . ':v' . $version;
 
         $values = Cache::remember($cacheKey, now()->addMinutes(60), function () use ($field, $section) {
-            return $section->documents()
+            $raw = $section->documents()
                 ->published()
                 ->join('document_field_values', 'documents.id', '=', 'document_field_values.document_id')
                 ->where('document_field_values.field_id', $field->id)
                 ->distinct()
                 ->pluck('document_field_values.value')
                 ->filter()
-                ->sort()
-                ->values()
                 ->all();
+
+            // الحقول متعددة الاختيارات قد تُخزَّن كـ JSON أو نص عادي، لذلك نوحّد القيم
+            if ($field->type === 'multiselect') {
+                $expanded = [];
+                foreach ($raw as $value) {
+                    foreach (DocumentFieldValue::normalizeMultiValue($value) as $option) {
+                        $expanded[$option] = true;
+                    }
+                }
+                $raw = array_keys($expanded);
+            }
+
+            sort($raw);
+
+            return array_values($raw);
         });
 
         return collect($values);
@@ -848,7 +897,10 @@ class DocumentController extends Controller
                     ->groupBy('dfv.value')
                     ->pluck('cnt', 'val')
                     ->toArray();
-                $counts[$field->id] = $rows;
+
+                $counts[$field->id] = $field->type === 'multiselect'
+                    ? $this->expandMultiSelectCounts($rows)
+                    : $rows;
             } elseif (in_array($field->type, ['date', 'datetime'])) {
                 $counts[$field->id] = [
                     'day' => [],

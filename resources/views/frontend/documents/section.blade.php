@@ -162,6 +162,7 @@
                                                 
                                                 @switch($field->type)
                                                     @case('select')
+                                                    @case('multiselect')
                                                         <select class="form-select" id="field_{{ $field->id }}" name="fields[{{ $field->id }}]" onchange="document.getElementById('filterForm').submit()">
                                                             <option value="">جميع القيم</option>
                                                             @php
@@ -479,19 +480,19 @@
                             </p>
                         @endif
 
-                        @if($document->fieldValues->count() > 0)
+                        @php
+                            $cardFieldValues = $document->fieldValues
+                                ->filter(fn ($fieldValue) => $fieldValue->field && !$fieldValue->isEmpty())
+                                ->sortBy(fn ($fieldValue) => $fieldValue->field->sort_order ?? 999);
+                        @endphp
+
+                        @if($cardFieldValues->isNotEmpty())
                             <div class="mb-3">
-                                @foreach($document->fieldValues->take(5) as $fieldValue)
-                                    @if($fieldValue->field->type == 'select' || $fieldValue->field->type == 'date' || $fieldValue->field->type == 'text')
-                                        <div class="small text-muted mb-1">
-                                            <strong>{{ $fieldValue->field->label }}:</strong>
-                                            @if($fieldValue->field->type == 'date')
-                                                {{ \Carbon\Carbon::parse($fieldValue->value)->format('Y-m-d') }}
-                                            @else
-                                                {{ $fieldValue->value }}
-                                            @endif
-                                        </div>
-                                    @endif
+                                @foreach($cardFieldValues as $fieldValue)
+                                    <div class="small text-muted mb-1 text-truncate">
+                                        <strong>{{ $fieldValue->field->label }}:</strong>
+                                        {{ Str::limit(strip_tags((string) $fieldValue->getDisplayValue()), 60) }}
+                                    </div>
                                 @endforeach
                             </div>
                         @endif
